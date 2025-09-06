@@ -6,6 +6,7 @@ export default function Registro() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [role, setRole] = useState<'valorador' | 'coordinador'>('valorador')
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -18,7 +19,7 @@ export default function Registro() {
       return
     }
     setLoading(true)
-    const ok = await register(username.trim(), password, remember)
+  const ok = await register(username.trim(), password, role, remember)
     setLoading(false)
     if (ok) {
       window.location.hash = '#/'
@@ -45,6 +46,14 @@ export default function Registro() {
               required
               placeholder="Nombre de usuario"
             />
+          </div>
+
+          <div className="form-group">
+            <label>Rol</label>
+            <select value={role} onChange={e => setRole(e.target.value as 'valorador' | 'coordinador')}>
+              <option value="valorador">Valorador</option>
+              <option value="coordinador">Coordinador</option>
+            </select>
           </div>
 
           <div className="form-group">

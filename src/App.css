@@ -103,6 +103,24 @@
   font-size: 0.875rem;
 }
 
+.role-badge {
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+}
+
+/* Coordinador: Naranja */
+.role-badge.coordinador {
+  background: #FB8C00;
+  color: #fff;
+}
+
+/* Valorador: Morado */
+.role-badge.valorador {
+  background: #62148c;
+  color: #fff;
+}
+
 .content {
   flex: 1;
   padding: 2rem;
@@ -115,7 +133,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  /* Color Hu para la pantalla de login */
+  background: #62148c;
 }
 
 .login-card {

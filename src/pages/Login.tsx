@@ -27,7 +27,7 @@ export default function Login() {
       <div className="login-card">
         <div className="login-header">
           <h1 className="login-title">ValorApp</h1>
-          <p className="login-subtitle">Valoración de Consumo Energético</p>
+          <p className="login-subtitle">Valoracion</p>
         </div>
         
         <form onSubmit={onSubmit} className="login-form">
