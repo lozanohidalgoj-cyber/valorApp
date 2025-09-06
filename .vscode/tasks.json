@@ -13,6 +13,19 @@
 			],
 			"group": "build",
 			"isBackground": true
+		},
+		{
+			"label": "Vite dev (valorApp)",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"dev",
+				"--",
+				"--host"
+			],
+			"isBackground": true,
+			"group": "build"
 		}
 	]
 }
