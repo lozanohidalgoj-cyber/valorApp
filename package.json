@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-  "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
-  "start": "vite preview --host",
-  "typecheck": "tsc -b --noEmit",
-  "vercel-build": "npm run build"
+    "start": "vite preview --host",
+    "typecheck": "tsc -b --noEmit",
+    "vercel-build": "npm run build"
   },
   "engines": {
-    "node": ">=18"
+    "node": "18.x"
   },
   "dependencies": {
     "react": "^18.3.1",
