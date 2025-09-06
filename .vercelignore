@@ -4,8 +4,4 @@ node_modules
 .vercel
 *.log
 .DS_Store
-src/
-public/
-tsconfig.*.json
-vite.config.d.ts
-README.md
+dist
