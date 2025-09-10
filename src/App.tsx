@@ -20,16 +20,15 @@ function useHashRoute() {
 }
 
 const baseNavigation = [
-  { id: 'lista', hash: '#/', label: 'Lista de Registros', icon: '📋' },
-  { id: 'nuevo', hash: '#/nuevo', label: 'Nuevo Registro', icon: '➕' },
+  { id: 'lista', hash: '#/', label: 'Importar ATR', icon: '�' }
 ]
 const coordinatorNav = { id: 'cambiarPass', hash: '#/coordinador/cambiar-password', label: 'Cambiar contraseña', icon: '🔐' }
 const coordinatorNavUsers = { id: 'gestionUsuarios', hash: '#/coordinador/usuarios', label: 'Gestión de usuarios', icon: '👥' }
 
 function getPageTitle(route: string) {
   switch (route) {
-    case '#/': return 'Lista de Registros'
-    case '#/nuevo': return 'Nuevo Registro'
+  case '#/': return 'Importar ATR'
+  // Ruta de nuevo registro eliminada
   case '#/saldo-atr': return 'Saldo ATR'
   case '#/coordinador/cambiar-password': return 'Cambiar contraseña'
     default: return 'ValorApp'
@@ -100,31 +99,6 @@ export default function App() {
                 </a>
               </li>
             )}
-            {user?.role === 'valorador' && (
-              <li className="sidebar-nav-item">
-                <a
-                  href="#/"
-                  className="sidebar-nav-link"
-                  onClick={(e) => {
-                    if (route === '#/') {
-                      e.preventDefault()
-                      const open = (window as any).valorApp_openFile
-                      if (typeof open === 'function') {
-                        open()
-                      } else {
-                        try { window.dispatchEvent(new CustomEvent('valorApp:triggerImportATR')) } catch {}
-                      }
-                    } else {
-                      try { localStorage.setItem('valorApp.triggerImportATR', '1') } catch {}
-                      // Permitimos la navegación a '#/' y Lista abrirá el diálogo al montar
-                    }
-                  }}
-                >
-                  <span>📥</span>
-                  Importar ATR
-                </a>
-              </li>
-            )}
           </ul>
         </nav>
       </aside>
@@ -141,6 +115,7 @@ export default function App() {
               >
                 {sidebarOpen ? '⟨⟨' : '☰'}
               </button>
+              <img src="/assets/importar-atr-icon.png" alt="Importar ATR" style={{ width: '24px', height: '24px' }} />
               <h2 className="header-title" style={{ margin: 0 }}>{getPageTitle(route)}</h2>
             </div>
             <div className="user-menu">
@@ -161,7 +136,7 @@ export default function App() {
 
         <main className="content">
           {route === '#/' && <Lista />}
-          {route === '#/nuevo' && <Nuevo />}
+          {/* Ruta '#/nuevo' eliminada */}
           {route === '#/saldo-atr' && <SaldoATR />}
           {route === '#/coordinador/cambiar-password' && <CambiarPassword />}
           {route === '#/coordinador/usuarios' && <GestionUsuarios />}

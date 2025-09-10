@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../state/store'
 
 export default function SaldoATR() {
-  const { saldoATR, add } = useStore()
+  const { saldoATR, add, setSaldoATR } = useStore() as any
 
   // Si no hay saldo cargado, volver a la lista
   useEffect(() => {
@@ -18,6 +18,11 @@ export default function SaldoATR() {
   const [maxKwh, setMaxKwh] = useState('')
   const [sort, setSort] = useState<'fecha-desc' | 'fecha-asc' | 'kwh-desc' | 'kwh-asc'>('fecha-desc')
   const [message, setMessage] = useState<string | null>(null)
+  const [editing, setEditing] = useState<{ idx: number, field: string } | null>(null)
+  const [hoverRow, setHoverRow] = useState<number | null>(null)
+  const [hoverCol, setHoverCol] = useState<number | null>(null)
+  const tableRef = useRef<HTMLTableElement | null>(null)
+  const colWidthsRef = useRef<Map<number, number>>(new Map())
 
   function ddmmyyyyToDate(s: string): Date {
     const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})/)
@@ -65,6 +70,24 @@ export default function SaldoATR() {
     return { rows: filtered, total: saldoATR.length }
   }, [saldoATR, q, fuente, minKwh, maxKwh, sort])
 
+  const headerCups = useMemo(() => {
+    // Si hay exactamente una fila seleccionada, usar ese CUPS
+    if (saldoSelection.size === 1) {
+      const idx = Array.from(saldoSelection)[0]
+      return saldoATR[idx]?.cups ?? null
+    }
+    // Conjunto de CUPS distintos en los datos visibles completos
+    const unique = new Set<string>()
+    for (const r of saldoATR) {
+      if (r?.cups) unique.add(r.cups)
+      if (unique.size > 2) break
+    }
+    if (unique.size === 1) return Array.from(unique)[0]
+    // Si hay hoverRow y múltiples CUPS, mostrar el del hover
+    if (hoverRow != null) return saldoATR[hoverRow]?.cups ?? null
+    return unique.size > 1 ? 'Varios CUPS' : null
+  }, [saldoSelection, hoverRow, saldoATR])
+
   function toggleRowSelection(idx: number) {
     setSaldoSelection(prev => {
       const next = new Set(prev)
@@ -74,62 +97,87 @@ export default function SaldoATR() {
     })
   }
 
-  function selectAllVisible() {
-    const currentIdx = view.rows.map(r => r.idx)
-    const allSelected = currentIdx.every(i => saldoSelection.has(i))
-    if (allSelected) {
-      const next = new Set(saldoSelection)
-      currentIdx.forEach(i => next.delete(i))
-      setSaldoSelection(next)
-    } else {
-      const next = new Set(saldoSelection)
-      currentIdx.forEach(i => next.add(i))
-      setSaldoSelection(next)
+
+
+  // Edición deshabilitada: funciones anuladas
+  function startEdit(_idx: number, _field: string) { /* no-op */ }
+  function commitEdit(_idx: number, _field: string, _value: string) { /* no-op */ }
+  function handleKeyEdit(_e: React.KeyboardEvent<HTMLInputElement>, _idx: number, _field: string) { /* no-op */ }
+
+  // Redimensionar columnas
+  function initResize(e: React.MouseEvent, colIndex: number) {
+    e.preventDefault()
+    const startX = e.clientX
+    const th = (e.target as HTMLElement).closest('th') as HTMLTableHeaderCellElement | null
+    if (!th) return
+    const startWidth = th.offsetWidth
+    function onMove(ev: MouseEvent) {
+      const delta = ev.clientX - startX
+      const newW = Math.max(40, startWidth + delta)
+      colWidthsRef.current.set(colIndex, newW)
+      if (tableRef.current) {
+        const rows = tableRef.current.querySelectorAll('tr')
+        rows.forEach(r => {
+          const cell = (r.children[colIndex] as HTMLElement | undefined)
+          if (cell) cell.style.width = newW + 'px'
+        })
+      }
     }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
   }
 
-  function createRegistros() {
-    if (!saldoSelection.size) return
-    let count = 0
-    saldoSelection.forEach(idx => {
-      const row = saldoATR[idx] as any
-      if (!row) return
-      const fechaISO = ddmmyyyyToISO(row.fechaHasta || row.fechaDesde)
-      const kWh = row.consumoTotalActivaKWh
-      if (!Number.isFinite(kWh)) return
-      const valorTipo = row.fuenteAgregada?.toLowerCase() === 'real' ? 'real' : 'estimado'
-      add({
-        id: generateId(),
-        clienteId: row.cups,
-        fechaISO,
-        gestion: 'averia',
-        valorTipo,
-        kWh,
-        notas: `Factura ${row.codigoFactura} (${row.tipoFactura}) Potencia ${row.potenciaKW}kW`
-      } as const)
-      count++
+  function copySelectionToClipboard() {
+    const idxs = Array.from(saldoSelection)
+    if (!idxs.length) return
+    const header = ['CUPS','Contrato','Desde','Hasta','kWh','Fuente','Estado medida','Factura','Tipo factura','Estado factura','Nº serie','F. envío','Pot(kW)','Autofactura']
+    const lines = [header.join('\t')]
+    idxs.forEach(i => {
+      const r = saldoATR[i]
+      if (!r) return
+      lines.push([
+        r.cups,
+        r.contratoATR,
+        r.fechaDesde,
+        r.fechaHasta,
+        r.consumoTotalActivaKWh,
+        r.fuenteAgregada,
+        r.estadoMedida,
+        r.codigoFactura,
+        r.tipoFactura,
+        r.estadoFactura,
+        r.numeroSerieContador,
+        r.fechaEnvioAFacturar,
+        r.potenciaKW,
+        r.autoFactura
+      ].join('\t'))
     })
-    setSaldoSelection(new Set())
-    setMessage(`${count} registro(s) creados desde saldo ATR.`)
-    setTimeout(() => setMessage(null), 3000)
+    const text = lines.join('\n')
+    navigator.clipboard?.writeText(text).then(() => {
+      setMessage('Filas copiadas al portapapeles')
+      setTimeout(() => setMessage(null), 2500)
+    }).catch(() => {})
   }
 
   return (
     <div className="card">
       <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h3 style={{ margin: 0 }}>Saldo ATR (pantalla completa)</h3>
-          <p style={{ margin: '0.25rem 0 0 0' }} className="text-sm opacity-70">
+          {headerCups && (
+            <h3 style={{ margin: 0, fontFamily: 'monospace' }}>{headerCups}</h3>
+          )}
+          <p style={{ margin: headerCups ? '0.25rem 0 0 0' : 0 }} className="text-sm opacity-70">
             {view.rows.length} filas visibles de {view.total}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <a href="#/" className="btn btn-secondary btn-sm">⟵ Volver</a>
-          <button className="btn btn-sm" onClick={selectAllVisible}>
-            {view.rows.every(r => saldoSelection.has(r.idx)) ? 'Deseleccionar' : 'Seleccionar'} visibles
-          </button>
-          <button className="btn btn-sm" disabled={!saldoSelection.size} onClick={createRegistros}>
-            ➕ Crear registros ({saldoSelection.size})
+          <button className="btn btn-sm" disabled={!saldoSelection.size} onClick={copySelectionToClipboard}>
+            📋 Copiar selección
           </button>
         </div>
       </div>
@@ -140,68 +188,36 @@ export default function SaldoATR() {
         </div>
       )}
 
-      <div className="filters">
-        <div className="filters-grid" style={{ gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
-          <div className="form-group">
-            <label>Buscar</label>
-            <input placeholder="CUPS, contrato, factura..." value={q} onChange={e => setQ(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label>Fuente</label>
-            <select value={fuente} onChange={e => setFuente(e.target.value as any)}>
-              <option value="all">Todas</option>
-              <option value="real">Real</option>
-              <option value="no-real">No real</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>kWh mín</label>
-            <input type="number" step="0.001" value={minKwh} onChange={e => setMinKwh(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label>kWh máx</label>
-            <input type="number" step="0.001" value={maxKwh} onChange={e => setMaxKwh(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label>Orden</label>
-            <select value={sort} onChange={e => setSort(e.target.value as any)}>
-              <option value="fecha-desc">Fecha (reciente primero)</option>
-              <option value="fecha-asc">Fecha (antiguo primero)</option>
-              <option value="kwh-desc">kWh (mayor primero)</option>
-              <option value="kwh-asc">kWh (menor primero)</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>&nbsp;</label>
-            <button className="btn btn-sm" onClick={() => { setQ(''); setFuente('all'); setMinKwh(''); setMaxKwh(''); setSort('fecha-desc') }}>Reset</button>
-          </div>
-        </div>
-      </div>
+  {/* Filtros eliminados a petición: se deja el código de estado para posible reactivación futura */}
 
-      <div className="table-container">
-        <table>
+      <div className="table-container table-sticky table-freeze-first table-excel">
+        <table
+          ref={tableRef}
+          onMouseLeave={() => { setHoverRow(null); setHoverCol(null) }}
+        >
           <thead>
             <tr>
-              <th></th>
-              <th>CUPS</th>
-              <th>Contrato</th>
-              <th>Desde</th>
-              <th>Hasta</th>
-              <th>kWh</th>
-              <th>Fuente</th>
-              <th>Estado medida</th>
-              <th>Factura</th>
-              <th>Tipo factura</th>
-              <th>Estado factura</th>
-              <th>Nº serie contador</th>
-              <th>F. envío facturar</th>
-              <th>Pot(kW)</th>
-              <th>Autofactura</th>
+              {[ '', 'CUPS','Contrato','Desde','Hasta','kWh','Fuente','Estado medida','Factura','Tipo factura','Estado factura','Nº serie contador','F. envío facturar','Pot(kW)','Autofactura' ].map((h, ci) => (
+                <th
+                  key={ci}
+                  className={`resizable ${hoverCol === ci ? 'col-highlight' : ''}`}
+                  onMouseEnter={() => { setHoverCol(ci); setHoverRow(null) }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>{h}</span>
+                    <span className="col-resizer" onMouseDown={(e) => initResize(e, ci)} />
+                  </div>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {view.rows.map(({ row: r, idx: i }) => (
-              <tr key={i}>
+              <tr
+                key={i}
+                className={hoverRow === i ? 'row-highlight' : ''}
+                onMouseEnter={() => { setHoverRow(i); }}
+              >
                 <td>
                   <input
                     type="checkbox"
@@ -209,20 +225,25 @@ export default function SaldoATR() {
                     onChange={() => toggleRowSelection(i)}
                   />
                 </td>
-                <td style={{ fontSize: '0.7rem' }}>{r.cups}</td>
-                <td style={{ fontSize: '0.7rem' }}>{r.contratoATR}</td>
-                <td>{r.fechaDesde}</td>
-                <td>{r.fechaHasta}</td>
-                <td style={{ textAlign: 'right' }}>{r.consumoTotalActivaKWh.toFixed(3)}</td>
-                <td>{r.fuenteAgregada}</td>
-                <td>{r.estadoMedida}</td>
-                <td style={{ fontSize: '0.65rem' }}>{r.codigoFactura}</td>
-                <td>{r.tipoFactura}</td>
-                <td>{r.estadoFactura}</td>
-                <td style={{ fontSize: '0.65rem' }}>{r.numeroSerieContador}</td>
-                <td style={{ fontSize: '0.75rem' }}>{r.fechaEnvioAFacturar}</td>
-                <td>{r.potenciaKW}</td>
-                <td>{r.autoFactura}</td>
+                {['cups','contratoATR','fechaDesde','fechaHasta','consumoTotalActivaKWh','fuenteAgregada','estadoMedida','codigoFactura','tipoFactura','estadoFactura','numeroSerieContador','fechaEnvioAFacturar','potenciaKW','autoFactura'].map((field, colIdx) => {
+                  const value = (r as any)[field]
+                  const isEditing = editing && editing.idx === i && editing.field === field
+                  const absoluteCol = colIdx + 1 // porque la col 0 es checkbox
+                  return (
+                    <td
+                      key={field}
+                      className={`${hoverCol === absoluteCol ? 'col-highlight' : ''}`}
+                      onMouseEnter={() => { setHoverCol(absoluteCol) }}
+                      style={field === 'cups' || field === 'contratoATR' ? { fontSize: '0.7rem' } : (field === 'codigoFactura' || field === 'numeroSerieContador') ? { fontSize: '0.65rem' } : (field === 'fechaEnvioAFacturar' ? { fontSize: '0.75rem' } : {})}
+                    >
+                      {field === 'consumoTotalActivaKWh' ? (
+                        <span style={{ textAlign: 'right', display: 'inline-block', minWidth: '60px' }}>{Number(value).toFixed(3)}</span>
+                      ) : (
+                        value || ''
+                      )}
+                    </td>
+                  )
+                })}
               </tr>
             ))}
           </tbody>

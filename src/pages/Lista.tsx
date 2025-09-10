@@ -3,7 +3,7 @@ import { useStore } from '../state/store'
 import { ATR_SALDO_EXPECTED_HEADERS, mapToATRSaldoRow } from '../types/atr'
 
 export default function Lista() {
-  const { registros, remove, clear, add, saldoATR, setSaldoATR } = useStore()
+  const { registros, clear, add, saldoATR, setSaldoATR } = useStore()
   const [q, setQ] = useState('')
   const [gestion, setGestion] = useState<string>('')
   const [valorTipo, setValorTipo] = useState<string>('')
@@ -95,13 +95,6 @@ export default function Lista() {
     })
   }
 
-  function selectAllSaldo() {
-    if (saldoSelection.size === saldoATR.length) {
-      setSaldoSelection(new Set())
-    } else {
-      setSaldoSelection(new Set(saldoATR.map((_, i) => i)))
-    }
-  }
 
   function ddmmyyyyToISO(s: string): string {
     const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})/)
@@ -213,9 +206,6 @@ export default function Lista() {
             <button className="btn btn-sm" disabled={!saldoSelection.size} onClick={createRegistrosFromSaldo}>
               ➕ Crear registros ({saldoSelection.size})
             </button>
-            <button className="btn btn-sm" onClick={selectAllSaldo}>
-              {saldoView.rows.every(r => saldoSelection.has(r.idx)) ? 'Deseleccionar' : 'Seleccionar'} visibles
-            </button>
           </div>
         </div>
         {showSaldo && (
@@ -258,7 +248,7 @@ export default function Lista() {
           </div>
         )}
         {showSaldo && (
-          <div className="table-container" style={{ maxHeight: '300px', overflow: 'auto' }}>
+          <div className="table-container table-sticky" style={{ maxHeight: '300px' }}>
             <table>
               <thead>
                 <tr>
@@ -394,9 +384,6 @@ export default function Lista() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <a href="#/nuevo" className="btn btn-primary">
-                ➕ Nuevo Registro
-              </a>
               <button type="button" className="btn btn-secondary" onClick={triggerImport}>
                 📥 Importar saldo ATR
               </button>
@@ -426,7 +413,7 @@ export default function Lista() {
             <p>Intente ajustar los filtros o crear un nuevo registro.</p>
           </div>
         ) : (
-          <div className="table-container">
+          <div className="table-container table-sticky">
             <table>
               <thead>
                 <tr>
@@ -436,7 +423,7 @@ export default function Lista() {
                   <th>Tipo Fraude</th>
                   <th>Tipo Valor</th>
                   <th>kWh</th>
-                  <th>Acciones</th>
+                  {/* Columna acciones eliminada */}
                 </tr>
               </thead>
               <tbody>
@@ -456,15 +443,6 @@ export default function Lista() {
                       </span>
                     </td>
                     <td style={{ fontWeight: 500 }}>{r.kWh.toFixed(2)}</td>
-                    <td>
-                      <button 
-                        className="btn btn-danger btn-sm" 
-                        onClick={() => remove(r.id)}
-                        title="Eliminar registro"
-                      >
-                        🗑️
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>

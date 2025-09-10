@@ -224,6 +224,77 @@ input:focus, select:focus, textarea:focus {
   box-shadow: var(--shadow-sm);
 }
 
+/* Contenedor con scroll y encabezado fijo */
+.table-sticky {
+  overflow: auto;
+  max-height: 70vh; /* Altura adaptable; evita que toda la página se desplace */
+  position: relative;
+}
+
+.table-sticky table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 3px -2px rgba(0,0,0,0.25);
+}
+
+/* Columnas fijas (primera y segunda) */
+.table-freeze-first th:first-child,
+.table-freeze-first td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--color-gray-50);
+  z-index: 15;
+}
+.table-freeze-first th:nth-child(2),
+.table-freeze-first td:nth-child(2) {
+  position: sticky;
+  left: 40px; /* ancho estimado de la primera col */
+  background: var(--bg-primary);
+  z-index: 14;
+}
+
+/* Resizable headers */
+th.resizable {
+  position: relative;
+}
+th.resizable .col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  cursor: col-resize;
+  user-select: none;
+  height: 100%;
+}
+th.resizable .col-resizer:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+/* Celda editable */
+.cell-editing {
+  padding: 0 !important;
+}
+.cell-editing input {
+  width: 100%;
+  border: 1px solid var(--color-primary);
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  background: #fffefa;
+}
+
+/* Estilo Excel: resaltado fila / columna */
+.table-excel .row-highlight td {
+  background: #fff8d0 !important;
+}
+.table-excel .col-highlight,
+.table-excel td.col-highlight {
+  background: #fff3a3 !important;
+}
+.table-excel .row-highlight td.col-highlight {
+  background: #ffe982 !important;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
