@@ -1,15 +1,18 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import type { ATRRegistro } from '../types/atr'
+import type { ATRRegistro, ATRSaldoRow } from '../types/atr'
 
 type Store = {
   registros: ATRRegistro[]
   add: (r: ATRRegistro) => void
   remove: (id: string) => void
   clear: () => void
+  saldoATR: ATRSaldoRow[]
+  setSaldoATR: (rows: ATRSaldoRow[]) => void
 }
 
 const Ctx = createContext<Store | null>(null)
 const LS_KEY = 'valorApp.registros'
+const LS_SALDO_KEY = 'valorApp.saldoATR'
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [registros, setRegistros] = useState<ATRRegistro[]>(() => {
@@ -20,12 +23,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return []
     }
   })
+  const [saldoATR, setSaldoATRState] = useState<ATRSaldoRow[]>(() => {
+    try {
+      const raw = localStorage.getItem(LS_SALDO_KEY)
+      return raw ? (JSON.parse(raw) as ATRSaldoRow[]) : []
+    } catch {
+      return []
+    }
+  })
 
   useEffect(() => {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(registros))
     } catch {}
   }, [registros])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_SALDO_KEY, JSON.stringify(saldoATR))
+    } catch {}
+  }, [saldoATR])
 
   const value = useMemo<Store>(() => ({
     registros,
@@ -38,7 +55,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     clear() {
       setRegistros([])
     },
-  }), [registros])
+    saldoATR,
+    setSaldoATR(rows) {
+      setSaldoATRState(rows)
+    }
+  }), [registros, saldoATR])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -151,6 +151,24 @@ a:hover {
   font-size: 0.75rem;
 }
 
+/* Botón éxito (verde) */
+.btn-success {
+  background-color: var(--color-success);
+  color: var(--text-inverse);
+  border-color: var(--color-success);
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #15803d; /* tono más oscuro */
+  border-color: #15803d;
+}
+
+/* Tamaño grande */
+.btn-lg {
+  padding: 0.875rem 1.25rem;
+  font-size: 1rem;
+}
+
 /* Formularios */
 .form-group {
   margin-bottom: 1rem;

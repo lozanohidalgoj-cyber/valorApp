@@ -7,6 +7,7 @@ import Registro from './pages/Registro'
 import CambiarPassword from './pages/CambiarPassword'
 import GestionUsuarios from './pages/GestionUsuarios'
 import { useAuth } from './auth/AuthContext'
+import SaldoATR from './pages/SaldoATR'
 
 function useHashRoute() {
   const [route, setRoute] = useState<string>(() => location.hash || '#/')
@@ -29,6 +30,7 @@ function getPageTitle(route: string) {
   switch (route) {
     case '#/': return 'Lista de Registros'
     case '#/nuevo': return 'Nuevo Registro'
+  case '#/saldo-atr': return 'Saldo ATR'
   case '#/coordinador/cambiar-password': return 'Cambiar contraseña'
     default: return 'ValorApp'
   }
@@ -38,6 +40,19 @@ export default function App() {
   const route = useHashRoute()
   const { isAuthenticated, user, logout } = useAuth()
   const navigation = user?.role === 'coordinador' ? [...baseNavigation, coordinatorNav, coordinatorNavUsers] : baseNavigation
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('valorApp.sidebarOpen')
+      if (saved === '0') return false
+      if (saved === '1') return true
+      // Por defecto, colapsada en pantallas pequeñas
+      return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+    } catch { return true }
+  })
+
+  useEffect(() => {
+    try { localStorage.setItem('valorApp.sidebarOpen', sidebarOpen ? '1' : '0') } catch {}
+  }, [sidebarOpen])
 
   if (!isAuthenticated && route !== '#/login' && route !== '#/registro') {
     window.location.hash = '#/login'
@@ -59,7 +74,7 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
+  <aside className={`sidebar ${sidebarOpen ? '' : 'collapsed'}`} aria-hidden={!sidebarOpen}>
         <div className="sidebar-header">
           <h1 className="sidebar-title">ValorApp</h1>
           <p className="sidebar-subtitle">Valoración Energética</p>
@@ -77,6 +92,39 @@ export default function App() {
                 </a>
               </li>
             ))}
+            {user?.role === 'valorador' && (
+              <li className="sidebar-nav-item">
+                <a href="#/saldo-atr" className={`sidebar-nav-link ${route === '#/saldo-atr' ? 'active' : ''}`}>
+                  <span>📊</span>
+                  Saldo ATR
+                </a>
+              </li>
+            )}
+            {user?.role === 'valorador' && (
+              <li className="sidebar-nav-item">
+                <a
+                  href="#/"
+                  className="sidebar-nav-link"
+                  onClick={(e) => {
+                    if (route === '#/') {
+                      e.preventDefault()
+                      const open = (window as any).valorApp_openFile
+                      if (typeof open === 'function') {
+                        open()
+                      } else {
+                        try { window.dispatchEvent(new CustomEvent('valorApp:triggerImportATR')) } catch {}
+                      }
+                    } else {
+                      try { localStorage.setItem('valorApp.triggerImportATR', '1') } catch {}
+                      // Permitimos la navegación a '#/' y Lista abrirá el diálogo al montar
+                    }
+                  }}
+                >
+                  <span>📥</span>
+                  Importar ATR
+                </a>
+              </li>
+            )}
           </ul>
         </nav>
       </aside>
@@ -84,7 +132,17 @@ export default function App() {
       <div className="main-content">
         <header className="header">
           <div className="header-content">
-            <h2 className="header-title">{getPageTitle(route)}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => setSidebarOpen(s => !s)}
+                aria-label={sidebarOpen ? 'Ocultar menú lateral' : 'Mostrar menú lateral'}
+                title={sidebarOpen ? 'Ocultar menú lateral' : 'Mostrar menú lateral'}
+              >
+                {sidebarOpen ? '⟨⟨' : '☰'}
+              </button>
+              <h2 className="header-title" style={{ margin: 0 }}>{getPageTitle(route)}</h2>
+            </div>
             <div className="user-menu">
               <div className="user-info">
                 <span>👤</span>
@@ -104,6 +162,7 @@ export default function App() {
         <main className="content">
           {route === '#/' && <Lista />}
           {route === '#/nuevo' && <Nuevo />}
+          {route === '#/saldo-atr' && <SaldoATR />}
           {route === '#/coordinador/cambiar-password' && <CambiarPassword />}
           {route === '#/coordinador/usuarios' && <GestionUsuarios />}
         </main>
