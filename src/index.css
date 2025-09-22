@@ -44,6 +44,14 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Tema de aplicación (no afecta botones): Azul primario y acentos rosa */
+  --app-primary: #0000FF;
+  --app-primary-8: rgba(0, 0, 255, 0.08);
+  --app-primary-16: rgba(0, 0, 255, 0.16);
+  --app-accent: #FF4081;
+  --app-accent-12: rgba(255, 64, 129, 0.12);
+  --app-accent-24: rgba(255, 64, 129, 0.24);
 }
 
 * {
