@@ -66,8 +66,9 @@
 }
 
 .sidebar-nav-link.active {
-  background-color: var(--color-primary);
-  color: var(--text-inverse);
+  background-color: var(--app-primary-8);
+  color: var(--app-primary);
+  border-left: 3px solid var(--app-primary);
 }
 
 .main-content {
@@ -78,7 +79,7 @@
 
 .header {
   background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 2px solid var(--app-accent);
   padding: 1rem 2rem;
   box-shadow: var(--shadow-sm);
 }
