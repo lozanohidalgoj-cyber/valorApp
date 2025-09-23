@@ -132,6 +132,9 @@ export default function App() {
               </button>
             </div>
           </div>
+          <div className="brand-top-right" aria-label="Marca">
+            Ayesa
+          </div>
         </header>
 
         <main className="content">

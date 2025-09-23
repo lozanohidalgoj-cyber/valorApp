@@ -82,12 +82,22 @@
   border-bottom: 2px solid var(--app-accent);
   padding: 1rem 2rem;
   box-shadow: var(--shadow-sm);
+  position: relative;
 }
 
 .header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.brand-top-right {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-weight: 700;
+  color: var(--text-inverse);
+  letter-spacing: 0.5px;
 }
 
 .header-title {
@@ -141,8 +151,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Color Hu para la pantalla de login */
-  background: #62148c;
+  /* Fondo de login con azul corporativo */
+  background: var(--app-primary);
 }
 
 .login-card {
