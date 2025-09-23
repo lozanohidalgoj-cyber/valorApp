@@ -159,11 +159,12 @@
 .login-brand-top-right {
   position: absolute;
   top: 24px;
-  right: 32px;
-  font-weight: 700;
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 800;
   color: var(--text-inverse);
-  font-size: 1.25rem;
-  letter-spacing: 0.5px;
+  font-size: 2.2rem;
+  letter-spacing: 1px;
   z-index: 2;
 }
 

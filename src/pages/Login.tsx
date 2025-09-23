@@ -75,7 +75,7 @@ export default function Login() {
             type="submit" 
             className="btn btn-primary" 
             disabled={loading}
-            style={{ width: '100%' }}
+            style={{ width: '100%', background: '#FF4081', borderColor: '#FF4081', color: '#fff' }}
           >
             {loading ? 'Ingresando…' : 'Iniciar Sesión'}
           </button>
