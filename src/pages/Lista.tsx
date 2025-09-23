@@ -34,63 +34,7 @@ export default function Lista() {
     window.addEventListener('valorApp:triggerImportATR' as any, onEvt as any)
     // Exponer apertura directa para mantener el gesto de usuario desde el menú
     ;(window as any).valorApp_openFile = () => triggerImport()
-    return () => {
-      window.removeEventListener('valorApp:triggerImportATR' as any, onEvt as any)
-      try { delete (window as any).valorApp_openFile } catch {}
-    }
-  }, [])
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImportError(null)
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        const text = String(reader.result || '')
-        const lines = text.split(/\r?\n/).filter(l => l.trim().length)
-        if (!lines.length) throw new Error('Archivo vacío')
-        const headerRaw = lines[0]
-        const headerCols = headerRaw.split(';').map(h => h.replace(/^"|"$/g, '').trim())
-        const expected = ATR_SALDO_EXPECTED_HEADERS
-        const mismatch = expected.some((h, idx) => headerCols[idx] !== h)
-        if (mismatch || headerCols.length !== expected.length) {
-          throw new Error('Formato de cabecera inválido. Se esperaba: ' + expected.join('; '))
-        }
-        const rowsParsed = [] as ReturnType<typeof mapToATRSaldoRow>[]
-        for (let i = 1; i < lines.length; i++) {
-          const raw = lines[i]
-          if (!raw.trim()) continue
-            const cols = raw.split(';').map(c => c.replace(/^"|"$/g, '').trim())
-          const mapped = mapToATRSaldoRow(cols)
-          if (!mapped) {
-            throw new Error(`Fila ${i + 1} inválida (columnas o números mal formateados).`)
-          }
-          rowsParsed.push(mapped)
-        }
-  setSaldoATR(rowsParsed as any)
-  setShowSaldo(true)
-  setSaldoSelection(new Set())
-  // Llevar al usuario a la pantalla de revisión completa del saldo
-  window.location.hash = '#/saldo-atr'
-      } catch (err: any) {
-        setImportError(err.message || 'Error importando archivo')
-      } finally {
-        // Reset para permitir reimportar el mismo archivo
-        if (fileInputRef.current) fileInputRef.current.value = ''
-      }
-    }
-    reader.onerror = () => {
-      setImportError('No se pudo leer el archivo')
-    }
-    reader.readAsText(file, 'utf-8')
-  }
-
-  function toggleRowSelection(idx: number) {
-    setSaldoSelection(prev => {
-      const next = new Set(prev)
-      if (next.has(idx)) next.delete(idx)
-      else next.add(idx)
+      // Panel Saldo ATR importado eliminado
       return next
     })
   }
