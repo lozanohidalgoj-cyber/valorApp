@@ -153,6 +153,18 @@
   justify-content: center;
   /* Fondo de login con azul corporativo */
   background: var(--app-primary);
+  position: relative;
+}
+
+.login-brand-top-right {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  font-weight: 700;
+  color: var(--text-inverse);
+  font-size: 1.25rem;
+  letter-spacing: 0.5px;
+  z-index: 2;
 }
 
 .login-card {

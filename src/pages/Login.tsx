@@ -24,6 +24,7 @@ export default function Login() {
 
   return (
     <div className="login-container">
+      <div className="login-brand-top-right">Ayesa</div>
       <div className="login-card">
         <div className="login-header">
           <h1 className="login-title">ValorApp</h1>
