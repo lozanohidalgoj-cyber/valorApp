@@ -116,7 +116,9 @@ export default function App() {
                 {sidebarOpen ? '⟨⟨' : '☰'}
               </button>
               <img src="/assets/importar-atr-icon.png" alt="Importar ATR" style={{ width: '24px', height: '24px' }} />
-              <h2 className="header-title" style={{ margin: 0 }}>{getPageTitle(route)}</h2>
+              {route !== '#/' && (
+                <h2 className="header-title" style={{ margin: 0 }}>{getPageTitle(route)}</h2>
+              )}
             </div>
             <div className="user-menu">
               <div className="user-info">
