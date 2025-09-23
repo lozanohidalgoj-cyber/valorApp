@@ -232,6 +232,20 @@ input:focus, select:focus, textarea:focus {
   box-shadow: var(--shadow-sm);
 }
 
+/* Acentos sutiles con el color primario y acento de la app */
+.table-container .active-row td {
+  background: var(--app-primary-8);
+}
+.tag-accent {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 12px;
+  background: var(--app-accent-12);
+  color: var(--app-accent);
+  border: 1px solid var(--app-accent-24);
+}
+
 /* Contenedor con scroll y encabezado fijo */
 .table-sticky {
   overflow: auto;
