@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, ChangeEvent } from 'react'
 import { useStore } from '../state/store'
 import { ATR_SALDO_EXPECTED_HEADERS, mapToATRSaldoRow } from '../types/atr'
 
@@ -21,7 +21,7 @@ export default function Lista() {
     fileInputRef.current?.click()
   }
 
-  // Si venimos desde el botón de la barra lateral, abrir el diálogo automáticamente
+  // Auto-apertura del diálogo de importación si se dejó una bandera en localStorage
   useEffect(() => {
     try {
       const flag = localStorage.getItem('valorApp.triggerImportATR')
@@ -32,11 +32,50 @@ export default function Lista() {
     } catch {}
     const onEvt = () => triggerImport()
     window.addEventListener('valorApp:triggerImportATR' as any, onEvt as any)
-    // Exponer apertura directa para mantener el gesto de usuario desde el menú
-    ;(window as any).valorApp_openFile = () => triggerImport()
-      // Panel Saldo ATR importado eliminado
+    ;(window as any).valorApp_openFile = triggerImport
+    return () => {
+      window.removeEventListener('valorApp:triggerImportATR' as any, onEvt as any)
+      if ((window as any).valorApp_openFile) delete (window as any).valorApp_openFile
+    }
+  }, [])
+
+  function toggleRowSelection(i: number) {
+    setSaldoSelection(prev => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
       return next
     })
+  }
+
+  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0)
+      if (!lines.length) {
+        setImportError('El archivo está vacío')
+        return
+      }
+      const header = lines[0].split(';').map(h => h.trim())
+      // Validar cabeceras mínimas esperadas (subset)
+      const faltantes = ATR_SALDO_EXPECTED_HEADERS.filter(h => !header.includes(h))
+      if (faltantes.length) {
+        setImportError('Cabeceras faltantes: ' + faltantes.join(', '))
+        return
+      }
+      const rows = lines.slice(1).map(l => mapToATRSaldoRow(l.split(';'))).filter(Boolean) as any[]
+      setSaldoATR(rows as any)
+      setImportError(`${rows.length} fila(s) importadas correctamente`)
+      setShowSaldo(true)
+      setTimeout(() => setImportError(null), 3000)
+    } catch (err: any) {
+      setImportError('Error leyendo CSV: ' + (err?.message || 'desconocido'))
+    } finally {
+      // limpiar input para permitir re-importar el mismo archivo
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
 
