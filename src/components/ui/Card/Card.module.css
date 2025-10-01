@@ -1,0 +1,21 @@
+.card {
+  background-color: var(--bg-primary);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+}
+
+.card > *:not(.header) {
+  padding: 1.5rem;
+}
+
+.card > *:not(.header):not(:last-child) {
+  border-bottom: 1px solid var(--border-color);
+}

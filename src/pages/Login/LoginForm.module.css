@@ -1,0 +1,62 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.checkboxGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-primary);
+}
+
+.checkboxLabel {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.errorMessage {
+  padding: 0.75rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--border-radius);
+  color: var(--color-error);
+  font-size: 0.875rem;
+}
+
+.submitButton {
+  width: 100%;
+  background-color: #FF4081;
+  border-color: #FF4081;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: #e91e63;
+  border-color: #e91e63;
+}
+
+.registerLink {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.linkButton:hover {
+  color: var(--color-primary-light);
+}

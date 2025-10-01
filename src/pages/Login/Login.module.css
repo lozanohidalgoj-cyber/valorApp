@@ -1,0 +1,45 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0040FF 0%, #2563eb 100%);
+  padding: 2rem;
+  position: relative;
+}
+
+.brand {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  font-weight: bold;
+  color: white;
+  font-size: 3rem;
+  text-transform: lowercase;
+  font-family: Arial, sans-serif;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 40px rgba(0, 64, 255, 0.3);
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .brand {
+    top: 1rem;
+    right: 1rem;
+    font-size: 2rem;
+  }
+  
+  .card {
+    padding: 1.5rem;
+  }
+}

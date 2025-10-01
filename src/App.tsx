@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import Lista from './pages/Lista'
-import Nuevo from './pages/Nuevo'
-import Login from './pages/Login'
+import { Dashboard } from './pages/Dashboard'
+import { Login } from './pages/Login/Login'
 import Registro from './pages/Registro'
 import CambiarPassword from './pages/CambiarPassword'
 import GestionUsuarios from './pages/GestionUsuarios'
-import { useAuth } from './auth/AuthContext'
+import { useAuth } from './auth/AuthContextNew'
 import SaldoATR from './pages/SaldoATR'
 
 function useHashRoute() {
@@ -20,17 +19,17 @@ function useHashRoute() {
 }
 
 const baseNavigation = [
-  { id: 'lista', hash: '#/', label: 'Importar ATR', icon: '�' }
+  { id: 'dashboard', hash: '#/', label: 'Dashboard', icon: '📊' }
 ]
 const coordinatorNav = { id: 'cambiarPass', hash: '#/coordinador/cambiar-password', label: 'Cambiar contraseña', icon: '🔐' }
 const coordinatorNavUsers = { id: 'gestionUsuarios', hash: '#/coordinador/usuarios', label: 'Gestión de usuarios', icon: '👥' }
 
 function getPageTitle(route: string) {
   switch (route) {
-  case '#/': return 'Importar ATR'
-  // Ruta de nuevo registro eliminada
-  case '#/saldo-atr': return 'Saldo ATR'
-  case '#/coordinador/cambiar-password': return 'Cambiar contraseña'
+    case '#/': return 'Dashboard ATR'
+    case '#/saldo-atr': return 'Saldo ATR'
+    case '#/coordinador/cambiar-password': return 'Cambiar contraseña'
+    case '#/coordinador/usuarios': return 'Gestión de Usuarios'
     default: return 'ValorApp'
   }
 }
@@ -46,11 +45,17 @@ export default function App() {
       if (saved === '1') return true
       // Por defecto, colapsada en pantallas pequeñas
       return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
-    } catch { return true }
+    } catch { 
+      return true 
+    }
   })
 
   useEffect(() => {
-    try { localStorage.setItem('valorApp.sidebarOpen', sidebarOpen ? '1' : '0') } catch {}
+    try { 
+      localStorage.setItem('valorApp.sidebarOpen', sidebarOpen ? '1' : '0') 
+    } catch {
+      // Ignore localStorage errors
+    }
   }, [sidebarOpen])
 
   if (!isAuthenticated && route !== '#/login' && route !== '#/registro') {
@@ -134,14 +139,10 @@ export default function App() {
               </button>
             </div>
           </div>
-          <div className="brand-top-right" aria-label="Marca">
-            Ayesa
-          </div>
         </header>
 
         <main className="content">
-          {route === '#/' && <Lista />}
-          {/* Ruta '#/nuevo' eliminada */}
+          {route === '#/' && <Dashboard />}
           {route === '#/saldo-atr' && <SaldoATR />}
           {route === '#/coordinador/cambiar-password' && <CambiarPassword />}
           {route === '#/coordinador/usuarios' && <GestionUsuarios />}

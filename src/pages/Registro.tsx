@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/AuthContextNew'
 
 export default function Registro() {
   const { register } = useAuth()

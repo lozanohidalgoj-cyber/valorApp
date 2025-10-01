@@ -1,58 +1,6 @@
-/* Variables CSS para tema corporativo */
-:root {
-  /* Colores corporativos */
-  --color-primary: #1f4788;
-  --color-primary-light: #2563eb;
-  --color-primary-dark: #1e3a5f;
-  --color-secondary: #64748b;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-error: #dc2626;
-  
-  /* Grises corporativos */
-  --color-gray-50: #f8fafc;
-  --color-gray-100: #f1f5f9;
-  --color-gray-200: #e2e8f0;
-  --color-gray-300: #cbd5e1;
-  --color-gray-400: #94a3b8;
-  --color-gray-500: #64748b;
-  --color-gray-600: #475569;
-  --color-gray-700: #334155;
-  --color-gray-800: #1e293b;
-  --color-gray-900: #0f172a;
-  
-  /* Fondos y textos */
-  --bg-primary: #ffffff;
-  --bg-secondary: var(--color-gray-50);
-  --bg-sidebar: var(--color-gray-900);
-  --text-primary: var(--color-gray-900);
-  --text-secondary: var(--color-gray-600);
-  --text-muted: var(--color-gray-500);
-  --text-inverse: #ffffff;
-  
-  /* Bordes y sombras */
-  --border-color: var(--color-gray-200);
-  --border-radius: 8px;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  
-  /* Tipografía */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  line-height: 1.6;
-  font-weight: 400;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  /* Tema de aplicación (no afecta botones): Azul primario y acentos rosa */
-  --app-primary: #0000FF;
-  --app-primary-8: rgba(0, 0, 255, 0.08);
-  --app-primary-16: rgba(0, 0, 255, 0.16);
-  --app-accent: #FF4081;
-  --app-accent-12: rgba(255, 64, 129, 0.12);
-  --app-accent-24: rgba(255, 64, 129, 0.24);
-}
+/* Import design tokens and utilities */
+@import './styles/tokens.css';
+@import './styles/utilities.css';
 
 * {
   box-sizing: border-box;

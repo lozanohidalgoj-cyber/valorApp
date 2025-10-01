@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/AuthContextNew'
 
 export default function CambiarPassword() {
   const { user, changePassword } = useAuth()

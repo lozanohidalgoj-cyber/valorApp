@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Role, useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/AuthContextNew'
+import { Role } from '../services/auth'
 
 export default function GestionUsuarios() {
   const { user, listUsers, setUserRole, removeUser, adminCreateUser, changePassword } = useAuth()
