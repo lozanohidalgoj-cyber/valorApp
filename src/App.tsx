@@ -159,10 +159,19 @@ export default function App() {
           {route === '#/' && (
             showWelcome ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
-                <WelcomeScreen onSelectGestion={(tipo) => { 
-                  console.log('Gestión seleccionada:', tipo)
-                  dismissWelcome()
-                }} />
+                <WelcomeScreen 
+                  onSelectGestion={(tipo) => { 
+                    console.log('Gestión seleccionada:', tipo)
+                    if (tipo === 'fraude') {
+                      // Si es fraude cerramos de inmediato
+                      dismissWelcome()
+                    }
+                  }}
+                  onSelectSubtipoAveria={(sub) => {
+                    console.log('Subtipo avería seleccionado:', sub)
+                    dismissWelcome()
+                  }}
+                />
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                   <button className="btn btn-primary" onClick={dismissWelcome}>
                     Continuar ➜
