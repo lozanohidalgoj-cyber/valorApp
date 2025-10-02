@@ -1,2 +1,2 @@
-export { Dashboard } from './Dashboard'
+export { Valoracion } from './Dashboard'
 export { useDashboard } from './useDashboard'

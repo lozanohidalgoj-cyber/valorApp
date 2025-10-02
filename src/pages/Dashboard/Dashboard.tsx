@@ -7,7 +7,7 @@ import { SaldoATRPanel } from './SaldoATRPanel'
 import { useDashboard } from './useDashboard'
 import styles from './Dashboard.module.css'
 
-export const Dashboard: React.FC = () => {
+export const Valoracion: React.FC = () => {
   const {
     registros,
     saldoATR,
@@ -38,7 +38,7 @@ export const Dashboard: React.FC = () => {
           <div className={styles.emptyIcon}>📊</div>
           <h3 className={styles.emptyTitle}>No hay registros aún</h3>
           <p className={styles.emptyMessage}>
-            Importe un archivo CSV con saldo ATR para comenzar a valorar el consumo energético.
+            Importe un archivo CSV con saldo ATR para comenzar la valoración energética.
           </p>
           
           <div className={styles.emptyActions}>
@@ -88,7 +88,7 @@ export const Dashboard: React.FC = () => {
         onFilterChange={updateFilter}
         onClearFilters={clearFilters}
         onClearAll={clearAllRegistros}
-        hasActiveFilters={false} // Will be updated when implementing filters count
+        hasActiveFilters={false}
       />
 
       {/* Main content */}
@@ -124,14 +124,12 @@ export const Dashboard: React.FC = () => {
           </div>
         </CardHeader>
 
-        {/* Error message */}
         {importError && (
           <div className={styles.alert}>
             ⚠️ {importError}
           </div>
         )}
 
-        {/* Saldo ATR Panel */}
         <SaldoATRPanel
           saldoData={saldoATR}
           selection={saldoSelection}
@@ -143,7 +141,6 @@ export const Dashboard: React.FC = () => {
           onFiltersChange={setSaldoFilters}
         />
 
-        {/* ATR Table */}
         <ATRTable registros={registros} />
       </Card>
     </div>

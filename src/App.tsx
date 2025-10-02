@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { Dashboard } from './pages/Dashboard'
+import { Valoracion } from './pages/Dashboard'
 import { Login } from './pages/Login/Login'
 import Registro from './pages/Registro'
 import CambiarPassword from './pages/CambiarPassword'
@@ -20,14 +20,14 @@ function useHashRoute() {
 }
 
 const baseNavigation = [
-  { id: 'dashboard', hash: '#/', label: 'Dashboard', icon: '📊' }
+  { id: 'dashboard', hash: '#/', label: 'Valoración', icon: '📊' }
 ]
 const coordinatorNav = { id: 'cambiarPass', hash: '#/coordinador/cambiar-password', label: 'Cambiar contraseña', icon: '🔐' }
 const coordinatorNavUsers = { id: 'gestionUsuarios', hash: '#/coordinador/usuarios', label: 'Gestión de usuarios', icon: '👥' }
 
 function getPageTitle(route: string) {
   switch (route) {
-    case '#/': return 'Dashboard ATR'
+    case '#/': return 'Valoración'
     case '#/saldo-atr': return 'Saldo ATR'
     case '#/coordinador/cambiar-password': return 'Cambiar contraseña'
     case '#/coordinador/usuarios': return 'Gestión de Usuarios'
@@ -179,7 +179,7 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <Dashboard />
+              <Valoracion />
             )
           )}
           {route === '#/saldo-atr' && <SaldoATR />}
