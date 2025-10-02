@@ -7,6 +7,7 @@ import CambiarPassword from './pages/CambiarPassword'
 import GestionUsuarios from './pages/GestionUsuarios'
 import { useAuth } from './auth/AuthContextNew'
 import SaldoATR from './pages/SaldoATR'
+import { WelcomeScreen } from './pages/Welcome/WelcomeScreen'
 
 function useHashRoute() {
   const [route, setRoute] = useState<string>(() => location.hash || '#/')
@@ -49,6 +50,14 @@ export default function App() {
       return true 
     }
   })
+  const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+    try {
+      const seen = localStorage.getItem('valorApp.welcome.seen')
+      return seen !== '1'
+    } catch {
+      return true
+    }
+  })
 
   useEffect(() => {
     try { 
@@ -57,6 +66,11 @@ export default function App() {
       // Ignore localStorage errors
     }
   }, [sidebarOpen])
+
+  const dismissWelcome = () => {
+    try { localStorage.setItem('valorApp.welcome.seen', '1') } catch {}
+    setShowWelcome(false)
+  }
 
   if (!isAuthenticated && route !== '#/login' && route !== '#/registro') {
     window.location.hash = '#/login'
@@ -141,8 +155,24 @@ export default function App() {
           </div>
         </header>
 
-        <main className="content">
-          {route === '#/' && <Dashboard />}
+        <main className={`content ${showWelcome && route === '#/' ? 'welcome-active' : ''}`}>
+          {route === '#/' && (
+            showWelcome ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+                <WelcomeScreen onSelectGestion={(tipo) => { 
+                  console.log('Gestión seleccionada:', tipo)
+                  dismissWelcome()
+                }} />
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                  <button className="btn btn-primary" onClick={dismissWelcome}>
+                    Continuar ➜
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Dashboard />
+            )
+          )}
           {route === '#/saldo-atr' && <SaldoATR />}
           {route === '#/coordinador/cambiar-password' && <CambiarPassword />}
           {route === '#/coordinador/usuarios' && <GestionUsuarios />}

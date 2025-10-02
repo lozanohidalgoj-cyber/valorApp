@@ -261,6 +261,18 @@
   color: var(--text-muted);
 }
 
+/* Fondo completo para la pantalla de bienvenida */
+.content.welcome-active {
+  padding: 0; /* sin padding para ocupar todo */
+  display: flex;
+}
+
+.content.welcome-active > div { /* el contenedor de WelcomeScreen */
+  flex: 1;
+  border-radius: 0; /* quitar esquinas */
+  min-height: 100%;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .app-layout {
