@@ -3,7 +3,6 @@ export const STORAGE_KEYS = {
   AUTH: 'valorApp.auth',
   USERS: 'valorApp.users',
   REGISTROS: 'valorApp.registros',
-  SALDO_ATR: 'valorApp.saldoATR',
   TRIGGER_IMPORT: 'valorApp.triggerImportATR',
 } as const
 
@@ -32,7 +31,6 @@ export const ROUTES = {
   LOGIN: '#/login',
   REGISTER: '#/registro',
   NEW_RECORD: '#/nuevo',
-  SALDO_ATR: '#/saldo-atr',
   CHANGE_PASSWORD: '#/coordinador/cambiar-password',
   USER_MANAGEMENT: '#/coordinador/usuarios',
 } as const

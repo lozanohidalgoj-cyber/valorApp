@@ -104,7 +104,6 @@ export function useATRData(options: UseATRDataOptions = {}) {
     // Data
     registros: filteredRegistros,
     allRegistros: store.registros,
-    saldoATR: store.saldoATR,
     
     // State
     isLoading: store.isLoading,
@@ -119,7 +118,6 @@ export function useATRData(options: UseATRDataOptions = {}) {
     addRegistro,
     removeRegistro,
     clearAllRegistros,
-    setSaldoATR: store.setSaldoATR,
     validateRegistro: store.validateRegistro,
     generateId: store.generateId,
   }

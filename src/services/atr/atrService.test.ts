@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ATRService } from './atrService'
-import type { ATRRegistro, ATRSaldoRow } from '../../types/atr'
+import type { ATRRegistro } from '../../types/atr'
 
 // Mock localStorage service
 const mockLocalStorageService = {
@@ -115,32 +115,6 @@ describe('ATRService', () => {
     })
   })
 
-  describe('loadSaldoATR', () => {
-    it('returns saldo ATR from storage', () => {
-      const mockSaldo: ATRSaldoRow[] = [
-        { 
-          cups: 'ES001234567890123456XX',
-          contratoATR: 'ATR123',
-          fechaDesde: '01/01/2024',
-          fechaHasta: '31/01/2024',
-          consumoTotalActivaKWh: 300,
-          fuenteAgregada: 'Telemedida',
-          estadoMedida: 'Firme',
-          potenciaKW: 5.75,
-          codigoFactura: 'F001',
-          tipoFactura: 'Estimada',
-          estadoFactura: 'Pendiente',
-          numeroSerieContador: 'CTR123456',
-          fechaEnvioAFacturar: '01/02/2024 10:00',
-          autoFactura: 'No'
-        }
-      ]
-      mockLocalStorageService.get.mockReturnValue(mockSaldo)
-
-      const result = atrService.loadSaldoATR()
-      expect(result).toEqual(mockSaldo)
-    })
-  })
 
   describe('generateId', () => {
     it('generates UUID when available', () => {

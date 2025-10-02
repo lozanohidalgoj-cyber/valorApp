@@ -30,39 +30,6 @@ export interface Valoracion {
 }
 
 // Estructura de filas del saldo ATR importado desde CSV ejemplos/ATR.csv
-export interface ATRSaldoRow {
-  cups: string
-  contratoATR: string
-  fechaDesde: string // dd/mm/yyyy
-  fechaHasta: string // dd/mm/yyyy
-  consumoTotalActivaKWh: number
-  fuenteAgregada: string
-  estadoMedida: string
-  potenciaKW: number
-  codigoFactura: string
-  tipoFactura: string
-  estadoFactura: string
-  numeroSerieContador: string
-  fechaEnvioAFacturar: string // dd/mm/yyyy HH:mm o '-'
-  autoFactura: string
-}
-
-export const ATR_SALDO_EXPECTED_HEADERS: string[] = [
-  'CUPS',
-  'Contrato ATR',
-  'Fecha desde',
-  'Fecha hasta',
-  'Consumo total activa',
-  'Fuente agregada',
-  'Estado medida',
-  'Potencia (kW)',
-  'Código factura',
-  'Tipo de factura',
-  'Estado factura',
-  'Número de serie del contador',
-  'Fecha de envío a facturar',
-  'Autofactura'
-]
 
 // Utilidad para convertir valores numéricos con separador de miles "." y decimal ","
 export function parseLocaleNumberES(input: string): number {
@@ -71,41 +38,3 @@ export function parseLocaleNumberES(input: string): number {
   return Number.isFinite(n) ? n : NaN
 }
 
-export function mapToATRSaldoRow(cols: string[]): ATRSaldoRow | null {
-  if (cols.length !== ATR_SALDO_EXPECTED_HEADERS.length) return null
-  const [
-    cups,
-    contratoATR,
-    fechaDesde,
-    fechaHasta,
-    consumoTotalActivaStr,
-    fuenteAgregada,
-    estadoMedida,
-    potenciaKWStr,
-    codigoFactura,
-    tipoFactura,
-    estadoFactura,
-    numeroSerieContador,
-    fechaEnvioAFacturar,
-    autoFactura
-  ] = cols
-  const consumoTotalActivaKWh = parseLocaleNumberES(consumoTotalActivaStr)
-  const potenciaKW = parseLocaleNumberES(potenciaKWStr)
-  if (Number.isNaN(consumoTotalActivaKWh) || Number.isNaN(potenciaKW)) return null
-  return {
-    cups,
-    contratoATR,
-    fechaDesde,
-    fechaHasta,
-    consumoTotalActivaKWh,
-    fuenteAgregada,
-    estadoMedida,
-    potenciaKW,
-    codigoFactura,
-    tipoFactura,
-    estadoFactura,
-    numeroSerieContador,
-    fechaEnvioAFacturar,
-    autoFactura
-  }
-}

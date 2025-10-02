@@ -151,8 +151,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Fondo de login con azul corporativo */
-  background: var(--app-primary);
+  /* Fondo de login azul intenso */
+  background: linear-gradient(135deg, #004c97 0%, #0066cc 60%, #0088ff 100%);
   position: relative;
 }
 
@@ -160,20 +160,23 @@
   position: absolute;
   top: 24px;
   right: 32px;
-  font-weight: 800;
-  color: var(--text-inverse);
-  font-size: 2.2rem;
-  letter-spacing: 1px;
-  z-index: 2;
+  font-weight: 900;
+  color: #ffffff;
+  font-size: 3.5rem;
+  letter-spacing: 2px;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  z-index: 3;
+  font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
 .login-card {
-  background-color: var(--bg-primary);
+  background: rgba(255,255,255,0.08);
   padding: 3rem;
   border-radius: 12px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 24px -4px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08) inset;
   width: 100%;
   max-width: 400px;
+  backdrop-filter: blur(10px) saturate(140%);
 }
 
 .login-header {
@@ -182,15 +185,18 @@
 }
 
 .login-title {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #ffffff;
   margin-bottom: 0.5rem;
+  letter-spacing: 1px;
 }
 
 .login-subtitle {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
+  color: rgba(255,255,255,0.85);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
 .login-form {

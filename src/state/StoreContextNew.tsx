@@ -1,37 +1,28 @@
 import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react'
-import { ATRRegistro, ATRSaldoRow } from '../types/atr'
+import { ATRRegistro } from '../types/atr'
 import { atrService } from '../services/atr'
 
 // Action types
 type StoreAction =
   | { type: 'INIT_REGISTROS'; payload: ATRRegistro[] }
-  | { type: 'INIT_SALDO_ATR'; payload: ATRSaldoRow[] }
   | { type: 'ADD_REGISTRO'; payload: ATRRegistro }
   | { type: 'REMOVE_REGISTRO'; payload: string }
   | { type: 'CLEAR_REGISTROS' }
-  | { type: 'SET_SALDO_ATR'; payload: ATRSaldoRow[] }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
 
 // Enhanced state
 interface StoreState {
   registros: ATRRegistro[]
-  saldoATR: ATRSaldoRow[]
   isLoading: boolean
   error: string | null
 }
 
 // Context type
 interface StoreContextType extends StoreState {
-  // Registro operations
   add: (registro: ATRRegistro) => void
   remove: (id: string) => void
   clear: () => void
-  
-  // Saldo ATR operations
-  setSaldoATR: (rows: ATRSaldoRow[]) => void
-  
-  // Helper methods
   searchRegistros: (query: string, gestionFilter?: string, valorTipoFilter?: string) => ATRRegistro[]
   getTotalKWh: () => number
   validateRegistro: (registro: Partial<ATRRegistro>) => string[]
@@ -41,7 +32,6 @@ interface StoreContextType extends StoreState {
 // Initial state
 const initialState: StoreState = {
   registros: [],
-  saldoATR: [],
   isLoading: false,
   error: null,
 }
@@ -67,12 +57,6 @@ const storeReducer = (state: StoreState, action: StoreAction): StoreState => {
       }
       break
 
-    case 'INIT_SALDO_ATR':
-      newState = {
-        ...state,
-        saldoATR: action.payload,
-      }
-      break
 
     case 'ADD_REGISTRO':
       newState = {
@@ -98,12 +82,6 @@ const storeReducer = (state: StoreState, action: StoreAction): StoreState => {
       }
       break
 
-    case 'SET_SALDO_ATR':
-      newState = {
-        ...state,
-        saldoATR: atrService.setSaldoATR(action.payload),
-      }
-      break
 
     case 'SET_LOADING':
       newState = {
@@ -145,11 +123,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true })
       
-      const registros = atrService.loadRegistros()
-      const saldoATR = atrService.loadSaldoATR()
-      
-      dispatch({ type: 'INIT_REGISTROS', payload: registros })
-      dispatch({ type: 'INIT_SALDO_ATR', payload: saldoATR })
+  const registros = atrService.loadRegistros()
+  dispatch({ type: 'INIT_REGISTROS', payload: registros })
     } catch (error) {
       dispatch({ 
         type: 'SET_ERROR', 
@@ -198,16 +173,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const setSaldoATR = (rows: ATRSaldoRow[]): void => {
-    try {
-      dispatch({ type: 'SET_SALDO_ATR', payload: rows })
-    } catch (error) {
-      dispatch({ 
-        type: 'SET_ERROR', 
-        payload: error instanceof Error ? error.message : 'Error guardando saldo ATR' 
-      })
-    }
-  }
 
   // Helper methods (memoized to avoid re-creation)
   const searchRegistros = useMemo(() => 
@@ -235,7 +200,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const contextValue = useMemo<StoreContextType>(() => ({
     // State
     registros: state.registros,
-    saldoATR: state.saldoATR,
+    
     isLoading: state.isLoading,
     error: state.error,
     
@@ -243,7 +208,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     add,
     remove,
     clear,
-    setSaldoATR,
     
     // Helper methods
     searchRegistros,

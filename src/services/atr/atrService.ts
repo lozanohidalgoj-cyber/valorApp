@@ -1,4 +1,4 @@
-import { ATRRegistro, ATRSaldoRow } from '../../types/atr'
+import { ATRRegistro } from '../../types/atr'
 import { STORAGE_KEYS } from '../../constants'
 import { localStorageService } from '../storage'
 
@@ -53,33 +53,6 @@ export class ATRService {
   clearRegistros(): ATRRegistro[] {
     this.saveRegistros([])
     return []
-  }
-
-  /**
-   * Load saldo ATR from storage
-   */
-  loadSaldoATR(): ATRSaldoRow[] {
-    try {
-      const saldoATR = this.storageService.get<ATRSaldoRow[]>(STORAGE_KEYS.SALDO_ATR)
-      return saldoATR ?? []
-    } catch {
-      return []
-    }
-  }
-
-  /**
-   * Save saldo ATR to storage
-   */
-  saveSaldoATR(saldoATR: ATRSaldoRow[]): void {
-    this.storageService.set(STORAGE_KEYS.SALDO_ATR, saldoATR)
-  }
-
-  /**
-   * Set saldo ATR data
-   */
-  setSaldoATR(saldoATR: ATRSaldoRow[]): ATRSaldoRow[] {
-    this.saveSaldoATR(saldoATR)
-    return saldoATR
   }
 
   /**

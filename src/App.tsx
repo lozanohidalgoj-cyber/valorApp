@@ -6,7 +6,6 @@ import Registro from './pages/Registro'
 import CambiarPassword from './pages/CambiarPassword'
 import GestionUsuarios from './pages/GestionUsuarios'
 import { useAuth } from './auth/AuthContextNew'
-import SaldoATR from './pages/SaldoATR'
 import { WelcomeScreen } from './pages/Welcome/WelcomeScreen'
 
 function useHashRoute() {
@@ -28,7 +27,6 @@ const coordinatorNavUsers = { id: 'gestionUsuarios', hash: '#/coordinador/usuari
 function getPageTitle(route: string) {
   switch (route) {
     case '#/': return 'Valoración'
-    case '#/saldo-atr': return 'Saldo ATR'
     case '#/coordinador/cambiar-password': return 'Cambiar contraseña'
     case '#/coordinador/usuarios': return 'Gestión de Usuarios'
     default: return 'ValorApp'
@@ -110,14 +108,6 @@ export default function App() {
                 </a>
               </li>
             ))}
-            {user?.role === 'valorador' && (
-              <li className="sidebar-nav-item">
-                <a href="#/saldo-atr" className={`sidebar-nav-link ${route === '#/saldo-atr' ? 'active' : ''}`}>
-                  <span>📊</span>
-                  Saldo ATR
-                </a>
-              </li>
-            )}
           </ul>
         </nav>
       </aside>
@@ -182,7 +172,6 @@ export default function App() {
               <Valoracion />
             )
           )}
-          {route === '#/saldo-atr' && <SaldoATR />}
           {route === '#/coordinador/cambiar-password' && <CambiarPassword />}
           {route === '#/coordinador/usuarios' && <GestionUsuarios />}
         </main>
