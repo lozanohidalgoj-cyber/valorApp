@@ -10,6 +10,11 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: true,
     reporters: ['verbose'],
+    include: [
+      'src/**/*.{test,spec}.{ts,tsx}',
+      'src/test/**/*.{test,spec}.{ts,tsx}',
+      'src/**/__tests__/**/*.{ts,tsx}'
+    ],
     coverage: {
       reporter: ['text', 'json', 'html'],
       include: [
@@ -17,7 +22,6 @@ export default defineConfig({
       ],
       exclude: [
         'node_modules/',
-        'src/test/',
         '**/*.d.ts',
         '**/*.config.*',
         '**/index.ts'
