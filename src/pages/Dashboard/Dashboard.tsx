@@ -52,18 +52,181 @@ export const Valoracion: React.FC = () => {
     }
   }, [stats, registros])
 
+  const [showAveriaSubs, setShowAveriaSubs] = useState(false)
+
   // Empty state - no registros at all
   if (!stats.total) {
     return (
-      <Card className={styles.emptyCard}>
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📊</div>
-          <h3 className={styles.emptyTitle}>No hay registros aún</h3>
-          <p className={styles.emptyMessage}>
-            Aún no existen registros para valorar. Cuando se carguen datos aparecerán aquí.
-          </p>
-        </div>
-      </Card>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 120px)',
+        width: '100%',
+        padding: '2rem 1.5rem',
+        background: '#0000FF'
+      }}>
+        <h1 style={{
+          fontSize: '3.5rem',
+          margin: '0 0 1.5rem',
+          fontWeight: 800,
+          letterSpacing: '1px',
+          color: '#FFFFFF',
+          textAlign: 'center'
+        }}>
+          Bienvenido a ValorApp
+        </h1>
+        <p style={{
+          fontSize: '1.75rem',
+          margin: '0 0 3rem',
+          fontWeight: 500,
+          color: '#FFFFFF',
+          textAlign: 'center'
+        }}>
+          ¿Qué gestión desea realizar?
+        </p>
+        {!showAveriaSubs && (
+          <div style={{
+            display: 'flex',
+            gap: '2.5rem',
+            justifyContent: 'center',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              type="button"
+              onClick={() => console.log('fraude')}
+              style={{
+                background: 'linear-gradient(135deg,#FF1493 0%,#ff3fab 40%,#ff66c0 100%)',
+                color: '#FFFFFF',
+                border: '2px solid #ff8ccd',
+                padding: '1.4rem 3.6rem',
+                fontSize: '1.6rem',
+                fontWeight: 800,
+                borderRadius: '22px',
+                boxShadow: '0 18px 40px -14px rgba(255,20,147,0.6), 0 0 0 2px rgba(255,255,255,0.15) inset',
+                cursor: 'pointer',
+                letterSpacing: '1.2px',
+                textTransform: 'uppercase',
+                transition: 'transform .25s ease, box-shadow .25s ease'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform='translateY(-4px)')}
+              onMouseLeave={e => (e.currentTarget.style.transform='translateY(0)')}
+            >FRAUDE</button>
+            <button
+              type="button"
+              onClick={() => setShowAveriaSubs(true)}
+              style={{
+                background: 'linear-gradient(135deg,#00a846 0%,#00c55a 45%,#00e46c 100%)',
+                color: '#FFFFFF',
+                border: '2px solid #4ce894',
+                padding: '1.4rem 3.6rem',
+                fontSize: '1.6rem',
+                fontWeight: 800,
+                borderRadius: '22px',
+                boxShadow: '0 18px 40px -14px rgba(0,168,70,0.55), 0 0 0 2px rgba(255,255,255,0.15) inset',
+                cursor: 'pointer',
+                letterSpacing: '1.2px',
+                textTransform: 'uppercase',
+                transition: 'transform .25s ease, box-shadow .25s ease'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform='translateY(-4px)')}
+              onMouseLeave={e => (e.currentTarget.style.transform='translateY(0)')}
+            >AVERÍA</button>
+          </div>
+        )}
+        {showAveriaSubs && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1.75rem',
+            background: '#FFFFFF',
+            padding: '2.5rem 2rem 2.8rem',
+            borderRadius: '32px',
+            boxShadow: '0 10px 40px -10px rgba(0,0,0,0.18), 0 2px 8px -2px rgba(0,0,0,0.08)',
+            border: '2px solid #e4ecf7',
+            maxWidth: '980px'
+          }}>
+            <h2 style={{
+              margin: '0 0 0.5rem',
+              fontSize: '2.1rem',
+              fontWeight: 800,
+              letterSpacing: '.5px',
+              color: '#0044aa',
+              textAlign: 'center'
+            }}>Seleccione el subtipo de Avería</h2>
+            <p style={{
+              margin: '0 0 1.5rem',
+              fontSize: '1.05rem',
+              color: '#1f3b63',
+              fontWeight: 500,
+              textAlign: 'center',
+              maxWidth: 700,
+              lineHeight: 1.45
+            }}>Elija una de las opciones para continuar con el proceso de valoración de la avería.</p>
+            <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button type="button" onClick={() => { window.location.hash = '#/wart' }} style={{
+                background: 'linear-gradient(140deg,#FF1493 0%,#ff40ac 45%,#ff7dc8 100%)',
+                color: '#FFFFFF',
+                border: '2px solid #ff9dd6',
+                padding: '1.25rem 2.6rem',
+                fontSize: '1.05rem',
+                fontWeight: 800,
+                borderRadius: '18px',
+                boxShadow: '0 16px 34px -14px rgba(255,20,147,0.55)',
+                cursor: 'pointer',
+                letterSpacing: '.7px',
+                transition: 'transform .25s ease, box-shadow .25s ease'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform='translateY(-4px)')}
+              onMouseLeave={e => (e.currentTarget.style.transform='translateY(0)')}
+              >WART</button>
+              <button type="button" onClick={() => console.log('averia:ERROR_MONTAJE')} style={{
+                background: 'linear-gradient(140deg,#FF1493 0%,#ff40ac 45%,#ff7dc8 100%)',
+                color: '#FFFFFF',
+                border: '2px solid #ff9dd6',
+                padding: '1.25rem 2.6rem',
+                fontSize: '1.05rem',
+                fontWeight: 800,
+                borderRadius: '18px',
+                boxShadow: '0 16px 34px -14px rgba(255,20,147,0.55)',
+                cursor: 'pointer',
+                letterSpacing: '.7px',
+                transition: 'transform .25s ease, box-shadow .25s ease'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform='translateY(-4px)')}
+              onMouseLeave={e => (e.currentTarget.style.transform='translateY(0)')}
+              >ERROR DE MONTAJE</button>
+              <button type="button" onClick={() => console.log('averia:ERROR_AVERIA')} style={{
+                background: 'linear-gradient(140deg,#FF1493 0%,#ff40ac 45%,#ff7dc8 100%)',
+                color: '#FFFFFF',
+                border: '2px solid #ff9dd6',
+                padding: '1.25rem 2.6rem',
+                fontSize: '1.05rem',
+                fontWeight: 800,
+                borderRadius: '18px',
+                boxShadow: '0 16px 34px -14px rgba(255,20,147,0.55)',
+                cursor: 'pointer',
+                letterSpacing: '.7px',
+                transition: 'transform .25s ease, box-shadow .25s ease'
+              }}
+              onMouseEnter={e => (e.currentTarget.style.transform='translateY(-4px)')}
+              onMouseLeave={e => (e.currentTarget.style.transform='translateY(0)')}
+              >ERROR DE AVERIA</button>
+            </div>
+            <button type="button" onClick={() => setShowAveriaSubs(false)} style={{
+              background: 'transparent',
+              color: '#0044aa',
+              border: 'none',
+              fontSize: '.95rem',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              fontWeight: 600
+            }}>Volver</button>
+          </div>
+        )}
+      </div>
     )
   }
 

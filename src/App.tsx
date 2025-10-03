@@ -7,6 +7,8 @@ import CambiarPassword from './pages/CambiarPassword'
 import GestionUsuarios from './pages/GestionUsuarios'
 import { useAuth } from './auth/AuthContextNew'
 import { WelcomeScreen } from './pages/Welcome/WelcomeScreen'
+import Wart from './pages/Wart/Wart'
+import AnalisisExpediente from './pages/AnalisisExpediente/AnalisisExpediente'
 
 function useHashRoute() {
   const [route, setRoute] = useState<string>(() => location.hash || '#/')
@@ -29,6 +31,8 @@ function getPageTitle(route: string) {
     case '#/': return 'Valoración'
     case '#/coordinador/cambiar-password': return 'Cambiar contraseña'
     case '#/coordinador/usuarios': return 'Gestión de Usuarios'
+    case '#/wart': return 'WART'
+    case '#/analisis-expediente': return 'Análisis de Expediente'
     default: return 'ValorApp'
   }
 }
@@ -87,6 +91,8 @@ export default function App() {
     return null
   }
   if (route === '#/coordinador/usuarios') return <GestionUsuarios />
+  if (route === '#/wart') return <Wart />
+  if (route === '#/analisis-expediente') return <AnalisisExpediente />
 
   return (
     <div className="app-layout">
