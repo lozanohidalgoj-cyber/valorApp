@@ -17,21 +17,59 @@ const useAtrCsv = (): ParsedCSV | null => {
 
 const ATRPreview: React.FC = () => {
   const data = useAtrCsv()
-  const [page, setPage] = React.useState(1)
-  const pageSize = 20
-
   const total = data?.rows?.length || 0
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const start = (page - 1) * pageSize
-  const current = data?.rows?.slice(start, start + pageSize) || []
 
   const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
   const isPotenciaHeader = (h: string) => ['Potencia (kW)', 'Potencia', 'Potencia kW'].some(x => x.toLowerCase() === (h || '').toLowerCase())
+  const stripAccents = (s: string) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  const isFechaEnvioHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t === 'fecha de envio a facturar' || (t.includes('fecha') && t.includes('envio') && (t.includes('factur') || t.includes('facturar')))
+  }
   const normalizeNumber = (s: string) => {
     // Convierte "2.345,67" o "2,200" a número normalizado para comparar
     const t = (s || '').replace(/\./g, '').replace(/,/g, '.')
     const n = Number(t)
     return Number.isFinite(n) ? n : NaN
+  }
+  const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n))
+  const fromExcelSerial = (serial: number): Date => {
+    // Excel 1900 date system: serial 1 -> 1899-12-31; tomamos base 1899-12-30 por bug del 1900 leap
+    const epoch = Date.UTC(1899, 11, 30)
+    return new Date(epoch + Math.round(serial * 86400000))
+  }
+  const parseDateLoose = (v: any): Date | null => {
+    if (v instanceof Date && !isNaN(v.getTime())) return v
+    if (typeof v === 'number' && isFinite(v)) {
+      // Si parece serial de Excel (rango típico > 20000)
+      if (v > 59) return fromExcelSerial(v)
+      // Si es timestamp (ms)
+      if (v > 1000000000000) return new Date(v)
+    }
+    if (typeof v === 'string') {
+      const s = v.trim()
+      // dd/MM/yyyy [HH:mm[:ss]]
+      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/)
+      if (m) {
+        const dd = Number(m[1]); const mm = Number(m[2]) - 1; const yyyy = Number(m[3].length === 2 ? `20${m[3]}` : m[3])
+        const HH = Number(m[4] ?? 0); const MM = Number(m[5] ?? 0); const SS = Number(m[6] ?? 0)
+        const d = new Date(yyyy, mm, dd, HH, MM, SS)
+        if (!isNaN(d.getTime())) return d
+      }
+      const d2 = new Date(s)
+      if (!isNaN(d2.getTime())) return d2
+    }
+    return null
+  }
+  const formatDateES = (v: any): string => {
+    const d = parseDateLoose(v)
+    if (!d) return String(v ?? '')
+    const Y = d.getFullYear(); const M = pad2(d.getMonth() + 1); const D = pad2(d.getDate())
+    const h = pad2(d.getHours()); const m = pad2(d.getMinutes()); const s = d.getSeconds()
+    const time = s ? `${h}:${m}:${pad2(s)}` : `${h}:${m}`
+    // Si hora es 00:00 y no hay indicios de tiempo, solo fecha
+    if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) return `${D}/${M}/${Y}`
+    return `${D}/${M}/${Y} ${time}`
   }
 
   if (!data || !data.headers?.length) {
@@ -47,9 +85,9 @@ const ATRPreview: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '1rem', maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ padding: '1rem', maxWidth: '95vw', margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
-        <h1 style={{ fontSize: '2rem', margin: 0, color: '#0d3d75' }}>Vista previa ATR</h1>
+        <h1 style={{ fontSize: '2.2rem', margin: 0, color: '#0d3d75' }}>Vista previa ATR</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ color: '#234e88' }}>{total} filas</span>
           <a href="#/export-saldo-atr" className="btn btn-secondary" style={{ borderRadius: 10 }}>Re-exportar</a>
@@ -60,7 +98,7 @@ const ATRPreview: React.FC = () => {
         Nota: se resaltan cambios de <strong style={{ color: '#b91c1c' }}>Contrato ATR</strong> y <strong style={{ color: '#b45309' }}>Potencia (kW)</strong> respecto a la fila anterior.
       </div>
 
-      <div style={{ overflow: 'auto', border: '1px solid #c9d6e8', borderRadius: 8, background: '#fff', boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.03)' }}>
+      <div style={{ overflowY: 'auto', overflowX: 'auto', border: '1px solid #c9d6e8', borderRadius: 8, background: '#fff', boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.03)', maxHeight: 'calc(100vh - 220px)' }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>
             <tr>
@@ -71,13 +109,12 @@ const ATRPreview: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {current.map((r, i) => {
-              const globalIndex = start + i
-              const prev = globalIndex > 0 ? data.rows[globalIndex - 1] : null
+            {data.rows.map((r, i) => {
+              const prev = i > 0 ? data.rows[i - 1] : null
               return (
                 <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#fbfdff' }}>
                   <td style={{ position: 'sticky', left: 0, zIndex: 1, background: i % 2 === 0 ? '#f7faff' : '#eef5ff', borderRight: '1px solid #e6edf7', color: '#6b7280', padding: '.4rem .5rem', textAlign: 'right' }}>
-                    {globalIndex + 1}
+                    {i + 1}
                   </td>
                   {data.headers.map((h, j) => {
                     const val = String(r[h] ?? '')
@@ -97,11 +134,14 @@ const ATRPreview: React.FC = () => {
                     const color = changed ? (contrato ? '#b91c1c' : '#b45309') : '#223a5c'
                     const bg = changed ? (contrato ? '#fee2e2' : '#ffedd5') : undefined
                     const fontWeight = changed ? 700 : 400
-                    const isNumeric = potencia || /^-?[0-9\.\,]+$/.test(val)
+                    const isFechaEnvio = isFechaEnvioHeader(h)
+                    const isNumeric = !isFechaEnvio && (potencia || /^-?[0-9\.\,]+$/.test(val))
                     const align = isNumeric ? 'right' as const : 'left' as const
-                    const display = isNumeric && !isNaN(normalizeNumber(val))
-                      ? new Intl.NumberFormat('es-ES', { maximumFractionDigits: 6 }).format(normalizeNumber(val))
-                      : val
+                    const display = isFechaEnvio
+                      ? formatDateES(r[h])
+                      : (isNumeric && !isNaN(normalizeNumber(val))
+                        ? new Intl.NumberFormat('es-ES', { maximumFractionDigits: 6 }).format(normalizeNumber(val))
+                        : val)
                     return (
                       <td key={j} style={{ padding: '.4rem .6rem', borderTop: '1px solid #eef2f7', borderRight: '1px solid #eef2f7', color, background: bg, fontWeight, textAlign: align }}>
                         {display}
@@ -113,12 +153,6 @@ const ATRPreview: React.FC = () => {
             })}
           </tbody>
         </table>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '.5rem', marginTop: '.75rem' }}>
-        <button className="btn btn-secondary" disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))} style={{ borderRadius: 10 }}>Anterior</button>
-        <span style={{ color: '#234e88' }}>Página {page} / {totalPages}</span>
-        <button className="btn btn-secondary" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} style={{ borderRadius: 10 }}>Siguiente</button>
       </div>
     </div>
   )
