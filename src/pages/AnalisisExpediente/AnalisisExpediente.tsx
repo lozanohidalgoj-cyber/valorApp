@@ -4,6 +4,9 @@ import { AnalisisTable, useAnalisisExpediente, readWorkbookFromArrayBuffer, extr
 const AnalisisExpediente: React.FC = () => {
   const { items, error, metrics, setFromWorkbook } = useAnalisisExpediente()
   const [raw, setRaw] = React.useState<{ headers: string[], rows: Record<string, any>[] } | null>(null)
+  const [tipoContador, setTipoContador] = React.useState<string | null>(() => {
+    try { return localStorage.getItem('valorApp.analisis.tipoContador') } catch { return null }
+  })
 
   // Carga automática desde un Excel embebido en /public si existe
   React.useEffect(() => {
@@ -32,30 +35,78 @@ const AnalisisExpediente: React.FC = () => {
       minHeight: 'calc(100vh - 120px)',
       display: 'flex',
       flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
       gap: '1.25rem',
       padding: '2rem 1rem 3rem',
       background: '#f5f9ff'
     }}>
-      <div style={{ maxWidth: 1100, width: '100%', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2.2rem', margin: '0 0 .5rem', fontWeight: 800, letterSpacing: '.3px', color: '#0d3d75' }}>
+      <div style={{ maxWidth: 1100, width: '100%', margin: '0 auto', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '2.6rem', margin: '0 0 .75rem', fontWeight: 800, letterSpacing: '.3px', color: '#0d3d75' }}>
           Análisis de Expediente
         </h1>
-        <p style={{ fontSize: '1rem', margin: '0 0 1.25rem', color: '#1a3550' }}>
-          Cargue su archivo Excel (.xlsm/.xlsx) para analizar las reglas de pinzas y diferencias de carga.
-        </p>
+        
 
-        {!raw && (
-          <div style={{
-            background: '#fff4e5',
-            border: '1px solid #ffe8cc',
-            color: '#7a4d00',
-            padding: '0.85rem 1rem',
-            borderRadius: 12,
-            marginBottom: '1rem'
-          }}>
-            Buscando archivo integrado (analisis-expedientes.xlsm)...
+        {/* Selector de tipo de contador */}
+        <div style={{
+          background: '#ffffff',
+          border: '1px solid #e6edf7',
+          borderRadius: 16,
+          padding: '1.25rem 1.5rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          gap: '.9rem'
+        }}>
+          <div style={{ color: '#0d3d75', fontWeight: 800, fontSize: '1.15rem' }}>
+            Antes de empezar la valoración cuéntame: el contador es
           </div>
-        )}
+          <div style={{ display: 'flex', gap: '.9rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setTipoContador('Tipo V')
+                try { localStorage.setItem('valorApp.analisis.tipoContador', 'Tipo V') } catch {}
+              }}
+              className="btn btn-primary"
+              style={{
+                borderRadius: 12,
+                background: 'linear-gradient(135deg,#FF1493 0%,#ff3fab 40%,#ff66c0 100%)',
+                border: '2px solid #ff8ccd',
+                color: '#fff',
+                fontSize: '1.05rem',
+                padding: '0.9rem 1.4rem',
+                minWidth: 220
+              }}
+            >Contador Tipo V</button>
+            <button
+              type="button"
+              onClick={() => {
+                setTipoContador('Tipo IV')
+                try { localStorage.setItem('valorApp.analisis.tipoContador', 'Tipo IV') } catch {}
+              }}
+              className="btn btn-secondary"
+              style={{
+                borderRadius: 12,
+                background: 'linear-gradient(135deg,#00a846 0%,#00c55a 45%,#00e46c 100%)',
+                border: '2px solid #4ce894',
+                color: '#fff',
+                fontSize: '1.05rem',
+                padding: '0.9rem 1.4rem',
+                minWidth: 220
+              }}
+            >Contador Tipo IV</button>
+          </div>
+          {tipoContador && (
+            <div style={{ fontSize: '1rem', color: '#1f3b63' }}>
+              Seleccionado: <strong>{tipoContador}</strong>
+            </div>
+          )}
+        </div>
+
+        {/* Mensaje de búsqueda eliminado a petición: no mostrar aviso mientras se carga el Excel */}
 
         {!!items.length && (
           <div style={{
@@ -102,8 +153,8 @@ const AnalisisExpediente: React.FC = () => {
 
         <AnalisisTable items={items} />
 
-        <div style={{ marginTop: '1.25rem', display: 'flex', gap: '.75rem' }}>
-          <a href="#/" className="btn btn-primary" style={{ borderRadius: 12 }}>Volver</a>
+        <div style={{ marginTop: '1.5rem', display: 'flex', gap: '.9rem', justifyContent: 'center' }}>
+          <a href="#/" className="btn btn-primary" style={{ borderRadius: 12, fontSize: '1.05rem', padding: '0.85rem 1.3rem', minWidth: 160 }}>Volver</a>
         </div>
       </div>
     </div>
