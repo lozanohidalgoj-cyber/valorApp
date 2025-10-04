@@ -72,6 +72,23 @@ const ATRPreview: React.FC = () => {
     return `${D}/${M}/${Y} ${time}`
   }
 
+  // Colores por grupo de contrato (pasteles suaves)
+  const groupPalette = ['#fefce8', '#eef2ff', '#ecfdf5', '#fdf2f8', '#f0f9ff', '#fff7ed', '#f5f3ff', '#e8f5e9', '#ede7f6', '#fffde7']
+  const contractHeader = React.useMemo(() => (data?.headers.find(h => isContratoHeader(h)) || null), [data])
+  const contractColorMap = React.useMemo(() => {
+    const map = new Map<string, string>()
+    if (!data || !contractHeader) return map
+    let idx = 0
+    for (const r of data.rows) {
+      const key = String(r[contractHeader] ?? '').trim()
+      if (!map.has(key)) {
+        map.set(key, groupPalette[idx % groupPalette.length])
+        idx++
+      }
+    }
+    return map
+  }, [data, contractHeader])
+
   if (!data || !data.headers?.length) {
     return (
       <div style={{ minHeight: 'calc(100vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
@@ -111,9 +128,11 @@ const ATRPreview: React.FC = () => {
           <tbody>
             {data.rows.map((r, i) => {
               const prev = i > 0 ? data.rows[i - 1] : null
+              const contractKey = contractHeader ? String(r[contractHeader] ?? '').trim() : ''
+              const rowBg = contractColorMap.get(contractKey)
               return (
-                <tr key={i} style={{ background: i % 2 === 0 ? '#ffffff' : '#fbfdff' }}>
-                  <td style={{ position: 'sticky', left: 0, zIndex: 1, background: i % 2 === 0 ? '#f7faff' : '#eef5ff', borderRight: '1px solid #e6edf7', color: '#6b7280', padding: '.4rem .5rem', textAlign: 'right' }}>
+                <tr key={i} style={{ background: rowBg || (i % 2 === 0 ? '#ffffff' : '#fbfdff') }}>
+                  <td style={{ position: 'sticky', left: 0, zIndex: 1, background: rowBg || (i % 2 === 0 ? '#f7faff' : '#eef5ff'), borderRight: '1px solid #e6edf7', color: '#6b7280', padding: '.4rem .5rem', textAlign: 'right' }}>
                     {i + 1}
                   </td>
                   {data.headers.map((h, j) => {
@@ -132,7 +151,8 @@ const ATRPreview: React.FC = () => {
                       }
                     }
                     const color = changed ? (contrato ? '#b91c1c' : '#b45309') : '#223a5c'
-                    const bg = changed ? (contrato ? '#fee2e2' : '#ffedd5') : undefined
+                    // Prioridad: si potencia changed -> fondo ámbar; si no, usar fondo por grupo de contrato; ya no sobreescribir por cambio de contrato
+                    const bg = changed && potencia ? '#ffedd5' : (rowBg || undefined)
                     const fontWeight = changed ? 700 : 400
                     const isFechaEnvio = isFechaEnvioHeader(h)
                     const isNumeric = !isFechaEnvio && (potencia || /^-?[0-9\.\,]+$/.test(val))
