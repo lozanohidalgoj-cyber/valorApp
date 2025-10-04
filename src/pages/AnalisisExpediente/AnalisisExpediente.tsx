@@ -1,5 +1,6 @@
 import React from 'react'
 import { AnalisisTable, useAnalisisExpediente, readWorkbookFromArrayBuffer, extractRawSheet } from '../../modules/analisisExpediente'
+import { parseCSV } from '../../utils/csv'
 
 const AnalisisExpediente: React.FC = () => {
   const { items, error, metrics, setFromWorkbook } = useAnalisisExpediente()
@@ -7,6 +8,15 @@ const AnalisisExpediente: React.FC = () => {
   const [tipoContador, setTipoContador] = React.useState<string | null>(() => {
     try { return localStorage.getItem('valorApp.analisis.tipoContador') } catch { return null }
   })
+  const [atrInfo, setAtrInfo] = React.useState<{ filas: number } | null>(() => {
+    try {
+      const s = localStorage.getItem('valorApp.analisis.atrCsv')
+      if (!s) return null
+      const p = JSON.parse(s)
+      return { filas: Array.isArray(p?.rows) ? p.rows.length : 0 }
+    } catch { return null }
+  })
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
 
   // Carga automática desde un Excel embebido en /public si existe
   React.useEffect(() => {
@@ -69,6 +79,7 @@ const AnalisisExpediente: React.FC = () => {
               onClick={() => {
                 setTipoContador('Tipo V')
                 try { localStorage.setItem('valorApp.analisis.tipoContador', 'Tipo V') } catch {}
+                window.location.hash = '#/export-saldo-atr'
               }}
               className="btn btn-primary"
               style={{
@@ -99,6 +110,7 @@ const AnalisisExpediente: React.FC = () => {
               }}
             >Contador Tipo IV</button>
           </div>
+          {/* Al elegir Tipo V navegamos a la pantalla dedicada de exportación */}
           {tipoContador && (
             <div style={{ fontSize: '1rem', color: '#1f3b63' }}>
               Seleccionado: <strong>{tipoContador}</strong>

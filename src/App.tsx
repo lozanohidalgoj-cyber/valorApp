@@ -9,6 +9,8 @@ import { useAuth } from './auth/AuthContextNew'
 import { WelcomeScreen } from './pages/Welcome/WelcomeScreen'
 import Wart from './pages/Wart/Wart'
 import AnalisisExpediente from './pages/AnalisisExpediente/AnalisisExpediente'
+import ExportSaldoATR from './pages/ExportSaldoATR/ExportSaldoATR'
+import ATRPreview from './pages/ExportSaldoATR/ATRPreview'
 
 function useHashRoute() {
   const [route, setRoute] = useState<string>(() => location.hash || '#/')
@@ -33,6 +35,8 @@ function getPageTitle(route: string) {
     case '#/coordinador/usuarios': return 'Gestión de Usuarios'
     case '#/wart': return 'WART'
     case '#/analisis-expediente': return 'Análisis de Expediente'
+    case '#/export-saldo-atr': return 'Exportar Saldo ATR'
+    case '#/ver-saldo-atr': return 'Vista previa ATR'
     default: return 'ValorApp'
   }
 }
@@ -93,6 +97,8 @@ export default function App() {
   if (route === '#/coordinador/usuarios') return <GestionUsuarios />
   if (route === '#/wart') return <Wart />
   if (route === '#/analisis-expediente') return <AnalisisExpediente />
+  if (route === '#/export-saldo-atr') return <ExportSaldoATR />
+  if (route === '#/ver-saldo-atr') return <ATRPreview />
 
   return (
     <div className="app-layout">
