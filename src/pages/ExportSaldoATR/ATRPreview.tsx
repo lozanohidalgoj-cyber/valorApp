@@ -26,6 +26,14 @@ const ATRPreview: React.FC = () => {
     const t = stripAccents(h).toLowerCase().trim()
     return t === 'fecha de envio a facturar' || (t.includes('fecha') && t.includes('envio') && (t.includes('factur') || t.includes('facturar')))
   }
+  const isFechaDesdeHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t === 'fecha desde' || (t.includes('fecha') && t.includes('desde'))
+  }
+  const isFechaHastaHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t === 'fecha hasta' || (t.includes('fecha') && t.includes('hasta'))
+  }
   const normalizeNumber = (s: string) => {
     // Convierte "2.345,67" o "2,200" a número normalizado para comparar
     const t = (s || '').replace(/\./g, '').replace(/,/g, '.')
@@ -155,9 +163,12 @@ const ATRPreview: React.FC = () => {
                     const bg = changed && potencia ? '#ffedd5' : (rowBg || undefined)
                     const fontWeight = changed ? 700 : 400
                     const isFechaEnvio = isFechaEnvioHeader(h)
-                    const isNumeric = !isFechaEnvio && (potencia || /^-?[0-9\.\,]+$/.test(val))
+                    const isFechaDesde = isFechaDesdeHeader(h)
+                    const isFechaHasta = isFechaHastaHeader(h)
+                    const isDateCol = isFechaEnvio || isFechaDesde || isFechaHasta
+                    const isNumeric = !isDateCol && (potencia || /^-?[0-9\.\,]+$/.test(val))
                     const align = isNumeric ? 'right' as const : 'left' as const
-                    const display = isFechaEnvio
+                    const display = isDateCol
                       ? formatDateES(r[h])
                       : (isNumeric && !isNaN(normalizeNumber(val))
                         ? new Intl.NumberFormat('es-ES', { maximumFractionDigits: 6 }).format(normalizeNumber(val))
