@@ -1,0 +1,3 @@
+Coloca aquí el archivo Excel "Análisis de Expedientes.xlsm" renombrado a "analisis-expedientes.xlsm" para que la aplicación lo cargue automáticamente al abrir la pantalla de Análisis de Expediente.
+
+Motivo del renombre: evitar problemas de URL con espacios y acentos. Si prefieres mantener el nombre original, adapta la ruta del fetch en AnalisisExpediente.tsx.
