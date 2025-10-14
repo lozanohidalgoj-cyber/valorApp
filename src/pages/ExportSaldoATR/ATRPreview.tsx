@@ -17,11 +17,50 @@ const useAtrCsv = (): ParsedCSV | null => {
 
 const ATRPreview: React.FC = () => {
   const data = useAtrCsv()
-  const [filteredRows, setFilteredRows] = React.useState<Record<string,string>[]>(() => data?.rows || [])
+  
+  // Filtrar columna "Autofactura" de los encabezados
+  const filteredData = React.useMemo(() => {
+    if (!data?.headers || !data?.rows) return null
+    
+    // Filtrar encabezados que no sean "Autofactura"
+    const filteredHeaders = data.headers.filter(h => 
+      (h || '').toLowerCase().trim() !== 'autofactura'
+    )
+    
+    // Si no hay cambios en los encabezados, retornar data original
+    if (filteredHeaders.length === data.headers.length) {
+      return data
+    }
+    
+    // Filtrar las columnas de cada fila
+    const filteredRows = data.rows.map(row => {
+      const newRow: Record<string, string> = {}
+      filteredHeaders.forEach(header => {
+        if (header in row) {
+          newRow[header] = row[header]
+        }
+      })
+      return newRow
+    })
+    
+    return {
+      headers: filteredHeaders,
+      rows: filteredRows
+    }
+  }, [data])
+  
+  const [filteredRows, setFilteredRows] = React.useState<Record<string,string>[]>(() => filteredData?.rows || [])
   const [anuladas, setAnuladas] = React.useState<number>(0)
   const [detalleAnuladas, setDetalleAnuladas] = React.useState<{comp: number; anuladas: number; anuladoras: number}>({ comp: 0, anuladas: 0, anuladoras: 0 })
   const [ordenado, setOrdenado] = React.useState<boolean>(false)
   const total = filteredRows.length
+  
+  // Actualizar filteredRows cuando cambien los datos
+  React.useEffect(() => {
+    if (filteredData?.rows) {
+      setFilteredRows(filteredData.rows)
+    }
+  }, [filteredData])
 
   const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
   const isPotenciaHeader = (h: string) => ['Potencia (kW)', 'Potencia', 'Potencia kW'].some(x => x.toLowerCase() === (h || '').toLowerCase())
@@ -86,12 +125,12 @@ const ATRPreview: React.FC = () => {
 
   // Colores por grupo de contrato (pasteles suaves)
   const groupPalette = ['#fefce8', '#eef2ff', '#ecfdf5', '#fdf2f8', '#f0f9ff', '#fff7ed', '#f5f3ff', '#e8f5e9', '#ede7f6', '#fffde7']
-  const contractHeader = React.useMemo(() => (data?.headers.find(h => isContratoHeader(h)) || null), [data])
-  const fechaDesdeHeader = React.useMemo(() => (data?.headers.find(h => isFechaDesdeHeader(h)) || null), [data])
-  const fechaHastaHeader = React.useMemo(() => (data?.headers.find(h => isFechaHastaHeader(h)) || null), [data])
+  const contractHeader = React.useMemo(() => (filteredData?.headers.find(h => isContratoHeader(h)) || null), [filteredData])
+  const fechaDesdeHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaDesdeHeader(h)) || null), [filteredData])
+  const fechaHastaHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaHastaHeader(h)) || null), [filteredData])
   const contractColorMap = React.useMemo(() => {
     const map = new Map<string, string>()
-    if (!data || !contractHeader) return map
+    if (!filteredData || !contractHeader) return map
     let idx = 0
     for (const r of filteredRows) {
       const key = String(r[contractHeader] ?? '').trim()
@@ -101,7 +140,7 @@ const ATRPreview: React.FC = () => {
       }
     }
     return map
-  }, [filteredRows, contractHeader])
+  }, [filteredRows, contractHeader, filteredData])
 
   // Duración total por contrato: desde primera "Fecha desde" hasta última "Fecha hasta"
   const plural = (n: number, s: string, p: string) => (n === 1 ? s : p)
@@ -119,7 +158,7 @@ const ATRPreview: React.FC = () => {
 
   const contractDurationText = React.useMemo(() => {
     const map = new Map<string, string>()
-    if (!data || !contractHeader || !fechaDesdeHeader || !fechaHastaHeader) return map
+    if (!filteredData || !contractHeader || !fechaDesdeHeader || !fechaHastaHeader) return map
     const acc = new Map<string, { minDesde: Date | null, maxHasta: Date | null }>()
     for (const r of filteredRows) {
       const key = String(r[contractHeader] ?? '').trim()
@@ -154,14 +193,67 @@ const ATRPreview: React.FC = () => {
 
 
   // Índice de CUPS para insertar la columna a su derecha
-  const cupsIndex = React.useMemo(() => (data ? data.headers.findIndex(h => (h || '').toString().toLowerCase().trim() === 'cups') : -1), [data])
+  const cupsIndex = React.useMemo(() => (filteredData ? filteredData.headers.findIndex(h => (h || '').toString().toLowerCase().trim() === 'cups') : -1), [filteredData])
+
+  // Datos para el panel lateral izquierdo
+  const contractsInfo = React.useMemo(() => {
+    if (!filteredData || !contractHeader) return []
+    
+    const potenciaHeader = filteredData.headers.find(h => isPotenciaHeader(h))
+    const contractsMap = new Map<string, {
+      potencias: Set<string>,
+      minDesde: Date | null,
+      maxHasta: Date | null
+    }>()
+    
+    for (const r of filteredRows) {
+      const contractKey = String(r[contractHeader] ?? '').trim()
+      if (!contractKey) continue
+      
+      if (!contractsMap.has(contractKey)) {
+        contractsMap.set(contractKey, {
+          potencias: new Set(),
+          minDesde: null,
+          maxHasta: null
+        })
+      }
+      
+      const info = contractsMap.get(contractKey)!
+      
+      // Agregar potencias únicas
+      if (potenciaHeader && r[potenciaHeader]) {
+        const potenciaVal = String(r[potenciaHeader]).trim()
+        if (potenciaVal) info.potencias.add(potenciaVal)
+      }
+      
+      // Calcular rango de fechas
+      if (fechaDesdeHeader && fechaHastaHeader) {
+        const dDesde = parseDateLoose(r[fechaDesdeHeader])
+        const dHasta = parseDateLoose(r[fechaHastaHeader])
+        
+        if (dDesde && (!info.minDesde || dDesde < info.minDesde)) {
+          info.minDesde = dDesde
+        }
+        if (dHasta && (!info.maxHasta || dHasta > info.maxHasta)) {
+          info.maxHasta = dHasta
+        }
+      }
+    }
+    
+    return Array.from(contractsMap.entries()).map(([contract, info]) => ({
+      contract,
+      potenciasCount: info.potencias.size,
+      duration: info.minDesde && info.maxHasta ? diffMonthsDays(info.minDesde, info.maxHasta) : null
+    }))
+  }, [filteredRows, contractHeader, fechaDesdeHeader, fechaHastaHeader, filteredData])
 
   const handleOrdenar = React.useCallback(() => {
-    if (!data || ordenado) return
-    const tipoHeader = data.headers.find(h => (h || '').toLowerCase().trim() === 'tipo de factura')
+    if (!filteredData || ordenado) return
+    const tipoHeader = filteredData.headers.find(h => (h || '').toLowerCase().trim() === 'tipo de factura')
     if (!tipoHeader) return
     const valoresAnular = new Set(['factura complementaria','anulada','anuladora','enviado a facturar'])
-    const originales = data.rows
+    // Usar filteredData.rows para trabajar con datos ya filtrados (sin columna autofactura)
+    const originales = filteredData.rows
     const restantes: Record<string,string>[] = []
     let count = 0
     let comp = 0, anul = 0, anuladora = 0
@@ -180,9 +272,9 @@ const ATRPreview: React.FC = () => {
     setAnuladas(count)
     setDetalleAnuladas({ comp, anuladas: anul, anuladoras: anuladora })
     setOrdenado(true)
-  }, [data, ordenado])
+  }, [filteredData, ordenado])
 
-  if (!data || !data.headers?.length) {
+  if (!filteredData || !filteredData.headers?.length) {
     return (
       <div style={{ 
         minHeight: '100vh', 
@@ -250,30 +342,152 @@ const ATRPreview: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '96vw', margin: '0 auto', minHeight: '100vh', background: 'linear-gradient(135deg, #f5f9ff 0%, #e6f0ff 100%)' }}>
-      {anuladas > 0 && (
+    <div style={{ 
+      display: 'flex',
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+      paddingBottom: '70px' // Espacio para bottom bar
+    }}>
+      {/* Panel lateral izquierdo */}
+      <div style={{
+        width: '320px',
+        flexShrink: 0,
+        background: 'rgba(255, 255, 255, 0.98)',
+        borderRight: '2px solid rgba(0, 0, 208, 0.1)',
+        boxShadow: '4px 0 12px rgba(0, 0, 208, 0.06)',
+        overflowY: 'auto',
+        padding: '1rem',
+        maxHeight: 'calc(100vh - 70px)',
+        position: 'sticky',
+        top: 0
+      }}>
+        <div style={{
+          marginBottom: '1.5rem',
+          paddingBottom: '1rem',
+          borderBottom: '2px solid rgba(0, 0, 208, 0.1)'
+        }}>
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            color: '#0000D0',
+            margin: '0 0 0.5rem 0',
+            fontFamily: "'Lato', sans-serif"
+          }}>📊 Información de Contratos</h2>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#64748b',
+            margin: 0,
+            fontFamily: "'Open Sans', sans-serif"
+          }}>
+            Total: <strong style={{ color: '#0000D0' }}>{contractsInfo.length}</strong> {contractsInfo.length === 1 ? 'contrato' : 'contratos'}
+          </p>
+        </div>
+
+        {/* Lista de contratos */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.875rem'
+        }}>
+          {contractsInfo.map((info, idx) => {
+            const durationText = info.duration ? (() => {
+              const { months, days } = info.duration
+              const years = Math.floor(months / 12)
+              const remMonths = months % 12
+              const parts: string[] = []
+              if (years > 0) parts.push(`${years}a`)
+              if (remMonths > 0) parts.push(`${remMonths}m`)
+              if (days > 0) parts.push(`${days}d`)
+              return parts.length > 0 ? parts.join(' ') : '0d'
+            })() : 'N/A'
+
+            return (
+              <div
+                key={idx}
+                style={{
+                  background: contractColorMap.get(info.contract) || 'rgba(0, 0, 208, 0.03)',
+                  border: '1.5px solid rgba(0, 0, 208, 0.12)',
+                  borderRadius: '10px',
+                  padding: '0.875rem',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 700,
+                  color: '#0000D0',
+                  marginBottom: '0.625rem',
+                  fontFamily: "'Lato', sans-serif",
+                  wordBreak: 'break-word'
+                }}>
+                  {info.contract || `Contrato ${idx + 1}`}
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.375rem',
+                  fontSize: '0.75rem',
+                  fontFamily: "'Open Sans', sans-serif"
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <span style={{ color: '#64748b' }}>⏱️ Duración:</span>
+                    <strong style={{ color: '#1e293b' }}>{durationText}</strong>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <span style={{ color: '#64748b' }}>⚡ Potencias:</span>
+                    <strong style={{ color: '#1e293b' }}>{info.potenciasCount}</strong>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {contractsInfo.length === 0 && (
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem 1rem',
+            color: '#94a3b8',
+            fontSize: '0.875rem',
+            fontFamily: "'Open Sans', sans-serif"
+          }}>
+            No se encontraron contratos en los datos
+          </div>
+        )}
+      </div>
+
+      {/* Contenido principal */}
+      <div style={{ 
+        flex: 1,
+        padding: '0.875rem 0.5rem',
+        overflow: 'hidden'
+      }}>
+        {anuladas > 0 && (
         <div
           style={{
-            background: 'rgba(0, 200, 83, 0.1)',
-            border: '2px solid rgba(0, 200, 83, 0.3)',
-            padding: '1rem 1.25rem',
-            borderRadius: 12,
-            marginBottom: '1.5rem',
-            color: '#00A043',
-            fontSize: '1rem',
+            background: 'linear-gradient(135deg, rgba(0, 200, 83, 0.08) 0%, rgba(16, 185, 129, 0.06) 100%)',
+            border: '1.5px solid rgba(0, 200, 83, 0.25)',
+            padding: '0.75rem 1rem',
+            borderRadius: 10,
+            marginBottom: '0.875rem',
+            marginLeft: '0.5rem',
+            marginRight: '0.5rem',
+            color: '#059669',
+            fontSize: '0.875rem',
             fontWeight: 600,
-            lineHeight: 1.6,
-            boxShadow: '0 4px 12px rgba(0, 200, 83, 0.15)',
+            lineHeight: 1.5,
+            boxShadow: '0 2px 8px rgba(0, 200, 83, 0.1)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.5rem'
+            gap: '0.375rem'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '1.25rem' }}>✓</span>
+            <span style={{ fontSize: '1.125rem' }}>✓</span>
             <strong>Se han anulado {anuladas} factura{anuladas === 1 ? '' : 's'} del listado.</strong>
           </div>
-          <span style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+          <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>
             Detalle: Factura complementaria: {detalleAnuladas.comp} | Anuladas: {detalleAnuladas.anuladas} | Anuladoras: {detalleAnuladas.anuladoras}
           </span>
         </div>
@@ -282,58 +496,71 @@ const ATRPreview: React.FC = () => {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between', 
-        gap: '1rem', 
-        marginBottom: '1.5rem',
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '1.25rem 1.5rem',
-        borderRadius: '16px',
-        boxShadow: '0 4px 12px rgba(0, 0, 208, 0.08)',
+        gap: '0.875rem', 
+        marginBottom: '0.875rem',
+        marginLeft: '0.5rem',
+        marginRight: '0.5rem',
+        background: 'rgba(255, 255, 255, 0.98)',
+        padding: '0.875rem 1rem',
+        borderRadius: '12px',
+        boxShadow: '0 2px 8px rgba(0, 0, 208, 0.06)',
         flexWrap: 'wrap'
       }}>
         <div>
-          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', margin: '0 0 0.25rem 0', color: '#0000D0', fontWeight: 800, letterSpacing: '-0.01em' }}>Vista previa ATR</h1>
-          <p style={{ fontSize: '1rem', margin: 0, color: '#2929E5', fontWeight: 600 }}>
+          <h1 style={{ 
+            fontSize: 'clamp(1.375rem, 3.5vw, 1.875rem)', 
+            margin: '0 0 0.25rem 0', 
+            color: '#0000D0', 
+            fontWeight: 700, 
+            letterSpacing: '-0.01em',
+            fontFamily: "'Lato', sans-serif"
+          }}>Vista previa ATR</h1>
+          <p style={{ fontSize: '0.875rem', margin: 0, color: '#64748b', fontWeight: 500 }}>
             <span style={{ 
-              background: 'rgba(0, 0, 208, 0.1)', 
-              padding: '0.25rem 0.75rem', 
-              borderRadius: '8px',
-              display: 'inline-block'
-            }}>{total} filas</span>
+              background: 'rgba(0, 0, 208, 0.08)', 
+              padding: '0.25rem 0.625rem', 
+              borderRadius: '6px',
+              display: 'inline-block',
+              color: '#0000D0',
+              fontWeight: 600,
+              fontSize: '0.8125rem'
+            }}>{total} {total === 1 ? 'fila' : 'filas'}</span>
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={handleOrdenar}
             disabled={ordenado}
             style={{
-              borderRadius: 12,
+              borderRadius: 10,
               opacity: ordenado ? 0.6 : 1,
-              padding: '0.75rem 1.5rem',
+              padding: '0.625rem 1.25rem',
               background: ordenado 
-                ? 'rgba(0, 0, 208, 0.15)' 
+                ? 'rgba(0, 0, 208, 0.12)' 
                 : 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)',
               border: 'none',
               color: ordenado ? 'rgba(0, 0, 208, 0.5)' : '#FFFFFF',
-              fontSize: '0.95rem',
+              fontSize: '0.8125rem',
               fontWeight: 700,
-              letterSpacing: '0.05em',
+              letterSpacing: '0.03em',
               cursor: ordenado ? 'not-allowed' : 'pointer',
-              boxShadow: ordenado ? 'none' : '0 10px 25px -8px rgba(255, 49, 132, 0.5)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              textTransform: 'uppercase'
+              boxShadow: ordenado ? 'none' : '0 4px 12px -2px rgba(255, 49, 132, 0.4)',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              fontFamily: "'Open Sans', sans-serif"
             }}
             title={ordenado ? 'Filtro ya aplicado' : 'Anular facturas seleccionadas'}
             onMouseEnter={e => { 
               if (!ordenado) {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(255, 49, 132, 0.7)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(255, 49, 132, 0.5)';
               }
             }}
             onMouseLeave={e => { 
               if (!ordenado) {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(255, 49, 132, 0.5)';
+                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(255, 49, 132, 0.4)';
               }
             }}
           >
@@ -342,78 +569,86 @@ const ATRPreview: React.FC = () => {
           <a 
             href="#/export-saldo-atr"
             style={{ 
-              borderRadius: 12,
-              padding: '0.75rem 1.5rem',
+              borderRadius: 10,
+              padding: '0.625rem 1.25rem',
               background: '#0000D0',
               border: 'none',
               color: '#FFFFFF',
-              fontSize: '0.95rem',
+              fontSize: '0.8125rem',
               fontWeight: 700,
               textDecoration: 'none',
-              boxShadow: '0 10px 25px -8px rgba(0, 0, 208, 0.4)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 4px 12px -2px rgba(0, 0, 208, 0.35)',
+              transition: 'all 0.2s ease',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              display: 'inline-block'
+              letterSpacing: '0.03em',
+              display: 'inline-block',
+              fontFamily: "'Open Sans', sans-serif"
             }}
             onMouseEnter={e => {
               e.currentTarget.style.background = '#0000B8';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(0, 0, 208, 0.6)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(0, 0, 208, 0.45)';
             }}
             onMouseLeave={e => {
               e.currentTarget.style.background = '#0000D0';
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(0, 0, 208, 0.4)';
+              e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 208, 0.35)';
             }}
           >Re-exportar</a>
           <a 
             href="#/analisis-expediente"
             style={{ 
-              borderRadius: 12,
-              padding: '0.75rem 1.5rem',
+              borderRadius: 10,
+              padding: '0.625rem 1.25rem',
               background: 'transparent',
-              border: '2px solid rgba(0, 0, 208, 0.3)',
+              border: '1.5px solid rgba(0, 0, 208, 0.25)',
               color: '#0000D0',
-              fontSize: '0.95rem',
+              fontSize: '0.8125rem',
               fontWeight: 700,
               textDecoration: 'none',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'all 0.2s ease',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              display: 'inline-block'
+              letterSpacing: '0.03em',
+              display: 'inline-block',
+              fontFamily: "'Open Sans', sans-serif"
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(0, 0, 208, 0.08)';
+              e.currentTarget.style.background = 'rgba(0, 0, 208, 0.06)';
               e.currentTarget.style.borderColor = '#0000D0';
             }}
             onMouseLeave={e => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = 'rgba(0, 0, 208, 0.3)';
+              e.currentTarget.style.borderColor = 'rgba(0, 0, 208, 0.25)';
             }}
           >← Volver</a>
         </div>
       </div>
       <div style={{ 
-        color: '#2929E5', 
-        fontSize: '0.9rem', 
-        marginBottom: '1rem',
-        background: 'rgba(0, 0, 208, 0.05)',
-        padding: '0.75rem 1rem',
+        color: '#64748b', 
+        fontSize: '0.8125rem', 
+        marginBottom: '0.75rem',
+        marginLeft: '0.5rem',
+        marginRight: '0.5rem',
+        background: 'rgba(0, 0, 208, 0.04)',
+        padding: '0.625rem 0.875rem',
         borderRadius: '8px',
-        border: '1px solid rgba(0, 0, 208, 0.1)'
+        border: '1px solid rgba(0, 0, 208, 0.08)',
+        fontFamily: "'Open Sans', sans-serif",
+        lineHeight: 1.5
       }}>
-        <strong>Nota:</strong> Se resaltan cambios de <strong style={{ color: '#F44336' }}>Contrato ATR</strong> y <strong style={{ color: '#FFA726' }}>Potencia (kW)</strong> respecto a la fila anterior.
+        <strong style={{ color: '#475569' }}>Nota:</strong> Se resaltan cambios de <strong style={{ color: '#0000D0' }}>Contrato ATR</strong> y <strong style={{ color: '#FF3184' }}>Potencia (kW)</strong> respecto a la fila anterior.
       </div>
 
       <div style={{ 
+        marginLeft: '0.5rem',
+        marginRight: '0.5rem',
         overflowY: 'auto', 
         overflowX: 'auto', 
-        border: '2px solid rgba(0, 0, 208, 0.1)', 
-        borderRadius: 16, 
+        border: '1.5px solid rgba(0, 0, 208, 0.1)', 
+        borderRadius: 12, 
         background: '#FFFFFF', 
-        boxShadow: '0 4px 12px rgba(0, 0, 208, 0.08)', 
-        maxHeight: 'calc(100vh - 240px)' 
+        boxShadow: '0 2px 8px rgba(0, 0, 208, 0.06)', 
+        maxHeight: 'calc(100vh - 300px)' 
       }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>
@@ -423,45 +658,48 @@ const ATRPreview: React.FC = () => {
                 left: 0, 
                 top: 0, 
                 zIndex: 3, 
-                background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.08) 0%, rgba(41, 41, 229, 0.06) 100%)', 
-                borderRight: '2px solid rgba(0, 0, 208, 0.15)', 
+                background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.06) 0%, rgba(41, 41, 229, 0.04) 100%)', 
+                borderRight: '1.5px solid rgba(0, 0, 208, 0.12)', 
                 color: '#0000D0', 
-                padding: '0.75rem 1rem',
+                padding: '0.625rem 0.875rem',
                 fontWeight: 700,
-                fontSize: '0.9rem'
+                fontSize: '0.8125rem',
+                fontFamily: "'Lato', sans-serif"
               }}></th>
-              {data.headers.map((h, idx) => (
+              {filteredData.headers.map((h, idx) => (
                 <React.Fragment key={idx}>
                   <th style={{ 
-                    padding: '0.75rem 1rem', 
-                    borderBottom: '2px solid rgba(0, 0, 208, 0.15)', 
-                    borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                    padding: '0.625rem 0.875rem', 
+                    borderBottom: '1.5px solid rgba(0, 0, 208, 0.12)', 
+                    borderRight: '1px solid rgba(0, 0, 208, 0.06)', 
                     color: '#0000D0', 
-                    background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.08) 0%, rgba(41, 41, 229, 0.06) 100%)', 
+                    background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.06) 0%, rgba(41, 41, 229, 0.04) 100%)', 
                     textAlign: 'left', 
                     position: 'sticky', 
                     top: 0, 
                     zIndex: 2,
                     fontWeight: 700,
-                    fontSize: '0.85rem',
+                    fontSize: '0.75rem',
                     letterSpacing: '0.02em',
-                    textTransform: 'uppercase'
+                    textTransform: 'uppercase',
+                    fontFamily: "'Lato', sans-serif"
                   }}>{h || '\u00A0'}</th>
                   {idx === cupsIndex && (
                     <th style={{ 
-                      padding: '0.75rem 1rem', 
-                      borderBottom: '2px solid rgba(0, 0, 208, 0.15)', 
-                      borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                      padding: '0.625rem 0.875rem', 
+                      borderBottom: '1.5px solid rgba(0, 0, 208, 0.12)', 
+                      borderRight: '1px solid rgba(0, 0, 208, 0.06)', 
                       color: '#0000D0', 
-                      background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.08) 0%, rgba(41, 41, 229, 0.06) 100%)', 
+                      background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.06) 0%, rgba(41, 41, 229, 0.04) 100%)', 
                       textAlign: 'left', 
                       position: 'sticky', 
                       top: 0, 
                       zIndex: 2,
                       fontWeight: 700,
-                      fontSize: '0.85rem',
+                      fontSize: '0.75rem',
                       letterSpacing: '0.02em',
-                      textTransform: 'uppercase'
+                      textTransform: 'uppercase',
+                      fontFamily: "'Lato', sans-serif"
                     }}>
                       Duración total del contrato
                     </th>
@@ -481,17 +719,18 @@ const ATRPreview: React.FC = () => {
                     position: 'sticky', 
                     left: 0, 
                     zIndex: 1, 
-                    background: rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.03)' : 'rgba(0, 0, 208, 0.05)'), 
-                    borderRight: '1px solid rgba(0, 0, 208, 0.1)', 
-                    color: '#475569', 
-                    padding: '0.6rem 0.8rem', 
+                    background: rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.02)' : 'rgba(0, 0, 208, 0.04)'), 
+                    borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                    color: '#64748b', 
+                    padding: '0.5rem 0.75rem', 
                     textAlign: 'right',
                     fontWeight: 600,
-                    fontSize: '0.85rem'
+                    fontSize: '0.75rem',
+                    fontFamily: "'Open Sans', sans-serif"
                   }}>
                     {i + 1}
                   </td>
-                  {data.headers.map((h, j) => {
+                  {filteredData.headers.map((h, j) => {
                     const val = String(r[h] ?? '')
                     const prevVal = prev ? String(prev[h] ?? '') : ''
                     const contrato = isContratoHeader(h)
@@ -529,27 +768,29 @@ const ATRPreview: React.FC = () => {
                     return (
                       <React.Fragment key={j}>
                         <td style={{ 
-                          padding: '0.6rem 0.8rem', 
-                          borderTop: '1px solid rgba(0, 0, 208, 0.08)', 
-                          borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                          padding: '0.5rem 0.75rem', 
+                          borderTop: '1px solid rgba(0, 0, 208, 0.06)', 
+                          borderRight: '1px solid rgba(0, 0, 208, 0.06)', 
                           color, 
                           background: bg, 
                           fontWeight, 
                           textAlign: align,
-                          fontSize: '0.9rem',
-                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                          fontSize: '0.8125rem',
+                          transition: 'background 0.15s ease',
+                          fontFamily: "'Open Sans', sans-serif"
                         }}>
                           {display}
                         </td>
                         {j === cupsIndex && (
                           <td style={{ 
-                            padding: '0.6rem 0.8rem', 
-                            borderTop: '1px solid rgba(0, 0, 208, 0.08)', 
-                            borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                            padding: '0.5rem 0.75rem', 
+                            borderTop: '1px solid rgba(0, 0, 208, 0.06)', 
+                            borderRight: '1px solid rgba(0, 0, 208, 0.06)', 
                             color: '#0000D0', 
                             background: rowBg || undefined, 
                             fontWeight: 700,
-                            fontSize: '0.9rem'
+                            fontSize: '0.8125rem',
+                            fontFamily: "'Open Sans', sans-serif"
                           }}>
                             {contractDurationText.get(contractKey) || ''}
                           </td>
@@ -562,6 +803,178 @@ const ATRPreview: React.FC = () => {
             })}
           </tbody>
         </table>
+      </div>
+      </div> {/* Cierre del contenido principal */}
+
+      {/* Bottom Bar - Barra inferior con scroll horizontal */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'linear-gradient(180deg, rgba(0, 0, 208, 0.96) 0%, rgba(0, 0, 180, 0.98) 100%)',
+        backdropFilter: 'blur(12px)',
+        boxShadow: '0 -4px 16px rgba(0, 0, 208, 0.2)',
+        zIndex: 1000,
+        borderTop: '2px solid rgba(255, 255, 255, 0.15)'
+      }}>
+        {/* Contenedor con scroll horizontal */}
+        <div style={{
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.875rem 1rem',
+            minWidth: 'max-content',
+            gap: '1.5rem'
+          }}>
+            {/* Sección izquierda - Información */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ 
+                  fontSize: '1.125rem', 
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontFamily: "'Lato', sans-serif"
+                }}>📊</span>
+                <span style={{ 
+                  color: '#FFFFFF', 
+                  fontSize: '0.875rem', 
+                  fontWeight: 600,
+                  fontFamily: "'Open Sans', sans-serif",
+                  whiteSpace: 'nowrap'
+                }}>
+                  Total: <strong style={{ fontSize: '1rem' }}>{total}</strong> {total === 1 ? 'registro' : 'registros'}
+                </span>
+              </div>
+              
+              {ordenado && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1rem', color: '#4ade80' }}>✓</span>
+                  <span style={{ 
+                    color: 'rgba(255, 255, 255, 0.95)', 
+                    fontSize: '0.875rem', 
+                    fontWeight: 500,
+                    fontFamily: "'Open Sans', sans-serif",
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {anuladas} factura{anuladas === 1 ? '' : 's'} filtrada{anuladas === 1 ? '' : 's'}
+                  </span>
+                </div>
+              )}
+              
+              {contractHeader && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ 
+                    fontSize: '0.875rem', 
+                    color: 'rgba(255, 255, 255, 0.85)',
+                    fontFamily: "'Open Sans', sans-serif",
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Contratos únicos: <strong style={{ color: '#FFFFFF' }}>{contractColorMap.size}</strong>
+                  </span>
+                </div>
+              )}
+
+              {filteredData && filteredData.headers && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ 
+                    fontSize: '0.875rem', 
+                    color: 'rgba(255, 255, 255, 0.85)',
+                    fontFamily: "'Open Sans', sans-serif",
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Columnas: <strong style={{ color: '#FFFFFF' }}>{filteredData.headers.length}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            {/* Sección derecha - Navegación y metadata */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontFamily: "'Open Sans', sans-serif",
+                letterSpacing: '0.03em',
+                whiteSpace: 'nowrap'
+              }}>
+                ValorApp ATR v1.0
+              </span>
+              <div style={{
+                width: '1px',
+                height: '24px',
+                background: 'rgba(255, 255, 255, 0.2)'
+              }} />
+              <a
+                href="#/export-saldo-atr"
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  padding: '0.375rem 0.875rem',
+                  borderRadius: '6px',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  transition: 'all 0.2s ease',
+                  fontFamily: "'Open Sans', sans-serif",
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                }}
+              >
+                📤 Re-exportar
+              </a>
+              <a
+                href="#/analisis-expediente"
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  padding: '0.375rem 0.875rem',
+                  borderRadius: '6px',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  transition: 'all 0.2s ease',
+                  fontFamily: "'Open Sans', sans-serif",
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                }}
+              >
+                ← Regresar
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        {/* Indicador de scroll (opcional) */}
+        <div style={{
+          height: '3px',
+          background: 'rgba(255, 255, 255, 0.1)',
+          position: 'relative'
+        }}>
+          <div style={{
+            height: '100%',
+            background: 'rgba(255, 255, 255, 0.3)',
+            width: '30%',
+            borderRadius: '3px'
+          }} />
+        </div>
       </div>
     </div>
   )

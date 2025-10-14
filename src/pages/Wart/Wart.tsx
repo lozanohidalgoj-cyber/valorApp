@@ -46,47 +46,49 @@ export const Wart: React.FC = () => {
       }} />
 
       <div style={{ 
-        maxWidth: '900px', 
+        maxWidth: '1200px', 
         width: '100%',
         background: 'rgba(255, 255, 255, 0.98)',
         borderRadius: '24px',
-        padding: '3rem 2.5rem',
+        padding: '4rem 3.5rem',
         boxShadow: '0 20px 60px -10px rgba(0, 0, 0, 0.3)',
         backdropFilter: 'blur(20px)',
         position: 'relative',
         zIndex: 10
       }}>
         <h1 style={{ 
-          fontSize: 'clamp(2rem, 5vw, 2.75rem)', 
-          margin: '0 0 0.75rem', 
+          fontSize: 'clamp(3rem, 7vw, 4.5rem)', 
+          margin: '0 0 1rem', 
           fontWeight: 800, 
           letterSpacing: '-0.01em', 
-          color: '#0000D0' 
+          color: '#0000D0',
+          fontFamily: "'Lato', sans-serif"
         }}>
           Módulo WART
         </h1>
         <p style={{ 
-          fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
-          margin: '0 0 2.5rem', 
+          fontSize: 'clamp(1.5rem, 3.5vw, 2rem)', 
+          margin: '0 0 3rem', 
           lineHeight: 1.6, 
           color: '#2929E5', 
-          fontWeight: 500 
+          fontWeight: 500,
+          fontFamily: "'Open Sans', sans-serif"
         }}>
           Antes de continuar recuerde revisar:
         </p>
         <ul style={{ 
           listStyle: 'none', 
           padding: 0, 
-          margin: '0 0 2.5rem', 
+          margin: '0 0 3rem', 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '1.25rem' 
+          gap: '1.75rem' 
         }}>
           <li style={{ 
             display: 'flex', 
             alignItems: 'flex-start', 
             background: 'rgba(0, 0, 208, 0.03)',
-            padding: '1.25rem',
+            padding: '1.75rem',
             borderRadius: '12px',
             border: '2px solid rgba(0, 0, 208, 0.1)',
             transition: 'all 0.2s ease'
@@ -94,23 +96,24 @@ export const Wart: React.FC = () => {
             <label style={{ 
               cursor: 'pointer', 
               display: 'flex', 
-              gap: '1rem', 
+              gap: '1.25rem', 
               alignItems: 'flex-start', 
-              fontSize: '1rem', 
+              fontSize: '1.35rem', 
               lineHeight: 1.6, 
               color: '#1a1a1a', 
               fontWeight: 500,
-              width: '100%'
+              width: '100%',
+              fontFamily: "'Open Sans', sans-serif"
             }}>
               <input
                 type="checkbox"
                 checked={checks.c1}
                 onChange={() => toggle('c1')}
                 style={{ 
-                  width: 24, 
-                  height: 24, 
+                  width: 28, 
+                  height: 28, 
                   accentColor: '#0000D0', 
-                  marginTop: 2,
+                  marginTop: 4,
                   cursor: 'pointer'
                 }}
               />
@@ -123,7 +126,7 @@ export const Wart: React.FC = () => {
             display: 'flex', 
             alignItems: 'flex-start',
             background: 'rgba(0, 0, 208, 0.03)',
-            padding: '1.25rem',
+            padding: '1.75rem',
             borderRadius: '12px',
             border: '2px solid rgba(0, 0, 208, 0.1)',
             transition: 'all 0.2s ease'
@@ -131,23 +134,24 @@ export const Wart: React.FC = () => {
             <label style={{ 
               cursor: 'pointer', 
               display: 'flex', 
-              gap: '1rem', 
+              gap: '1.25rem', 
               alignItems: 'flex-start', 
-              fontSize: '1rem', 
+              fontSize: '1.35rem', 
               lineHeight: 1.6, 
               color: '#1a1a1a', 
               fontWeight: 500,
-              width: '100%'
+              width: '100%',
+              fontFamily: "'Open Sans', sans-serif"
             }}>
               <input
                 type="checkbox"
                 checked={checks.c2}
                 onChange={() => toggle('c2')}
                 style={{ 
-                  width: 24, 
-                  height: 24, 
+                  width: 28, 
+                  height: 28, 
                   accentColor: '#0000D0', 
-                  marginTop: 2,
+                  marginTop: 4,
                   cursor: 'pointer'
                 }}
               />
@@ -160,26 +164,27 @@ export const Wart: React.FC = () => {
 
         <div style={{ 
           display: 'flex', 
-          gap: '1rem', 
+          gap: '1.25rem', 
           alignItems: 'center',
           justifyContent: 'flex-start',
           flexWrap: 'wrap',
-          paddingTop: '1rem'
+          paddingTop: '1.5rem'
         }}>
           <a
             href="#/"
             style={{
               background: 'transparent',
               color: '#0000D0',
-              padding: '1rem 1.5rem',
+              padding: '1.25rem 2rem',
               fontWeight: 600,
               textDecoration: 'none',
-              fontSize: '1rem',
+              fontSize: '1.25rem',
               borderRadius: '8px',
               transition: 'all 0.2s ease',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: '0.5rem',
+              fontFamily: "'Open Sans', sans-serif"
             }}
             onMouseEnter={e => {
               e.currentTarget.style.background = 'rgba(0, 0, 208, 0.08)';
@@ -198,8 +203,8 @@ export const Wart: React.FC = () => {
                 : 'rgba(0, 0, 208, 0.15)',
               color: allOk ? '#FFFFFF' : 'rgba(0, 0, 208, 0.4)',
               border: 'none',
-              padding: '1rem 2.5rem',
-              fontSize: '1rem',
+              padding: '1.25rem 3rem',
+              fontSize: '1.25rem',
               fontWeight: 700,
               borderRadius: '12px',
               cursor: allOk ? 'pointer' : 'not-allowed',
@@ -207,7 +212,8 @@ export const Wart: React.FC = () => {
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              opacity: allOk ? 1 : 0.6
+              opacity: allOk ? 1 : 0.6,
+              fontFamily: "'Lato', sans-serif"
             }}
             onMouseEnter={e => { 
               if (allOk) {
