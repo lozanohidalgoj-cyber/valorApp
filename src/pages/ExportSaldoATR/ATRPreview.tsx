@@ -112,10 +112,10 @@ const ATRPreview: React.FC = () => {
     const totalDays = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000))
     return { months, days, totalDays }
   }
+
   const contractDurationText = React.useMemo(() => {
     const map = new Map<string, string>()
     if (!data || !contractHeader || !fechaDesdeHeader || !fechaHastaHeader) return map
-    // Acumular rangos por contrato
     const acc = new Map<string, { minDesde: Date | null, maxHasta: Date | null }>()
     for (const r of data.rows) {
       const key = String(r[contractHeader] ?? '').trim()
@@ -126,20 +126,20 @@ const ATRPreview: React.FC = () => {
       if (dDesde && (!cur.minDesde || dDesde < cur.minDesde)) cur.minDesde = dDesde
       if (dHasta && (!cur.maxHasta || dHasta > cur.maxHasta)) cur.maxHasta = dHasta
     }
-    // Construir textos
     for (const [key, { minDesde, maxHasta }] of acc) {
       if (minDesde && maxHasta && maxHasta >= minDesde) {
-        const { months, days, totalDays } = diffMonthsDays(minDesde, maxHasta)
+        const { months, days } = diffMonthsDays(minDesde, maxHasta)
+        const years = Math.floor(months / 12)
+        const remMonths = months % 12
+        const parts: string[] = []
+        if (years > 0) parts.push(`${years} ${plural(years, 'año', 'años')}`)
+        if (remMonths > 0) parts.push(`${remMonths} ${plural(remMonths, 'mes', 'meses')}`)
+        if (days > 0) parts.push(`${days} ${plural(days, 'día', 'días')}`)
+        if (parts.length === 0) parts.push('0 días')
         let text: string
-        if (months > 0 && days > 0) {
-          text = `${months} ${plural(months, 'mes', 'meses')} y ${days} ${plural(days, 'día', 'días')} (${totalDays})`
-        } else if (months > 0) {
-          text = `${months} ${plural(months, 'mes', 'meses')} (${totalDays})`
-        } else if (days > 0) {
-          text = `${days} ${plural(days, 'día', 'días')} (${totalDays})`
-        } else {
-          text = '0 días (0)'
-        }
+        if (parts.length === 1) text = parts[0]
+        else if (parts.length === 2) text = parts.join(' y ')
+        else text = parts.slice(0, -1).join(', ') + ' y ' + parts[parts.length - 1]
         map.set(key, text)
       } else {
         map.set(key, '')
@@ -148,18 +148,6 @@ const ATRPreview: React.FC = () => {
     return map
   }, [data, contractHeader, fechaDesdeHeader, fechaHastaHeader])
 
-  // Índices primera/última aparición por contrato para mostrar duración solo en inicio y fin
-  const contractFirstLastIndex = React.useMemo(() => {
-    const map = new Map<string, { first: number, last: number }>()
-    if (!data || !contractHeader) return map
-    data.rows.forEach((r, idx) => {
-      const key = String(r[contractHeader] ?? '').trim()
-      const cur = map.get(key)
-      if (!cur) map.set(key, { first: idx, last: idx })
-      else cur.last = idx
-    })
-    return map
-  }, [data, contractHeader])
 
   // Índice de CUPS para insertar la columna a su derecha
   const cupsIndex = React.useMemo(() => (data ? data.headers.findIndex(h => (h || '').toString().toLowerCase().trim() === 'cups') : -1), [data])
