@@ -90,6 +90,15 @@ const ATRPreview: React.FC = () => {
     const t = stripAccents(h).toLowerCase().trim()
     return t === 'fecha hasta' || (t.includes('fecha') && t.includes('hasta'))
   }
+  // Cabeceras robustas para "Tipo de factura" y "Estado de medida"
+  const isTipoFacturaHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t === 'tipo de factura' || t === 'tipo factura' || (t.includes('tipo') && t.includes('factur'))
+  }
+  const isEstadoMedidaHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t === 'estado de medida' || t === 'estado medida' || (t.includes('estado') && t.includes('medida'))
+  }
   const normalizeNumber = (s: string) => {
     // Convierte "2.345,67" o "2,200" a número normalizado para comparar
     const t = (s || '').replace(/\./g, '').replace(/,/g, '.')
@@ -319,19 +328,19 @@ const ATRPreview: React.FC = () => {
 
   const handleOrdenar = React.useCallback(() => {
     if (!filteredData || ordenado) return
-    const tipoHeader = filteredData.headers.find(h => (h || '').toLowerCase().trim() === 'tipo de factura')
-    const estadoMedidaHeader = filteredData.headers.find(h => stripAccents(h || '').toLowerCase().trim() === 'estado de medida')
+    const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
+    const estadoMedidaHeader = filteredData.headers.find(h => isEstadoMedidaHeader(h))
     if (!tipoHeader && !estadoMedidaHeader) return
-    const valoresAnularTipo = new Set(['factura complementaria','anulada','anuladora','enviado a facturar'])
-    const valoresAnularEstado = new Set(['anulada','anuladora'])
+  const valoresAnularTipo = new Set(['factura complementaria','anulada','anuladora','enviado a facturar','enviada a facturar','enviado a facturacion','enviada a facturacion'])
+  const valoresAnularEstado = new Set(['anulada','anuladora'])
     // Usar filteredData.rows para trabajar con datos ya filtrados (sin columna autofactura)
     const originales = filteredData.rows
     const restantes: Record<string,string>[] = []
     let count = 0
     let comp = 0, anul = 0, anuladora = 0, estadoAnulada = 0, estadoAnuladora = 0
     for (const r of originales) {
-      const tipo = tipoHeader ? (r[tipoHeader] || '').toString().toLowerCase().trim() : ''
-      const estado = estadoMedidaHeader ? stripAccents((r[estadoMedidaHeader] || '').toString()).toLowerCase().trim() : ''
+  const tipo = tipoHeader ? stripAccents((r[tipoHeader] || '').toString()).toLowerCase().trim() : ''
+  const estado = estadoMedidaHeader ? stripAccents((r[estadoMedidaHeader] || '').toString()).toLowerCase().trim() : ''
       const porTipo = tipoHeader ? valoresAnularTipo.has(tipo) : false
       const porEstado = estadoMedidaHeader ? valoresAnularEstado.has(estado) : false
       if (porTipo || porEstado) {
