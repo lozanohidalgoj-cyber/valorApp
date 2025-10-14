@@ -83,6 +83,8 @@ const ATRPreview: React.FC = () => {
   // Colores por grupo de contrato (pasteles suaves)
   const groupPalette = ['#fefce8', '#eef2ff', '#ecfdf5', '#fdf2f8', '#f0f9ff', '#fff7ed', '#f5f3ff', '#e8f5e9', '#ede7f6', '#fffde7']
   const contractHeader = React.useMemo(() => (data?.headers.find(h => isContratoHeader(h)) || null), [data])
+  const fechaDesdeHeader = React.useMemo(() => (data?.headers.find(h => isFechaDesdeHeader(h)) || null), [data])
+  const fechaHastaHeader = React.useMemo(() => (data?.headers.find(h => isFechaHastaHeader(h)) || null), [data])
   const contractColorMap = React.useMemo(() => {
     const map = new Map<string, string>()
     if (!data || !contractHeader) return map
@@ -96,6 +98,71 @@ const ATRPreview: React.FC = () => {
     }
     return map
   }, [data, contractHeader])
+
+  // Duración total por contrato: desde primera "Fecha desde" hasta última "Fecha hasta"
+  const plural = (n: number, s: string, p: string) => (n === 1 ? s : p)
+  const diffMonthsDays = (start: Date, end: Date) => {
+    let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    let anchor = new Date(start.getFullYear(), start.getMonth() + months, start.getDate())
+    if (anchor > end) {
+      months--
+      anchor = new Date(start.getFullYear(), start.getMonth() + months, start.getDate())
+    }
+    const days = Math.max(0, Math.floor((end.getTime() - anchor.getTime()) / 86400000))
+    const totalDays = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000))
+    return { months, days, totalDays }
+  }
+  const contractDurationText = React.useMemo(() => {
+    const map = new Map<string, string>()
+    if (!data || !contractHeader || !fechaDesdeHeader || !fechaHastaHeader) return map
+    // Acumular rangos por contrato
+    const acc = new Map<string, { minDesde: Date | null, maxHasta: Date | null }>()
+    for (const r of data.rows) {
+      const key = String(r[contractHeader] ?? '').trim()
+      const dDesde = parseDateLoose(r[fechaDesdeHeader])
+      const dHasta = parseDateLoose(r[fechaHastaHeader])
+      if (!acc.has(key)) acc.set(key, { minDesde: null, maxHasta: null })
+      const cur = acc.get(key)!
+      if (dDesde && (!cur.minDesde || dDesde < cur.minDesde)) cur.minDesde = dDesde
+      if (dHasta && (!cur.maxHasta || dHasta > cur.maxHasta)) cur.maxHasta = dHasta
+    }
+    // Construir textos
+    for (const [key, { minDesde, maxHasta }] of acc) {
+      if (minDesde && maxHasta && maxHasta >= minDesde) {
+        const { months, days, totalDays } = diffMonthsDays(minDesde, maxHasta)
+        let text: string
+        if (months > 0 && days > 0) {
+          text = `${months} ${plural(months, 'mes', 'meses')} y ${days} ${plural(days, 'día', 'días')} (${totalDays})`
+        } else if (months > 0) {
+          text = `${months} ${plural(months, 'mes', 'meses')} (${totalDays})`
+        } else if (days > 0) {
+          text = `${days} ${plural(days, 'día', 'días')} (${totalDays})`
+        } else {
+          text = '0 días (0)'
+        }
+        map.set(key, text)
+      } else {
+        map.set(key, '')
+      }
+    }
+    return map
+  }, [data, contractHeader, fechaDesdeHeader, fechaHastaHeader])
+
+  // Índices primera/última aparición por contrato para mostrar duración solo en inicio y fin
+  const contractFirstLastIndex = React.useMemo(() => {
+    const map = new Map<string, { first: number, last: number }>()
+    if (!data || !contractHeader) return map
+    data.rows.forEach((r, idx) => {
+      const key = String(r[contractHeader] ?? '').trim()
+      const cur = map.get(key)
+      if (!cur) map.set(key, { first: idx, last: idx })
+      else cur.last = idx
+    })
+    return map
+  }, [data, contractHeader])
+
+  // Índice de CUPS para insertar la columna a su derecha
+  const cupsIndex = React.useMemo(() => (data ? data.headers.findIndex(h => (h || '').toString().toLowerCase().trim() === 'cups') : -1), [data])
 
   if (!data || !data.headers?.length) {
     return (
@@ -128,8 +195,15 @@ const ATRPreview: React.FC = () => {
           <thead>
             <tr>
               <th style={{ position: 'sticky', left: 0, top: 0, zIndex: 3, background: '#eef3fb', borderRight: '1px solid #d7e2f3', color: '#203a5c', padding: '.4rem .5rem' }}></th>
-              {data.headers.map(h => (
-                <th key={h} style={{ padding: '.4rem .6rem', borderBottom: '1px solid #d7e2f3', borderRight: '1px solid #e6edf7', color: '#203a5c', background: '#eef3fb', textAlign: 'left', position: 'sticky', top: 0, zIndex: 2 }}>{h || '\u00A0'}</th>
+              {data.headers.map((h, idx) => (
+                <React.Fragment key={idx}>
+                  <th style={{ padding: '.4rem .6rem', borderBottom: '1px solid #d7e2f3', borderRight: '1px solid #e6edf7', color: '#203a5c', background: '#eef3fb', textAlign: 'left', position: 'sticky', top: 0, zIndex: 2 }}>{h || '\u00A0'}</th>
+                  {idx === cupsIndex && (
+                    <th style={{ padding: '.4rem .6rem', borderBottom: '1px solid #d7e2f3', borderRight: '1px solid #e6edf7', color: '#203a5c', background: '#eef3fb', textAlign: 'left', position: 'sticky', top: 0, zIndex: 2 }}>
+                      Duración total del contrato
+                    </th>
+                  )}
+                </React.Fragment>
               ))}
             </tr>
           </thead>
@@ -174,9 +248,16 @@ const ATRPreview: React.FC = () => {
                         ? new Intl.NumberFormat('es-ES', { maximumFractionDigits: 6 }).format(normalizeNumber(val))
                         : val)
                     return (
-                      <td key={j} style={{ padding: '.4rem .6rem', borderTop: '1px solid #eef2f7', borderRight: '1px solid #eef2f7', color, background: bg, fontWeight, textAlign: align }}>
-                        {display}
-                      </td>
+                      <React.Fragment key={j}>
+                        <td style={{ padding: '.4rem .6rem', borderTop: '1px solid #eef2f7', borderRight: '1px solid #eef2f7', color, background: bg, fontWeight, textAlign: align }}>
+                          {display}
+                        </td>
+                        {j === cupsIndex && (
+                          <td style={{ padding: '.4rem .6rem', borderTop: '1px solid #eef2f7', borderRight: '1px solid #eef2f7', color: '#223a5c', background: rowBg || undefined, fontWeight: 600 }}>
+                            {contractDurationText.get(contractKey) || ''}
+                          </td>
+                        )}
+                      </React.Fragment>
                     )
                   })}
                 </tr>
