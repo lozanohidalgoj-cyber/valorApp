@@ -17,7 +17,11 @@ const useAtrCsv = (): ParsedCSV | null => {
 
 const ATRPreview: React.FC = () => {
   const data = useAtrCsv()
-  const total = data?.rows?.length || 0
+  const [filteredRows, setFilteredRows] = React.useState<Record<string,string>[]>(() => data?.rows || [])
+  const [anuladas, setAnuladas] = React.useState<number>(0)
+  const [detalleAnuladas, setDetalleAnuladas] = React.useState<{comp: number; anuladas: number; anuladoras: number}>({ comp: 0, anuladas: 0, anuladoras: 0 })
+  const [ordenado, setOrdenado] = React.useState<boolean>(false)
+  const total = filteredRows.length
 
   const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
   const isPotenciaHeader = (h: string) => ['Potencia (kW)', 'Potencia', 'Potencia kW'].some(x => x.toLowerCase() === (h || '').toLowerCase())
@@ -89,7 +93,7 @@ const ATRPreview: React.FC = () => {
     const map = new Map<string, string>()
     if (!data || !contractHeader) return map
     let idx = 0
-    for (const r of data.rows) {
+    for (const r of filteredRows) {
       const key = String(r[contractHeader] ?? '').trim()
       if (!map.has(key)) {
         map.set(key, groupPalette[idx % groupPalette.length])
@@ -97,7 +101,7 @@ const ATRPreview: React.FC = () => {
       }
     }
     return map
-  }, [data, contractHeader])
+  }, [filteredRows, contractHeader])
 
   // Duración total por contrato: desde primera "Fecha desde" hasta última "Fecha hasta"
   const plural = (n: number, s: string, p: string) => (n === 1 ? s : p)
@@ -117,7 +121,7 @@ const ATRPreview: React.FC = () => {
     const map = new Map<string, string>()
     if (!data || !contractHeader || !fechaDesdeHeader || !fechaHastaHeader) return map
     const acc = new Map<string, { minDesde: Date | null, maxHasta: Date | null }>()
-    for (const r of data.rows) {
+    for (const r of filteredRows) {
       const key = String(r[contractHeader] ?? '').trim()
       const dDesde = parseDateLoose(r[fechaDesdeHeader])
       const dHasta = parseDateLoose(r[fechaHastaHeader])
@@ -146,11 +150,37 @@ const ATRPreview: React.FC = () => {
       }
     }
     return map
-  }, [data, contractHeader, fechaDesdeHeader, fechaHastaHeader])
+  }, [filteredRows, contractHeader, fechaDesdeHeader, fechaHastaHeader])
 
 
   // Índice de CUPS para insertar la columna a su derecha
   const cupsIndex = React.useMemo(() => (data ? data.headers.findIndex(h => (h || '').toString().toLowerCase().trim() === 'cups') : -1), [data])
+
+  const handleOrdenar = React.useCallback(() => {
+    if (!data || ordenado) return
+    const tipoHeader = data.headers.find(h => (h || '').toLowerCase().trim() === 'tipo de factura')
+    if (!tipoHeader) return
+    const valoresAnular = new Set(['factura complementaria','anulada','anuladora','enviado a facturar'])
+    const originales = data.rows
+    const restantes: Record<string,string>[] = []
+    let count = 0
+    let comp = 0, anul = 0, anuladora = 0
+    for (const r of originales) {
+      const tipo = (r[tipoHeader] || '').toString().toLowerCase().trim()
+      if (valoresAnular.has(tipo)) {
+        count++
+        if (tipo === 'factura complementaria') comp++
+        else if (tipo === 'anulada') anul++
+        else if (tipo === 'anuladora') anuladora++
+        continue
+      }
+      restantes.push(r)
+    }
+    setFilteredRows(restantes)
+    setAnuladas(count)
+    setDetalleAnuladas({ comp, anuladas: anul, anuladoras: anuladora })
+    setOrdenado(true)
+  }, [data, ordenado])
 
   if (!data || !data.headers?.length) {
     return (
@@ -166,10 +196,56 @@ const ATRPreview: React.FC = () => {
 
   return (
     <div style={{ padding: '1rem', maxWidth: '95vw', margin: '0 auto' }}>
+      {anuladas > 0 && (
+        <div
+          style={{
+            background: 'linear-gradient(90deg,#16a34a,#22c55e)',
+            border: '2px solid #065f46',
+            padding: '.9rem 1.1rem',
+            borderRadius: 12,
+            marginBottom: '.95rem',
+            color: '#ffffff',
+            fontSize: '.95rem',
+            fontWeight: 600,
+            lineHeight: 1.35,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.18)'
+          }}
+        >
+          ✅ Se han anulado {anuladas} factura{anuladas === 1 ? '' : 's'} del listado.<br />
+          <span style={{ fontSize: '.85rem', fontWeight: 500 }}>
+            Detalle: Factura complementaria: {detalleAnuladas.comp} | Anuladas: {detalleAnuladas.anuladas} | Anuladoras: {detalleAnuladas.anuladoras}
+          </span>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
         <h1 style={{ fontSize: '2.2rem', margin: 0, color: '#0d3d75' }}>Vista previa ATR</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ color: '#234e88' }}>{total} filas</span>
+          <button
+            type="button"
+            onClick={handleOrdenar}
+            disabled={ordenado}
+            className="btn"
+            style={{
+              borderRadius: 14,
+              opacity: ordenado ? 0.65 : 1,
+              padding: '.75rem 1.5rem',
+              background: ordenado ? 'linear-gradient(90deg,#a1a1aa,#71717a)' : 'linear-gradient(90deg,#d946ef,#9333ea)',
+              border: '2px solid ' + (ordenado ? '#52525b' : '#86198f'),
+              color: '#fff',
+              fontSize: '1rem',
+              fontWeight: 700,
+              letterSpacing: '.5px',
+              cursor: ordenado ? 'not-allowed' : 'pointer',
+              boxShadow: '0 3px 6px rgba(0,0,0,0.25)',
+              transition: 'all .2s'
+            }}
+            title={ordenado ? 'Filtro ya aplicado' : 'Anular facturas seleccionadas'}
+            onMouseEnter={e => { if (!ordenado) (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1.1)' }}
+            onMouseLeave={e => { if (!ordenado) (e.currentTarget as HTMLButtonElement).style.filter = 'none' }}
+          >
+            {ordenado ? 'Filtrado aplicado' : 'Ordenar'}
+          </button>
           <a href="#/export-saldo-atr" className="btn btn-secondary" style={{ borderRadius: 10 }}>Re-exportar</a>
           <a href="#/analisis-expediente" className="btn btn-primary" style={{ borderRadius: 10 }}>Volver</a>
         </div>
@@ -196,8 +272,8 @@ const ATRPreview: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {data.rows.map((r, i) => {
-              const prev = i > 0 ? data.rows[i - 1] : null
+            {filteredRows.map((r, i) => {
+              const prev = i > 0 ? filteredRows[i - 1] : null
               const contractKey = contractHeader ? String(r[contractHeader] ?? '').trim() : ''
               const rowBg = contractColorMap.get(contractKey)
               return (
