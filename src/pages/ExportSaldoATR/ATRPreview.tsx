@@ -320,27 +320,39 @@ const ATRPreview: React.FC = () => {
   const handleOrdenar = React.useCallback(() => {
     if (!filteredData || ordenado) return
     const tipoHeader = filteredData.headers.find(h => (h || '').toLowerCase().trim() === 'tipo de factura')
-    if (!tipoHeader) return
-    const valoresAnular = new Set(['factura complementaria','anulada','anuladora','enviado a facturar'])
+    const estadoMedidaHeader = filteredData.headers.find(h => stripAccents(h || '').toLowerCase().trim() === 'estado de medida')
+    if (!tipoHeader && !estadoMedidaHeader) return
+    const valoresAnularTipo = new Set(['factura complementaria','anulada','anuladora','enviado a facturar'])
+    const valoresAnularEstado = new Set(['anulada','anuladora'])
     // Usar filteredData.rows para trabajar con datos ya filtrados (sin columna autofactura)
     const originales = filteredData.rows
     const restantes: Record<string,string>[] = []
     let count = 0
-    let comp = 0, anul = 0, anuladora = 0
+    let comp = 0, anul = 0, anuladora = 0, estadoAnulada = 0, estadoAnuladora = 0
     for (const r of originales) {
-      const tipo = (r[tipoHeader] || '').toString().toLowerCase().trim()
-      if (valoresAnular.has(tipo)) {
+      const tipo = tipoHeader ? (r[tipoHeader] || '').toString().toLowerCase().trim() : ''
+      const estado = estadoMedidaHeader ? stripAccents((r[estadoMedidaHeader] || '').toString()).toLowerCase().trim() : ''
+      const porTipo = tipoHeader ? valoresAnularTipo.has(tipo) : false
+      const porEstado = estadoMedidaHeader ? valoresAnularEstado.has(estado) : false
+      if (porTipo || porEstado) {
         count++
-        if (tipo === 'factura complementaria') comp++
-        else if (tipo === 'anulada') anul++
-        else if (tipo === 'anuladora') anuladora++
+        if (porTipo) {
+          if (tipo === 'factura complementaria') comp++
+          else if (tipo === 'anulada') anul++
+          else if (tipo === 'anuladora') anuladora++
+        }
+        if (porEstado) {
+          if (estado === 'anulada') estadoAnulada++
+          else if (estado === 'anuladora') estadoAnuladora++
+        }
         continue
       }
       restantes.push(r)
     }
     setFilteredRows(restantes)
     setAnuladas(count)
-    setDetalleAnuladas({ comp, anuladas: anul, anuladoras: anuladora })
+    // Unificamos anuladas y anuladoras por ambos criterios
+    setDetalleAnuladas({ comp, anuladas: anul + estadoAnulada, anuladoras: anuladora + estadoAnuladora })
     setOrdenado(true)
   }, [filteredData, ordenado])
 
