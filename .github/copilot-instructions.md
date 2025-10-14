@@ -1,10 +1,27 @@
 # ValorApp – Guía para agentes (Copilot)
 
 ## Visión general
-Aplicación corporativa para valoración de consumo energético basada en## Páginas y patrones
+Aplicación corporativa para valoración de consumo energético basada en registros ATR (información de contadores de clientes). Permite crear/gestionar registros, distinguir gestión por avería/fraude y marcar valores estimados o reales. 
+
+**IMPORTANTE**: La aplicación NO maneja autenticación ni usuarios. Es una aplicación de acceso libre sin control de acceso.
+
+## Arquitectura y patrones clave
+- **Arquitectura modular**: Separación clara entre presentación, lógica de negocio y estado
+- **Contexto único**: `StoreProvider` en `src/main.tsx` para gestión de estado global
+- **Persistencia**: Store en localStorage con clave `valorApp.registros`
+- **SPA por hash**: hook `useHashRoute()` en `src/App.tsx`; rutas: `#/`, `#/wart`, `#/analisis-expediente`, `#/export-saldo-atr`, `#/ver-saldo-atr`
+- **Navegación**: sidebar con enlace activo usando clase `.active`
+
+## Páginas y patrones
 
 ### Estructura de páginas
-- **Login** (`src/pages/Login/`## Calidad de código y herramientas
+- **Dashboard** (`src/pages/Dashboard/`): Valoración principal con filtros y agregaciones
+- **WART** (`src/pages/Wart/`): Funcionalidad WART
+- **Análisis de Expediente** (`src/pages/AnalisisExpediente/`): Análisis de expedientes
+- **Export Saldo ATR** (`src/pages/ExportSaldoATR/`): Exportación de datos
+- **ATR Form** (`src/pages/ATRForm/`): Formularios de gestión ATR
+
+## Calidad de código y herramientas
 
 ### Linting y formateo
 - **ESLint**: Configuración estricta con reglas de React y TypeScript
@@ -130,13 +147,8 @@ const useFormulario = (initialData: FormData) => {
 ## Visión general
 Aplicación corporativa para valoración de consumo energético basada en registros ATR (información de contadores de clientes). Permite crear/gestionar registros, distinguir gestión por avería/fraude y marcar valores estimados o reales.
 
-## Arquitectura y patrones clave
-- Contextos anidados: `AuthProvider` envuelve `StoreProvider` en `src/main.tsx`.
-- Persistencia: Auth en localStorage o sessionStorage según “remember”; Store en localStorage con clave `valorApp.registros`.
-- Errores de contexto: `useAuth`/`useStore` lanzan error si se usan fuera de sus providers (mensaje en español).
-- SPA por hash: hook `useHashRoute()` en `src/App.tsx`; rutas: `#/login`, `#/`, `#/nuevo` (sin react-router).
-- Guard de autenticación: si no hay sesión → redirección a `#/login`.
-- Navegación: sidebar con enlace activo usando clase `.active`.
+## Arquitectura y patrones clave (duplicado - eliminado)
+**Esta sección está duplicada y obsoleta. Ver arriba la versión actualizada.**
 
 ## Estructura de carpetas y organización
 
@@ -222,10 +234,8 @@ export type { UserCardProps } from './UserCard';
 - **Utilidades globales** en `src/styles/utilities.css`
 - **Layout corporativo** en `src/App.css`: `.app-layout` con `.sidebar` + `.main-content`
 
-## Páginas y patrones
-- `src/pages/Login.tsx`: login demo; `login()` devuelve booleano; “Recordar credenciales” decide localStorage vs sessionStorage.
-- `src/pages/Nuevo.tsx`: formulario con grid 2 columnas; mostrar selector de fraude solo si `gestion === 'fraude'`; tras guardar → `window.location.hash = '#/'`.
-- `src/pages/Lista.tsx`: filtros con `useMemo` (texto/gestión/valor); estados vacíos diferenciados; totales de kWh.
+## Patrones de implementación (duplicado - ver arriba)
+**Esta sección está duplicada. Ver la sección "Páginas y patrones" al inicio del documento.**
 
 ## Estado y datos
 
@@ -261,8 +271,7 @@ const reducer = (state: State, action: Action): State => {
 ```
 
 ### Persistencia y sincronización
-- localStorage para datos del usuario y preferencias
-- sessionStorage para datos temporales de sesión
+- localStorage para datos de registros ATR y preferencias de UI
 - Debouncing para sincronización automática
 - Manejo de errores y recuperación de datos corruptos
 

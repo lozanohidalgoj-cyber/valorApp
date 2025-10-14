@@ -1,49 +1,62 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: 0.01em;
 }
 
 .textarea {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
+  padding: 0.75rem 1rem;
+  border: 2px solid rgba(0, 0, 208, 0.15);
+  border-radius: 12px;
   font-size: 1rem;
-  transition: border-color 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   resize: vertical;
-  min-height: 80px;
+  min-height: 100px;
   font-family: inherit;
+  line-height: 1.6;
 }
 
 .textarea:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(31, 71, 136, 0.1);
+  box-shadow: 0 0 0 4px rgba(0, 0, 208, 0.1);
+  transform: translateY(-1px);
 }
 
 .textarea.error {
   border-color: var(--color-error);
+  background-color: rgba(244, 67, 54, 0.02);
 }
 
 .textarea.error:focus {
   border-color: var(--color-error);
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.1);
 }
 
 .errorText {
   font-size: 0.875rem;
-  color: var(--color-error);
+  color: var(--color-error-dark);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.errorText::before {
+  content: '⚠';
 }
 
 .helperText {
   font-size: 0.875rem;
   color: var(--text-muted);
+  line-height: 1.4;
 }

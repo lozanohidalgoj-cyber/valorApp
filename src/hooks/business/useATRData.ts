@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useStore } from '../../state/StoreContextNew'
+import { useStore } from '../../state/StoreContext'
 import { ATRRegistro } from '../../types/atr'
 import { useDebounce } from '../ui'
 

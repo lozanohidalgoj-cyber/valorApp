@@ -1,23 +1,20 @@
 import React from 'react'
 import { render, RenderOptions } from '@testing-library/react'
-import { AuthProvider } from '../auth/AuthContextNew'
-import { StoreProvider } from '../state/StoreContextNew'
+import { StoreProvider } from '../state/StoreContext'
 
 // Custom render function with providers
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   return (
-    <AuthProvider>
-      <StoreProvider>
-        {children}
-      </StoreProvider>
-    </AuthProvider>
+    <StoreProvider>
+      {children}
+    </StoreProvider>
   )
 }
 
 export const renderWithProviders = (
   ui: React.ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>
-) => render(ui, { wrapper: AllTheProviders, ...options })
+): ReturnType<typeof render> => render(ui, { wrapper: AllTheProviders, ...options })
 
 // Re-export everything
 export * from '@testing-library/react'
@@ -31,18 +28,4 @@ export const mockATRRegistro = {
   valorTipo: 'real' as const,
   kWh: 150.5,
   notas: 'Test registro'
-}
-
-export const mockUser = {
-  username: 'testuser',
-  role: 'valorador' as const
-}
-
-export const mockAuthState = {
-  user: mockUser,
-  token: 'test-token',
-  isLoading: false,
-  error: null,
-  isAuthenticated: true,
-  isCoordinator: false
 }

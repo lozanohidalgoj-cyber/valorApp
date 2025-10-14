@@ -4,9 +4,9 @@ import { readWorkbookFromArrayBuffer, extractRawSheet } from '../../modules/anal
 
 const ExportIcon: React.FC<{ size?: number }> = ({ size = 96 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img">
-    <path d="M12 3v10" stroke="#0d3d75" strokeWidth="2" strokeLinecap="round" />
-    <path d="M8.5 7.5L12 4l3.5 3.5" stroke="#0d3d75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    <rect x="4" y="13" width="16" height="7" rx="2" stroke="#3a78c9" strokeWidth="2" fill="#e9f1ff" />
+    <path d="M12 3v10" stroke="#0000D0" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M8.5 7.5L12 4l3.5 3.5" stroke="#0000D0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <rect x="4" y="13" width="16" height="7" rx="2" stroke="#FF3184" strokeWidth="2" fill="rgba(255, 49, 132, 0.1)" />
   </svg>
 )
 
@@ -23,44 +23,106 @@ const ExportSaldoATR: React.FC = () => {
 
   return (
     <div style={{
-      minHeight: 'calc(100vh - 120px)',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '2rem 1rem',
-      gap: '1.25rem',
-      background: 'linear-gradient(180deg,#f5f9ff 0%, #ffffff 60%)'
+      padding: '2rem 1.5rem',
+      gap: '2rem',
+      background: 'linear-gradient(135deg, #0000D0 0%, #2929E5 50%, #5252FF 100%)',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <div style={{ textAlign: 'center', maxWidth: 900 }}>
-        <ExportIcon />
-        <h1 style={{ fontSize: '2.4rem', margin: '0.5rem 0 0.25rem', fontWeight: 800, color: '#0d3d75' }}>
+      {/* Efectos decorativos */}
+      <div style={{
+        position: 'absolute',
+        top: '-10%',
+        right: '-5%',
+        width: '40%',
+        height: '40%',
+        background: 'radial-gradient(circle, rgba(255,49,132,0.12) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        pointerEvents: 'none'
+      }} />
+      
+      <div style={{ 
+        textAlign: 'center', 
+        maxWidth: '900px',
+        width: '100%',
+        background: 'rgba(255, 255, 255, 0.98)',
+        borderRadius: '24px',
+        padding: '3rem 2.5rem',
+        boxShadow: '0 20px 60px -10px rgba(0, 0, 0, 0.3)',
+        backdropFilter: 'blur(20px)',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        <div style={{ marginBottom: '1.5rem' }}>
+          <ExportIcon size={80} />
+        </div>
+        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.5rem)', margin: '0 0 1rem', fontWeight: 800, color: '#0000D0', letterSpacing: '-0.01em' }}>
           Exportar Saldo ATR
         </h1>
-        <p style={{ color: '#234e88', marginBottom: '1rem', fontSize: '1.05rem' }}>
-          Selecciona tu archivo <strong>ATR.CSV</strong> para incorporarlo a la aplicación.
+        <p style={{ color: '#2929E5', marginBottom: '2rem', fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', lineHeight: 1.6, fontWeight: 500 }}>
+          Selecciona tu archivo <strong style={{ color: '#0000D0' }}>ATR.CSV</strong> para incorporarlo a la aplicación.
         </p>
 
-  <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '1.25rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="btn btn-primary"
             style={{
-              borderRadius: 14,
-              background: 'linear-gradient(135deg,#0d3d75 0%,#1b58a9 50%,#3a78c9 100%)',
-              border: '2px solid #5da0f0',
-              color: '#fff',
-              fontSize: '1.1rem',
-              padding: '0.95rem 1.5rem',
-              minWidth: 280
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '1rem',
+              padding: '1.25rem 2.5rem',
+              minWidth: 280,
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 10px 25px -8px rgba(255, 49, 132, 0.6)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
             }}
-          >Exportar ATR.CSV a la aplicación</button>
-
-          <a href="#/analisis-expediente" className="btn btn-secondary" style={{ borderRadius: 14 }}>
-            Volver al análisis
-          </a>
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #E6006F 0%, #CC005C 100%)';
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(255, 49, 132, 0.8)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(255, 49, 132, 0.6)';
+            }}
+          >Exportar ATR.CSV</button>
         </div>
+
+        <a 
+          href="#/analisis-expediente"
+          style={{
+            display: 'inline-block',
+            background: 'transparent',
+            color: '#0000D0',
+            padding: '0.75rem 1.5rem',
+            fontWeight: 600,
+            textDecoration: 'none',
+            fontSize: '1rem',
+            borderRadius: '8px',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(0, 0, 208, 0.08)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          ← Volver al análisis
+        </a>
 
         <input
           ref={inputRef}
@@ -105,15 +167,20 @@ const ExportSaldoATR: React.FC = () => {
 
         {info && (
           <div style={{
-            marginTop: '1rem',
-            background: '#ffffff',
-            border: '1px solid #e6edf7',
-            borderRadius: 16,
-            padding: '0.85rem 1rem',
-            color: '#0d3d75',
-            fontWeight: 700
+            marginTop: '1.5rem',
+            background: 'rgba(0, 200, 83, 0.1)',
+            border: '2px solid rgba(0, 200, 83, 0.3)',
+            borderRadius: 12,
+            padding: '1rem 1.5rem',
+            color: '#00A043',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            justifyContent: 'center'
           }}>
-            ATR.CSV cargado: {info.filas} filas
+            <span style={{ fontSize: '1.25rem' }}>✓</span>
+            <span>ATR.CSV cargado: <strong>{info.filas} filas</strong></span>
           </div>
         )}
       </div>

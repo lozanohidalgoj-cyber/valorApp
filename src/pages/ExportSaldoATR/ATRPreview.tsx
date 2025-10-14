@@ -184,86 +184,285 @@ const ATRPreview: React.FC = () => {
 
   if (!data || !data.headers?.length) {
     return (
-      <div style={{ minHeight: 'calc(100vh - 120px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: '2rem', marginBottom: '.5rem', color: '#0d3d75' }}>Sin datos de ATR</h1>
-          <p style={{ color: '#234e88' }}>Primero exporta un archivo ATR.CSV a la aplicación.</p>
-          <a href="#/export-saldo-atr" className="btn btn-primary" style={{ borderRadius: 12, marginTop: '0.75rem' }}>Ir a exportar</a>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '2rem',
+        background: 'linear-gradient(135deg, #0000D0 0%, #2929E5 50%, #5252FF 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: '-10%',
+          right: '-5%',
+          width: '40%',
+          height: '40%',
+          background: 'radial-gradient(circle, rgba(255,49,132,0.12) 0%, transparent 70%)',
+          borderRadius: '50%',
+          filter: 'blur(60px)',
+          pointerEvents: 'none'
+        }} />
+        <div style={{ 
+          textAlign: 'center',
+          background: 'rgba(255, 255, 255, 0.98)',
+          borderRadius: '24px',
+          padding: '3rem 2.5rem',
+          boxShadow: '0 20px 60px -10px rgba(0, 0, 0, 0.3)',
+          backdropFilter: 'blur(20px)',
+          position: 'relative',
+          zIndex: 10,
+          maxWidth: '600px'
+        }}>
+          <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.25rem)', marginBottom: '1rem', color: '#0000D0', fontWeight: 800, letterSpacing: '-0.01em' }}>Sin datos de ATR</h1>
+          <p style={{ color: '#2929E5', fontSize: '1.125rem', marginBottom: '2rem', fontWeight: 500 }}>Primero exporta un archivo ATR.CSV a la aplicación.</p>
+          <a 
+            href="#/export-saldo-atr"
+            style={{ 
+              display: 'inline-block',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '1rem',
+              padding: '1rem 2rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              boxShadow: '0 10px 25px -8px rgba(255, 49, 132, 0.6)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(255, 49, 132, 0.8)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(255, 49, 132, 0.6)';
+            }}
+          >Ir a exportar</a>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: '1rem', maxWidth: '95vw', margin: '0 auto' }}>
+    <div style={{ padding: '1.5rem', maxWidth: '96vw', margin: '0 auto', minHeight: '100vh', background: 'linear-gradient(135deg, #f5f9ff 0%, #e6f0ff 100%)' }}>
       {anuladas > 0 && (
         <div
           style={{
-            background: 'linear-gradient(90deg,#16a34a,#22c55e)',
-            border: '2px solid #065f46',
-            padding: '.9rem 1.1rem',
+            background: 'rgba(0, 200, 83, 0.1)',
+            border: '2px solid rgba(0, 200, 83, 0.3)',
+            padding: '1rem 1.25rem',
             borderRadius: 12,
-            marginBottom: '.95rem',
-            color: '#ffffff',
-            fontSize: '.95rem',
+            marginBottom: '1.5rem',
+            color: '#00A043',
+            fontSize: '1rem',
             fontWeight: 600,
-            lineHeight: 1.35,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.18)'
+            lineHeight: 1.6,
+            boxShadow: '0 4px 12px rgba(0, 200, 83, 0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem'
           }}
         >
-          ✅ Se han anulado {anuladas} factura{anuladas === 1 ? '' : 's'} del listado.<br />
-          <span style={{ fontSize: '.85rem', fontWeight: 500 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>✓</span>
+            <strong>Se han anulado {anuladas} factura{anuladas === 1 ? '' : 's'} del listado.</strong>
+          </div>
+          <span style={{ fontSize: '0.9rem', opacity: 0.9 }}>
             Detalle: Factura complementaria: {detalleAnuladas.comp} | Anuladas: {detalleAnuladas.anuladas} | Anuladoras: {detalleAnuladas.anuladoras}
           </span>
         </div>
       )}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.75rem' }}>
-        <h1 style={{ fontSize: '2.2rem', margin: 0, color: '#0d3d75' }}>Vista previa ATR</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ color: '#234e88' }}>{total} filas</span>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        gap: '1rem', 
+        marginBottom: '1.5rem',
+        background: 'rgba(255, 255, 255, 0.95)',
+        padding: '1.25rem 1.5rem',
+        borderRadius: '16px',
+        boxShadow: '0 4px 12px rgba(0, 0, 208, 0.08)',
+        flexWrap: 'wrap'
+      }}>
+        <div>
+          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.25rem)', margin: '0 0 0.25rem 0', color: '#0000D0', fontWeight: 800, letterSpacing: '-0.01em' }}>Vista previa ATR</h1>
+          <p style={{ fontSize: '1rem', margin: 0, color: '#2929E5', fontWeight: 600 }}>
+            <span style={{ 
+              background: 'rgba(0, 0, 208, 0.1)', 
+              padding: '0.25rem 0.75rem', 
+              borderRadius: '8px',
+              display: 'inline-block'
+            }}>{total} filas</span>
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={handleOrdenar}
             disabled={ordenado}
-            className="btn"
             style={{
-              borderRadius: 14,
-              opacity: ordenado ? 0.65 : 1,
-              padding: '.75rem 1.5rem',
-              background: ordenado ? 'linear-gradient(90deg,#a1a1aa,#71717a)' : 'linear-gradient(90deg,#d946ef,#9333ea)',
-              border: '2px solid ' + (ordenado ? '#52525b' : '#86198f'),
-              color: '#fff',
-              fontSize: '1rem',
+              borderRadius: 12,
+              opacity: ordenado ? 0.6 : 1,
+              padding: '0.75rem 1.5rem',
+              background: ordenado 
+                ? 'rgba(0, 0, 208, 0.15)' 
+                : 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)',
+              border: 'none',
+              color: ordenado ? 'rgba(0, 0, 208, 0.5)' : '#FFFFFF',
+              fontSize: '0.95rem',
               fontWeight: 700,
-              letterSpacing: '.5px',
+              letterSpacing: '0.05em',
               cursor: ordenado ? 'not-allowed' : 'pointer',
-              boxShadow: '0 3px 6px rgba(0,0,0,0.25)',
-              transition: 'all .2s'
+              boxShadow: ordenado ? 'none' : '0 10px 25px -8px rgba(255, 49, 132, 0.5)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              textTransform: 'uppercase'
             }}
             title={ordenado ? 'Filtro ya aplicado' : 'Anular facturas seleccionadas'}
-            onMouseEnter={e => { if (!ordenado) (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1.1)' }}
-            onMouseLeave={e => { if (!ordenado) (e.currentTarget as HTMLButtonElement).style.filter = 'none' }}
+            onMouseEnter={e => { 
+              if (!ordenado) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(255, 49, 132, 0.7)';
+              }
+            }}
+            onMouseLeave={e => { 
+              if (!ordenado) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(255, 49, 132, 0.5)';
+              }
+            }}
           >
-            {ordenado ? 'Filtrado aplicado' : 'Ordenar'}
+            {ordenado ? '✓ Filtrado' : 'Ordenar'}
           </button>
-          <a href="#/export-saldo-atr" className="btn btn-secondary" style={{ borderRadius: 10 }}>Re-exportar</a>
-          <a href="#/analisis-expediente" className="btn btn-primary" style={{ borderRadius: 10 }}>Volver</a>
+          <a 
+            href="#/export-saldo-atr"
+            style={{ 
+              borderRadius: 12,
+              padding: '0.75rem 1.5rem',
+              background: '#0000D0',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              boxShadow: '0 10px 25px -8px rgba(0, 0, 208, 0.4)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              display: 'inline-block'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = '#0000B8';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(0, 0, 208, 0.6)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = '#0000D0';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(0, 0, 208, 0.4)';
+            }}
+          >Re-exportar</a>
+          <a 
+            href="#/analisis-expediente"
+            style={{ 
+              borderRadius: 12,
+              padding: '0.75rem 1.5rem',
+              background: 'transparent',
+              border: '2px solid rgba(0, 0, 208, 0.3)',
+              color: '#0000D0',
+              fontSize: '0.95rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              display: 'inline-block'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(0, 0, 208, 0.08)';
+              e.currentTarget.style.borderColor = '#0000D0';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'rgba(0, 0, 208, 0.3)';
+            }}
+          >← Volver</a>
         </div>
       </div>
-      <div style={{ color: '#6b7280', fontSize: '.9rem', marginBottom: '.5rem' }}>
-        Nota: se resaltan cambios de <strong style={{ color: '#b91c1c' }}>Contrato ATR</strong> y <strong style={{ color: '#b45309' }}>Potencia (kW)</strong> respecto a la fila anterior.
+      <div style={{ 
+        color: '#2929E5', 
+        fontSize: '0.9rem', 
+        marginBottom: '1rem',
+        background: 'rgba(0, 0, 208, 0.05)',
+        padding: '0.75rem 1rem',
+        borderRadius: '8px',
+        border: '1px solid rgba(0, 0, 208, 0.1)'
+      }}>
+        <strong>Nota:</strong> Se resaltan cambios de <strong style={{ color: '#F44336' }}>Contrato ATR</strong> y <strong style={{ color: '#FFA726' }}>Potencia (kW)</strong> respecto a la fila anterior.
       </div>
 
-      <div style={{ overflowY: 'auto', overflowX: 'auto', border: '1px solid #c9d6e8', borderRadius: 8, background: '#fff', boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.03)', maxHeight: 'calc(100vh - 220px)' }}>
+      <div style={{ 
+        overflowY: 'auto', 
+        overflowX: 'auto', 
+        border: '2px solid rgba(0, 0, 208, 0.1)', 
+        borderRadius: 16, 
+        background: '#FFFFFF', 
+        boxShadow: '0 4px 12px rgba(0, 0, 208, 0.08)', 
+        maxHeight: 'calc(100vh - 240px)' 
+      }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>
             <tr>
-              <th style={{ position: 'sticky', left: 0, top: 0, zIndex: 3, background: '#eef3fb', borderRight: '1px solid #d7e2f3', color: '#203a5c', padding: '.4rem .5rem' }}></th>
+              <th style={{ 
+                position: 'sticky', 
+                left: 0, 
+                top: 0, 
+                zIndex: 3, 
+                background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.08) 0%, rgba(41, 41, 229, 0.06) 100%)', 
+                borderRight: '2px solid rgba(0, 0, 208, 0.15)', 
+                color: '#0000D0', 
+                padding: '0.75rem 1rem',
+                fontWeight: 700,
+                fontSize: '0.9rem'
+              }}></th>
               {data.headers.map((h, idx) => (
                 <React.Fragment key={idx}>
-                  <th style={{ padding: '.4rem .6rem', borderBottom: '1px solid #d7e2f3', borderRight: '1px solid #e6edf7', color: '#203a5c', background: '#eef3fb', textAlign: 'left', position: 'sticky', top: 0, zIndex: 2 }}>{h || '\u00A0'}</th>
+                  <th style={{ 
+                    padding: '0.75rem 1rem', 
+                    borderBottom: '2px solid rgba(0, 0, 208, 0.15)', 
+                    borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                    color: '#0000D0', 
+                    background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.08) 0%, rgba(41, 41, 229, 0.06) 100%)', 
+                    textAlign: 'left', 
+                    position: 'sticky', 
+                    top: 0, 
+                    zIndex: 2,
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    letterSpacing: '0.02em',
+                    textTransform: 'uppercase'
+                  }}>{h || '\u00A0'}</th>
                   {idx === cupsIndex && (
-                    <th style={{ padding: '.4rem .6rem', borderBottom: '1px solid #d7e2f3', borderRight: '1px solid #e6edf7', color: '#203a5c', background: '#eef3fb', textAlign: 'left', position: 'sticky', top: 0, zIndex: 2 }}>
+                    <th style={{ 
+                      padding: '0.75rem 1rem', 
+                      borderBottom: '2px solid rgba(0, 0, 208, 0.15)', 
+                      borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                      color: '#0000D0', 
+                      background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.08) 0%, rgba(41, 41, 229, 0.06) 100%)', 
+                      textAlign: 'left', 
+                      position: 'sticky', 
+                      top: 0, 
+                      zIndex: 2,
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      letterSpacing: '0.02em',
+                      textTransform: 'uppercase'
+                    }}>
                       Duración total del contrato
                     </th>
                   )}
@@ -277,8 +476,19 @@ const ATRPreview: React.FC = () => {
               const contractKey = contractHeader ? String(r[contractHeader] ?? '').trim() : ''
               const rowBg = contractColorMap.get(contractKey)
               return (
-                <tr key={i} style={{ background: rowBg || (i % 2 === 0 ? '#ffffff' : '#fbfdff') }}>
-                  <td style={{ position: 'sticky', left: 0, zIndex: 1, background: rowBg || (i % 2 === 0 ? '#f7faff' : '#eef5ff'), borderRight: '1px solid #e6edf7', color: '#6b7280', padding: '.4rem .5rem', textAlign: 'right' }}>
+                <tr key={i} style={{ background: rowBg || (i % 2 === 0 ? '#ffffff' : 'rgba(0, 0, 208, 0.02)') }}>
+                  <td style={{ 
+                    position: 'sticky', 
+                    left: 0, 
+                    zIndex: 1, 
+                    background: rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.03)' : 'rgba(0, 0, 208, 0.05)'), 
+                    borderRight: '1px solid rgba(0, 0, 208, 0.1)', 
+                    color: '#475569', 
+                    padding: '0.6rem 0.8rem', 
+                    textAlign: 'right',
+                    fontWeight: 600,
+                    fontSize: '0.85rem'
+                  }}>
                     {i + 1}
                   </td>
                   {data.headers.map((h, j) => {
@@ -296,9 +506,14 @@ const ATRPreview: React.FC = () => {
                         changed = Number.isFinite(a) && Number.isFinite(b) ? a !== b : val.trim() !== prevVal.trim()
                       }
                     }
-                    const color = changed ? (contrato ? '#b91c1c' : '#b45309') : '#223a5c'
-                    // Prioridad: si potencia changed -> fondo ámbar; si no, usar fondo por grupo de contrato; ya no sobreescribir por cambio de contrato
-                    const bg = changed && potencia ? '#ffedd5' : (rowBg || undefined)
+                    // Colores corporativos para cambios: contrato -> Primary #0000D0, potencia -> Secondary #FF3184
+                    const color = changed ? (contrato ? '#0000D0' : '#FF3184') : '#1e293b'
+                    // Fondos corporativos para cambios: contrato -> azul suave, potencia -> rosa suave
+                    const bg = changed && contrato 
+                      ? 'rgba(0, 0, 208, 0.08)' 
+                      : changed && potencia 
+                        ? 'rgba(255, 49, 132, 0.08)' 
+                        : (rowBg || undefined)
                     const fontWeight = changed ? 700 : 400
                     const isFechaEnvio = isFechaEnvioHeader(h)
                     const isFechaDesde = isFechaDesdeHeader(h)
@@ -313,11 +528,29 @@ const ATRPreview: React.FC = () => {
                         : val)
                     return (
                       <React.Fragment key={j}>
-                        <td style={{ padding: '.4rem .6rem', borderTop: '1px solid #eef2f7', borderRight: '1px solid #eef2f7', color, background: bg, fontWeight, textAlign: align }}>
+                        <td style={{ 
+                          padding: '0.6rem 0.8rem', 
+                          borderTop: '1px solid rgba(0, 0, 208, 0.08)', 
+                          borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                          color, 
+                          background: bg, 
+                          fontWeight, 
+                          textAlign: align,
+                          fontSize: '0.9rem',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}>
                           {display}
                         </td>
                         {j === cupsIndex && (
-                          <td style={{ padding: '.4rem .6rem', borderTop: '1px solid #eef2f7', borderRight: '1px solid #eef2f7', color: '#223a5c', background: rowBg || undefined, fontWeight: 600 }}>
+                          <td style={{ 
+                            padding: '0.6rem 0.8rem', 
+                            borderTop: '1px solid rgba(0, 0, 208, 0.08)', 
+                            borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
+                            color: '#0000D0', 
+                            background: rowBg || undefined, 
+                            fontWeight: 700,
+                            fontSize: '0.9rem'
+                          }}>
                             {contractDurationText.get(contractKey) || ''}
                           </td>
                         )}

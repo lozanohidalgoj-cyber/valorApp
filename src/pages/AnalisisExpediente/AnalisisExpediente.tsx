@@ -42,78 +42,116 @@ const AnalisisExpediente: React.FC = () => {
 
   return (
     <div style={{
-      minHeight: 'calc(100vh - 120px)',
+      minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: '1.25rem',
+      gap: '1.5rem',
       padding: '2rem 1rem 3rem',
-      background: '#f5f9ff'
+      background: 'linear-gradient(135deg, #f5f9ff 0%, #e6f0ff 100%)'
     }}>
-      <div style={{ maxWidth: 1100, width: '100%', margin: '0 auto', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '2.6rem', margin: '0 0 .75rem', fontWeight: 800, letterSpacing: '.3px', color: '#0d3d75' }}>
+      <div style={{ maxWidth: 1200, width: '100%', margin: '0 auto', textAlign: 'center' }}>
+        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 2.75rem)', margin: '0 0 1rem', fontWeight: 800, letterSpacing: '-0.01em', color: '#0000D0' }}>
           Análisis de Expediente
         </h1>
         
 
         {/* Selector de tipo de contador */}
         <div style={{
-          background: '#ffffff',
-          border: '1px solid #e6edf7',
-          borderRadius: 16,
-          padding: '1.25rem 1.5rem',
-          marginBottom: '1rem',
+          background: 'rgba(255, 255, 255, 0.98)',
+          border: 'none',
+          borderRadius: 24,
+          padding: '2.5rem 2rem',
+          marginBottom: '1.5rem',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           textAlign: 'center',
-          gap: '.9rem'
+          gap: '1.5rem',
+          boxShadow: '0 10px 40px -10px rgba(0, 0, 208, 0.15)'
         }}>
-          <div style={{ color: '#0d3d75', fontWeight: 800, fontSize: '1.15rem' }}>
-            Antes de empezar la valoración cuéntame: el contador es
+          <div style={{ color: '#0000D0', fontWeight: 700, fontSize: 'clamp(1.125rem, 2.5vw, 1.375rem)', lineHeight: 1.4 }}>
+            Antes de empezar la valoración, indique el tipo de contador:
           </div>
-          <div style={{ display: 'flex', gap: '.9rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
               type="button"
               onClick={() => {
                 setTipoContador('Tipo V')
-                try { localStorage.setItem('valorApp.analisis.tipoContador', 'Tipo V') } catch {}
+                try { localStorage.setItem('valorApp.analisis.tipoContador', 'Tipo V') } catch { /* Ignorar error */ }
                 window.location.hash = '#/export-saldo-atr'
               }}
-              className="btn btn-primary"
               style={{
                 borderRadius: 12,
-                background: 'linear-gradient(135deg,#FF1493 0%,#ff3fab 40%,#ff66c0 100%)',
-                border: '2px solid #ff8ccd',
-                color: '#fff',
-                fontSize: '1.05rem',
-                padding: '0.9rem 1.4rem',
-                minWidth: 220
+                background: '#0000D0',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '1rem',
+                padding: '1.125rem 2.25rem',
+                minWidth: 220,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 10px 25px -8px rgba(0, 0, 208, 0.5)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = '#0000B8';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(0, 0, 208, 0.7)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = '#0000D0';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(0, 0, 208, 0.5)';
               }}
             >Contador Tipo V</button>
             <button
               type="button"
               onClick={() => {
                 setTipoContador('Tipo IV')
-                try { localStorage.setItem('valorApp.analisis.tipoContador', 'Tipo IV') } catch {}
+                try { localStorage.setItem('valorApp.analisis.tipoContador', 'Tipo IV') } catch { /* Ignorar error */ }
               }}
-              className="btn btn-secondary"
               style={{
                 borderRadius: 12,
-                background: 'linear-gradient(135deg,#00a846 0%,#00c55a 45%,#00e46c 100%)',
-                border: '2px solid #4ce894',
-                color: '#fff',
-                fontSize: '1.05rem',
-                padding: '0.9rem 1.4rem',
-                minWidth: 220
+                background: 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '1rem',
+                padding: '1.125rem 2.25rem',
+                minWidth: 220,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 10px 25px -8px rgba(255, 49, 132, 0.6)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #E6006F 0%, #CC005C 100%)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(255, 49, 132, 0.8)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(255, 49, 132, 0.6)';
               }}
             >Contador Tipo IV</button>
           </div>
           {/* Al elegir Tipo V navegamos a la pantalla dedicada de exportación */}
           {tipoContador && (
-            <div style={{ fontSize: '1rem', color: '#1f3b63' }}>
-              Seleccionado: <strong>{tipoContador}</strong>
+            <div style={{ 
+              fontSize: '1rem', 
+              color: '#0000D0',
+              background: 'rgba(0, 0, 208, 0.05)',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '8px',
+              fontWeight: 600
+            }}>
+              ✓ Seleccionado: <strong>{tipoContador}</strong>
             </div>
           )}
         </div>

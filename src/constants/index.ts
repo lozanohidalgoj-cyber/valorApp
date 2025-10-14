@@ -1,26 +1,17 @@
 // Storage Keys
 export const STORAGE_KEYS = {
-  AUTH: 'valorApp.auth',
-  USERS: 'valorApp.users',
   REGISTROS: 'valorApp.registros',
   TRIGGER_IMPORT: 'valorApp.triggerImportATR',
+  SIDEBAR_OPEN: 'valorApp.sidebarOpen',
+  WELCOME_SEEN: 'valorApp.welcome.seen',
 } as const
 
 // UI Constants
 export const UI_TEXT = {
   APP_TITLE: 'ValorApp',
-  APP_SUBTITLE: 'Valoracion',
+  APP_SUBTITLE: 'Valoración Energética',
   BRAND: 'Ayesa',
-  LOGIN: {
-    TITLE: 'Iniciar Sesión',
-    USERNAME_PLACEHOLDER: 'Ingrese su usuario',
-    PASSWORD_PLACEHOLDER: 'Ingrese su contraseña',
-    REMEMBER_LABEL: 'Recordar credenciales',
-    REGISTER_LINK: '¿No tienes cuenta? Regístrate',
-    INVALID_CREDENTIALS: 'Credenciales no válidas',
-  },
   LOADING: {
-    LOGIN: 'Ingresando…',
     LOADING: 'Cargando...',
   },
 } as const
@@ -28,11 +19,10 @@ export const UI_TEXT = {
 // Routes
 export const ROUTES = {
   HOME: '#/',
-  LOGIN: '#/login',
-  REGISTER: '#/registro',
-  NEW_RECORD: '#/nuevo',
-  CHANGE_PASSWORD: '#/coordinador/cambiar-password',
-  USER_MANAGEMENT: '#/coordinador/usuarios',
+  WART: '#/wart',
+  ANALISIS_EXPEDIENTE: '#/analisis-expediente',
+  EXPORT_SALDO_ATR: '#/export-saldo-atr',
+  VER_SALDO_ATR: '#/ver-saldo-atr',
 } as const
 
 // Business Constants

@@ -1,50 +1,88 @@
-/* Design Tokens - Variables de diseño */
+﻿/* ============================================
+   SISTEMA DE DISEÑO CORPORATIVO - ValorApp
+   ============================================ */
+
 :root {
-  /* Colores corporativos */
-  --color-primary: #1f4788;
-  --color-primary-light: #2563eb;
-  --color-primary-dark: #1e3a5f;
-  --color-secondary: #64748b;
-  --color-success: #16a34a;
-  --color-warning: #d97706;
-  --color-error: #dc2626;
+  /* ========== COLORES CORPORATIVOS ========== */
   
-  /* Grises corporativos */
-  --color-gray-50: #f8fafc;
-  --color-gray-100: #f1f5f9;
-  --color-gray-200: #e2e8f0;
-  --color-gray-300: #cbd5e1;
-  --color-gray-400: #94a3b8;
-  --color-gray-500: #64748b;
-  --color-gray-600: #475569;
-  --color-gray-700: #334155;
-  --color-gray-800: #1e293b;
-  --color-gray-900: #0f172a;
+  /* Primario - Azul corporativo */
+  --color-primary: #0000D0;
+  --color-primary-light: #2929E5;
+  --color-primary-lighter: #5252FF;
+  --color-primary-dark: #0000A8;
+  --color-primary-darker: #000080;
+  --color-primary-alpha-05: rgba(0, 0, 208, 0.05);
+  --color-primary-alpha-10: rgba(0, 0, 208, 0.1);
+  --color-primary-alpha-20: rgba(0, 0, 208, 0.2);
+  --color-primary-alpha-30: rgba(0, 0, 208, 0.3);
   
-  /* Fondos y textos */
-  --bg-primary: #ffffff;
+  /* Secundario - Rosa/Magenta */
+  --color-secondary: #FF3184;
+  --color-secondary-light: #FF5C9E;
+  --color-secondary-lighter: #FF87B8;
+  --color-secondary-dark: #E6006F;
+  --color-secondary-darker: #CC005C;
+  --color-secondary-alpha-05: rgba(255, 49, 132, 0.05);
+  --color-secondary-alpha-10: rgba(255, 49, 132, 0.1);
+  --color-secondary-alpha-20: rgba(255, 49, 132, 0.2);
+  --color-secondary-alpha-30: rgba(255, 49, 132, 0.3);
+
+  /* ========== COLORES DE ESTADO ========== */
+  --color-success: #00C853;
+  --color-success-light: #5FE890;
+  --color-success-dark: #00A043;
+  --color-warning: #FFA726;
+  --color-warning-light: #FFB74D;
+  --color-warning-dark: #F57C00;
+  --color-error: #F44336;
+  --color-error-light: #EF5350;
+  --color-error-dark: #D32F2F;
+  --color-info: #29B6F6;
+  --color-info-light: #4FC3F7;
+  --color-info-dark: #0288D1;
+
+  /* ========== COLORES NEUTROS ========== */
+  --color-white: #FFFFFF;
+  --color-gray-50: #FAFAFA;
+  --color-gray-100: #F5F5F5;
+  --color-gray-200: #EEEEEE;
+  --color-gray-300: #E0E0E0;
+  --color-gray-400: #BDBDBD;
+  --color-gray-500: #9E9E9E;
+  --color-gray-600: #757575;
+  --color-gray-700: #616161;
+  --color-gray-800: #424242;
+  --color-gray-900: #212121;
+  --color-black: #000000;
+
+  /* ========== COLORES SEMÁNTICOS ========== */
+  --bg-primary: var(--color-white);
   --bg-secondary: var(--color-gray-50);
-  --bg-sidebar: var(--color-gray-900);
+  --bg-tertiary: var(--color-gray-100);
+  --bg-overlay: rgba(0, 0, 0, 0.5);
+  
   --text-primary: var(--color-gray-900);
-  --text-secondary: var(--color-gray-600);
+  --text-secondary: var(--color-gray-700);
   --text-muted: var(--color-gray-500);
-  --text-inverse: #ffffff;
+  --text-inverse: var(--color-white);
+  --text-link: var(--color-primary);
   
-  /* Bordes y sombras */
-  --border-color: var(--color-gray-200);
-  --border-radius: 8px;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  
-  /* Espaciado */
+  --border-color: var(--color-gray-300);
+  --border-light: var(--color-gray-200);
+  --border-dark: var(--color-gray-400);
+
+  /* ========== ESPACIADO ========== */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
-  --spacing-xl: 3rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* ========== TIPOGRAFÍA ========== */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   
-  /* Tipografía */
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -53,12 +91,49 @@
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
   --font-size-4xl: 2.25rem;
+  --font-size-5xl: 3rem;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ========== BORDER RADIUS ========== */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* ========== SOMBRAS CORPORATIVAS ========== */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   
-  /* Tema de aplicación específico */
-  --app-primary: #0000FF;
-  --app-primary-8: rgba(0, 0, 255, 0.08);
-  --app-primary-16: rgba(0, 0, 255, 0.16);
-  --app-accent: #FF4081;
-  --app-accent-12: rgba(255, 64, 129, 0.12);
-  --app-accent-24: rgba(255, 64, 129, 0.24);
+  /* Sombras de marca */
+  --shadow-primary: 0 10px 25px -8px rgba(0, 0, 208, 0.4);
+  --shadow-primary-lg: 0 20px 40px -10px rgba(0, 0, 208, 0.5);
+  --shadow-secondary: 0 10px 25px -8px rgba(255, 49, 132, 0.4);
+  --shadow-secondary-lg: 0 20px 40px -10px rgba(255, 49, 132, 0.5);
+
+  /* ========== TRANSICIONES ========== */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ========== Z-INDEX ========== */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
 }

@@ -2,15 +2,15 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
-import { StoreProvider } from './state/StoreContextNew'
-import { AuthProvider } from './auth/AuthContextNew'
+import { StoreProvider } from './state/StoreContext'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root')
+if (!rootElement) throw new Error('Root element not found')
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <AuthProvider>
-      <StoreProvider>
-        <App />
-      </StoreProvider>
-    </AuthProvider>
+    <StoreProvider>
+      <App />
+    </StoreProvider>
   </React.StrictMode>,
 )
