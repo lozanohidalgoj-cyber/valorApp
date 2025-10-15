@@ -965,20 +965,22 @@ const ATRPreview: React.FC = () => {
                   background: activeTab === 'vista' ? '#0000D0' : 'transparent'
                 }}
               >Vista previa</button>
-              <button
-                type="button"
-                onClick={() => setTab('eliminadas')}
-                style={{
-                  borderRadius: 8,
-                  padding: '0.5rem 0.875rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: '0.8125rem',
-                  color: activeTab === 'eliminadas' ? '#FFFFFF' : '#1e293b',
-                  background: activeTab === 'eliminadas' ? '#0000D0' : 'transparent'
-                }}
-              >Eliminadas</button>
+              {removedRows.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setTab('eliminadas')}
+                  style={{
+                    borderRadius: 8,
+                    padding: '0.5rem 0.875rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: '0.8125rem',
+                    color: activeTab === 'eliminadas' ? '#FFFFFF' : '#1e293b',
+                    background: activeTab === 'eliminadas' ? '#0000D0' : 'transparent'
+                  }}
+                >Eliminadas</button>
+              )}
             </div>
           )}
           {/* Botón para anular por Estado/Tipo con confirmación previa */}
@@ -1011,7 +1013,7 @@ const ATRPreview: React.FC = () => {
             }}
           >Anular por Estado/Tipo</button>
           {/* Botón "Anular por Estado/Tipo" desactivado por solicitud */}
-          {ordenado && (
+          {ordenado && removedRows.length > 0 && (
             <button
               type="button"
               onClick={toggleView}
