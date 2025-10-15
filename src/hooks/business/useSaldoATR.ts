@@ -89,7 +89,7 @@ export function useSaldoATR(): UseSaldoATRResult {
     const min = minKwh ? parseFloat(minKwh) : -Infinity
     const max = maxKwh ? parseFloat(maxKwh) : Infinity
     const withIdx = (saldoATR as ATRSaldoRow[]).map((row: ATRSaldoRow, idx: number) => ({ row, idx }))
-    let rows = withIdx.filter(({ row }) => {
+    const rows = withIdx.filter(({ row }) => {
       if (q) {
         const haystack = `${row.cups} ${row.contratoATR} ${row.codigoFactura} ${row.tipoFactura}`.toLowerCase()
         if (!haystack.includes(q)) return false

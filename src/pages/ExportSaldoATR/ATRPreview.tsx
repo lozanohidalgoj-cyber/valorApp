@@ -1844,64 +1844,14 @@ const ATRPreview: React.FC = () => {
 
 export default ATRPreview
 
-// Tipos para el gráfico de anomalías
-type HoverInfo = { x: number; y: number; text: string }
-type AnomPoint = { fecha: Date; consumo: number; factura: string }
-interface AnomChartProps { data: Array<AnomPoint>; anomalyIdx: number | null; onHover: (_info: HoverInfo | null) => void }
-
-// Gráfico SVG para análisis de anomalías
-function AnomChart({ data, anomalyIdx, onHover }: AnomChartProps) {
-  const width = 1000; const height = 320; const m = { l: 48, r: 24, t: 20, b: 40 }
-  const innerW = width - m.l - m.r
-  const innerH = height - m.t - m.b
-  const maxY = Math.max(...data.map(d => d.consumo), 1)
-  const minY = 0
-  const x = (i: number) => m.l + (data.length <= 1 ? innerW / 2 : (i * innerW) / (data.length - 1))
-  const y = (v: number) => m.t + innerH - ((v - minY) / (maxY - minY)) * innerH
-  const pathD = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(d.consumo)}`).join(' ')
-
-  const handleEnter = (i: number, e: React.MouseEvent<SVGCircleElement>) => {
-    const d = data[i]
-    const text = anomalyIdx === i
-      ? `Inicio de anomalía detectado — Factura: ${d.factura || i + 1} — Fecha: ${d.fecha.toLocaleDateString('es-ES')}`
-      : `Factura: ${d.factura || i + 1} — Fecha: ${d.fecha.toLocaleDateString('es-ES')} — Consumo: ${new Intl.NumberFormat('es-ES').format(d.consumo)}`
-    onHover({ x: e.clientX + 12, y: e.clientY - 28, text })
-  }
-  const handleLeave = () => onHover(null)
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <svg width={width} height={height}>
-        <line x1={m.l} y1={m.t} x2={m.l} y2={m.t + innerH} stroke="#94a3b8" strokeWidth={1} />
-        <line x1={m.l} y1={m.t + innerH} x2={m.l + innerW} y2={m.t + innerH} stroke="#94a3b8" strokeWidth={1} />
-        <path d={pathD} fill="none" stroke="#0000D0" strokeWidth={2} />
-        {data.map((d, i) => (
-          <circle
-            key={i}
-            cx={x(i)}
-            cy={y(d.consumo)}
-            r={5}
-            fill={anomalyIdx === i ? '#dc2626' : '#1d4ed8'}
-            stroke="#fff"
-            strokeWidth={1.5}
-            onMouseEnter={(e) => handleEnter(i, e)}
-            onMouseLeave={handleLeave}
-          />
-        ))}
-      </svg>
-    </div>
-  )
-}
-
 // ==== Visualizaciones del panel secundario ====
 type MonthlyPoint = { key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }
 type Hover = { x: number; y: number; text: string }
 
 // Heatmap: x = Años, y = Meses (1..12). Color por consumo. Borde rojo en primera anomalía.
-function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyIdx: number | null; onHover: (h: Hover | null) => void }) {
+function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyIdx: number | null; onHover: (_h: Hover | null) => void }) {
   // Determinar rango de años presentes
   const years = Array.from(new Set(data.map(d => d.year))).sort((a,b) => a - b)
-  const yearIndex = new Map<number, number>(years.map((y, i) => [y, i]))
   const cols = years.length
   const rows = 12
   const cell = 36
