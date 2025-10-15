@@ -68,7 +68,7 @@ const ATRPreview: React.FC = () => {
     const raw = (h || '')
     const t = stripAccents(raw).toLowerCase().trim()
     // Normalizamos espacios y puntuación común
-    const norm = t.replace(/[\s\._\-]/g, '')
+  const norm = t.replace(/[\s._-]/g, '')
     // Casos explícitos comunes
     if (['potencia', 'potenciakw', 'potenciakW'.toLowerCase()].includes(norm)) return true
     // Heurística: contiene "pot" (pot/potencia) y "kw"
@@ -95,10 +95,7 @@ const ATRPreview: React.FC = () => {
     const t = stripAccents(h).toLowerCase().trim()
     return t === 'tipo de factura' || t === 'tipo factura' || (t.includes('tipo') && t.includes('factur'))
   }
-  const isEstadoMedidaHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
-    return t === 'estado de medida' || t === 'estado medida' || (t.includes('estado') && t.includes('medida'))
-  }
+  // (Eliminado isEstadoMedidaHeader por no usarse)
   const normalizeNumber = (s: string) => {
     // Convierte "2.345,67" o "2,200" a número normalizado para comparar
     const t = (s || '').replace(/\./g, '').replace(/,/g, '.')
@@ -106,7 +103,10 @@ const ATRPreview: React.FC = () => {
     return Number.isFinite(n) ? n : NaN
   }
   const normalizeLabel = (s: string) => {
-    const t = stripAccents(String(s ?? ''))
+    const raw = String(s ?? '')
+    // Sustituir espacios no separables y otros espacios Unicode por espacio normal
+    const withSpaces = raw.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    const t = stripAccents(withSpaces)
       .toLowerCase()
       .replace(/["'`]/g, '')
       .replace(/\s+/g, ' ')
@@ -225,77 +225,9 @@ const ATRPreview: React.FC = () => {
   // Índice de CUPS para insertar la columna a su derecha
   const cupsIndex = React.useMemo(() => (filteredData ? filteredData.headers.findIndex(h => (h || '').toString().toLowerCase().trim() === 'cups') : -1), [filteredData])
 
-  // Datos para el panel lateral izquierdo
-  const contractsInfo = React.useMemo(() => {
-    if (!filteredData || !contractHeader) return []
-    
-    const potenciaHeader = filteredData.headers.find(h => isPotenciaHeader(h))
-    const contractsMap = new Map<string, {
-      potencias: Set<string>,
-      minDesde: Date | null,
-      maxHasta: Date | null
-    }>()
-    
-    for (const r of filteredRows) {
-      const contractKey = String(r[contractHeader] ?? '').trim()
-      if (!contractKey) continue
-      
-      if (!contractsMap.has(contractKey)) {
-        contractsMap.set(contractKey, {
-          potencias: new Set(),
-          minDesde: null,
-          maxHasta: null
-        })
-      }
-      
-      const info = contractsMap.get(contractKey)!
-      
-      // Agregar potencias únicas
-      if (potenciaHeader && r[potenciaHeader]) {
-        const potenciaVal = String(r[potenciaHeader]).trim()
-        if (potenciaVal) info.potencias.add(potenciaVal)
-      }
-      
-      // Calcular rango de fechas
-      if (fechaDesdeHeader && fechaHastaHeader) {
-        const dDesde = parseDateLoose(r[fechaDesdeHeader])
-        const dHasta = parseDateLoose(r[fechaHastaHeader])
-        
-        if (dDesde && (!info.minDesde || dDesde < info.minDesde)) {
-          info.minDesde = dDesde
-        }
-        if (dHasta && (!info.maxHasta || dHasta > info.maxHasta)) {
-          info.maxHasta = dHasta
-        }
-      }
-    }
-    
-    return Array.from(contractsMap.entries()).map(([contract, info]) => ({
-      contract,
-      potenciasCount: info.potencias.size,
-      duration: info.minDesde && info.maxHasta ? diffMonthsDays(info.minDesde, info.maxHasta) : null,
-      year: info.minDesde ? info.minDesde.getFullYear() : null
-    }))
-  }, [filteredRows, contractHeader, fechaDesdeHeader, fechaHastaHeader, filteredData])
+  // (Eliminado panel "Información de Contratos" y su cálculo asociado)
 
-  // Calcular suma total de potencias (soporta múltiples columnas de potencia)
-  const totalPotencia = React.useMemo(() => {
-    if (!filteredData) return 0
-    const potenciaHeaders = filteredData.headers.filter(h => isPotenciaHeader(h))
-    if (!potenciaHeaders.length) return 0
-
-    let sum = 0
-    for (const row of filteredRows) {
-      for (const h of potenciaHeaders) {
-        const val = String(row[h] ?? '')
-        const num = normalizeNumber(val)
-        if (Number.isFinite(num)) {
-          sum += num
-        }
-      }
-    }
-    return sum
-  }, [filteredRows, filteredData])
+  // (Eliminado totalPotencia por no usarse actualmente)
 
   // Contar cuántas veces hubo cambio de Potencia (kW) por contrato (transiciones)
   const totalCambiosPotencia = React.useMemo(() => {
@@ -339,7 +271,7 @@ const ATRPreview: React.FC = () => {
     const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
     // Solo anulamos por Tipo de factura para: Factura complementaria, Enviado a facturar, Anulada
     if (!tipoHeader) return
-    const valoresAnularTipo = new Set(['factura complementaria','anulada','enviado a facturar','enviada a facturar','enviado a facturacion','enviada a facturacion'])
+  const valoresAnularTipo = new Set(['factura complementaria','anulada','enviado a facturar','enviada a facturar','enviado a facturacion','enviada a facturacion'])
     // Usar filteredData.rows para trabajar con datos ya filtrados (sin columna autofactura)
     const originales = filteredData.rows
     const restantes: Record<string,string>[] = []
@@ -348,14 +280,14 @@ const ATRPreview: React.FC = () => {
     for (const r of originales) {
       const tipo = normalizeLabel(r[tipoHeader])
       const porTipo = valoresAnularTipo.has(tipo) ||
-        (tipo.includes('factura') && tipo.includes('complementaria')) ||
+        ((tipo.includes('factura') || tipo.includes('fact')) && (tipo.includes('complementaria') || tipo.includes('complem') || tipo.includes('compl'))) ||
         (tipo.includes('envi') && tipo.includes('factur')) ||
-        (tipo === 'anulada')
+        (tipo.includes('anulad'))
       if (porTipo) {
         count++
-        if (tipo.includes('factura') && tipo.includes('complementaria')) comp++
+        if ((tipo.includes('factura') || tipo.includes('fact')) && (tipo.includes('complementaria') || tipo.includes('complem') || tipo.includes('compl'))) comp++
         else if (tipo.includes('envi') && tipo.includes('factur')) enviados++
-        else if (tipo === 'anulada') anul++
+        else if (tipo.includes('anulad')) anul++
         continue
       }
       restantes.push(r)
@@ -365,6 +297,23 @@ const ATRPreview: React.FC = () => {
     setDetalleAnuladas({ comp, anuladas: anul, enviados })
     setOrdenado(true)
   }, [filteredData, ordenado])
+
+  // Eliminar datos ATR cargados y redirigir a exportación
+  const handleEliminar = React.useCallback(() => {
+    const ok = window.confirm('¿Eliminar los datos ATR cargados? Esta acción no se puede deshacer.')
+    if (!ok) return
+    try {
+      localStorage.removeItem('valorApp.analisis.atrCsv')
+    } catch {
+      // ignorar errores de almacenamiento
+    }
+    // Limpiar estados locales y navegar a exportación
+    setFilteredRows([])
+    setAnuladas(0)
+    setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
+    setOrdenado(false)
+    window.location.hash = '#/export-saldo-atr'
+  }, [])
 
   if (!filteredData || !filteredData.headers?.length) {
     return (
@@ -440,119 +389,12 @@ const ATRPreview: React.FC = () => {
       background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
       paddingBottom: '70px' // Espacio para bottom bar
     }}>
-      {/* Panel lateral izquierdo */}
-      <div style={{
-        width: '320px',
-        flexShrink: 0,
-        background: 'rgba(255, 255, 255, 0.98)',
-        borderRight: '2px solid rgba(0, 0, 208, 0.1)',
-        boxShadow: '4px 0 12px rgba(0, 0, 208, 0.06)',
-        overflowY: 'auto',
-        padding: '1rem',
-        maxHeight: 'calc(100vh - 70px)',
-        position: 'sticky',
-        top: 0
-      }}>
-        <div style={{
-          marginBottom: '1.5rem',
-          paddingBottom: '1rem',
-          borderBottom: '2px solid rgba(0, 0, 208, 0.1)'
-        }}>
-          <h2 style={{
-            fontSize: '1.25rem',
-            fontWeight: 700,
-            color: '#0000D0',
-            margin: '0 0 0.5rem 0',
-            fontFamily: "'Lato', sans-serif"
-          }}>📊 Información de Contratos</h2>
-          <p style={{
-            fontSize: '0.875rem',
-            color: '#64748b',
-            margin: 0,
-            fontFamily: "'Open Sans', sans-serif"
-          }}>
-            Total: <strong style={{ color: '#0000D0' }}>{contractsInfo.length}</strong> {contractsInfo.length === 1 ? 'contrato' : 'contratos'}
-          </p>
-        </div>
+      {/* (Eliminado: Panel lateral "Información de Contratos") */}
 
-        {/* Lista de contratos */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.875rem'
-        }}>
-          {contractsInfo.map((info, idx) => {
-            const durationText = info.duration ? (() => {
-              const { months, days } = info.duration
-              const years = Math.floor(months / 12)
-              const remMonths = months % 12
-              const parts: string[] = []
-              if (years > 0) parts.push(`${years} ${years === 1 ? 'año' : 'años'}`)
-              if (remMonths > 0) parts.push(`${remMonths} ${remMonths === 1 ? 'mes' : 'meses'}`)
-              if (days > 0) parts.push(`${days} ${days === 1 ? 'día' : 'días'}`)
-              return parts.length > 0 ? parts.join(' ') : '0 días'
-            })() : 'N/A'
-
-            return (
-              <div
-                key={idx}
-                style={{
-                  background: contractColorMap.get(info.contract) || 'rgba(0, 0, 208, 0.03)',
-                  border: '1.5px solid rgba(0, 0, 208, 0.12)',
-                  borderRadius: '10px',
-                  padding: '0.875rem',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <div style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 700,
-                  color: '#0000D0',
-                  marginBottom: '0.625rem',
-                  fontFamily: "'Lato', sans-serif",
-                  wordBreak: 'break-word'
-                }}>
-                  {info.contract || `Contrato ${idx + 1}`}{info.year ? ` - ${info.year}` : ''}
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.375rem',
-                  fontSize: '0.75rem',
-                  fontFamily: "'Open Sans', sans-serif"
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                    <span style={{ color: '#64748b' }}>⏱️ Duración:</span>
-                    <strong style={{ color: '#1e293b' }}>{durationText}</strong>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                    <span style={{ color: '#64748b' }}>⚡ Potencias:</span>
-                    <strong style={{ color: '#1e293b' }}>{info.potenciasCount}</strong>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {contractsInfo.length === 0 && (
-          <div style={{
-            textAlign: 'center',
-            padding: '2rem 1rem',
-            color: '#94a3b8',
-            fontSize: '0.875rem',
-            fontFamily: "'Open Sans', sans-serif"
-          }}>
-            No se encontraron contratos en los datos
-          </div>
-        )}
-      </div>
-
-      {/* Contenido principal */}
+      {/* Contenido principal (a ancho completo tras quitar sidebar) */}
       <div style={{ 
         flex: 1,
-        padding: '0.875rem 0.5rem',
+        padding: '0.875rem 1rem',
         overflow: 'hidden'
       }}>
         {anuladas > 0 && (
@@ -620,7 +462,9 @@ const ATRPreview: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
-          <button
+          {/* Grupo de acciones principales: Ordenar + Eliminar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'nowrap' }}>
+            <button
             type="button"
             onClick={handleOrdenar}
             disabled={ordenado}
@@ -657,7 +501,36 @@ const ATRPreview: React.FC = () => {
             }}
           >
             {ordenado ? '✓ Filtrado' : 'Ordenar'}
-          </button>
+            </button>
+            <button
+            type="button"
+            onClick={handleEliminar}
+            style={{
+              borderRadius: 10,
+              padding: '0.625rem 1.25rem',
+              background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              letterSpacing: '0.03em',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px -2px rgba(220, 38, 38, 0.35)',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              fontFamily: "'Open Sans', sans-serif"
+            }}
+            title="Eliminar datos ATR"
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(239, 68, 68, 0.45)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(220, 38, 38, 0.35)';
+            }}
+            >Eliminar</button>
+          </div>
           <a 
             href="#/export-saldo-atr"
             style={{ 
@@ -850,7 +723,7 @@ const ATRPreview: React.FC = () => {
                     const isFechaDesde = isFechaDesdeHeader(h)
                     const isFechaHasta = isFechaHastaHeader(h)
                     const isDateCol = isFechaEnvio || isFechaDesde || isFechaHasta
-                    const isNumeric = !isDateCol && (potencia || /^-?[0-9\.\,]+$/.test(val))
+                    const isNumeric = !isDateCol && (potencia || /^-?[0-9.,]+$/.test(val))
                     const align = isNumeric ? 'right' as const : 'left' as const
                     const display = isDateCol
                       ? formatDateES(r[h])
