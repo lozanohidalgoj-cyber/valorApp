@@ -385,48 +385,33 @@ const ATRPreview: React.FC = () => {
     window.location.hash = '#/export-saldo-atr'
   }, [])
 
-  // Botón: Filtrar (selecciona por Tipo/Estado exactos y abre ventana con filtradas)
+  // Botón: Filtrar (selecciona por cualquier columna que contenga Complementaria / Enviado a facturar / Anulada / Anuladora y abre ventana con filtradas)
   const handleFiltrar = React.useCallback(() => {
     if (!filteredData) return
-    const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
-    const estadoHeader = filteredData.headers.find(h => isEstadoMedidaHeader(h))
-    if (!tipoHeader && !estadoHeader) {
-      window.alert('No se encontraron columnas "Tipo de factura" ni "Estado de medida" en el archivo.')
-      return
-    }
-
-    // Criterios exactos solicitados
-    const TIPOS_PERMITIDOS = new Set([
-      'factura complementaria',
-      'enviado a facturar',
-      'enviada a facturar',
-      'anulada'
-    ])
-    const ESTADOS_PERMITIDOS = new Set(['anulada', 'anuladora'])
-
+    // Criterios: detectar por cualquier columna usando la heurística classifyLabel
     const originales = filteredData.rows
     const seleccionadas: Record<string,string>[] = []
     let comp = 0, anul = 0, enviados = 0
 
     for (const r of originales) {
-      let match = false
-      if (tipoHeader) {
-        const t = normalizeLabel(String(r[tipoHeader]))
-        if (TIPOS_PERMITIDOS.has(t)) {
-          match = true
-          if (t === 'factura complementaria') comp++
-          else if (t === 'anulada') anul++
-          else if (t === 'enviado a facturar' || t === 'enviada a facturar') enviados++
+      let claseDetectada: ClaseObjetivo = null
+      // Recorremos todas las columnas para encontrar la primera coincidencia significativa
+      for (const h of filteredData.headers) {
+        const v = String(r[h] ?? '')
+        const c = classifyLabel(v)
+        if (c === 'comp' || c === 'envi' || c === 'anul') {
+          // Priorizamos: compl > envi > anul para recuentos
+          if (claseDetectada === null) claseDetectada = c
+          else if (claseDetectada !== 'comp' && c === 'comp') claseDetectada = 'comp'
+          else if (claseDetectada === 'anul' && c === 'envi') claseDetectada = 'envi'
         }
       }
-      if (!match && estadoHeader) {
-        const e = normalizeLabel(String(r[estadoHeader]))
-        if (ESTADOS_PERMITIDOS.has(e)) {
-          match = true
-          anul++
-        }
+      if (claseDetectada) {
+        if (claseDetectada === 'comp') comp++
+        else if (claseDetectada === 'envi') enviados++
+        else if (claseDetectada === 'anul') anul++
+        seleccionadas.push(r)
       }
-      if (match) seleccionadas.push(r)
     }
 
     setRemovedRows(seleccionadas)
