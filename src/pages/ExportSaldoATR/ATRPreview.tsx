@@ -18,7 +18,6 @@ const useAtrCsv = (): ParsedCSV | null => {
 const ATRPreview: React.FC = () => {
   const data = useAtrCsv()
     // Leer cambio de titular desde localStorage
-    export default ATRPreview
   const cambioTitularInfo = React.useMemo(() => {
     try {
       const s = localStorage.getItem('valorApp.wart.cambioTitular')
@@ -556,7 +555,8 @@ const ATRPreview: React.FC = () => {
   const handleDetectarAnomalias = React.useCallback(() => {
     try {
       const headers = filteredData?.headers || []
-      const rows = filteredData?.rows || []
+      // Analizar siempre la vista vigente: si hay 'keptRows' (post-anulación), usarla; si no, usar dataset filtrado original
+      const rows = (keptRows && keptRows.length > 0) ? keptRows : (filteredData?.rows || [])
       if (!headers.length || !rows.length) { window.alert('No hay datos para analizar.'); return }
       const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
       const consumoHeader = headers.find(h => isConsumoActivaHeader(h))
@@ -587,7 +587,7 @@ const ATRPreview: React.FC = () => {
     } catch {
       window.alert('Error al analizar anomalías.')
     }
-  }, [filteredData])
+  }, [filteredData, keptRows])
 
   // Nuevo: Anular/copiar por Estado de medida o Tipo de factura y pasar a pestaña Eliminadas
   const handleAnularEstadoTipo = React.useCallback(() => {
