@@ -1505,6 +1505,15 @@ const ATRPreview: React.FC = () => {
                   if (selKeys.has(rowKey(r))) eliminadas.push(r)
                   else restantes.push(r)
                 }
+                // Persistir dataset actualizado (sin anuladas)
+                try {
+                  localStorage.setItem('valorApp.analisis.atrCsv', JSON.stringify({
+                    headers: filteredData!.headers,
+                    rows: restantes
+                  }))
+                } catch {
+                  // ignorar errores de almacenamiento
+                }
                 // Vista principal: mostrar restantes (las anuladas desaparecen de la vista)
                 setFilteredRows(restantes)
                 setKeptRows(restantes)
