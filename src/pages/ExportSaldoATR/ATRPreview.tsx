@@ -128,6 +128,30 @@ const ATRPreview: React.FC = () => {
       .trim()
     return t
   }
+
+  // Clasifica etiquetas en categorías objetivo con heurística amplia
+  type ClaseObjetivo = 'comp' | 'envi' | 'anul' | 'orden' | null
+  const classifyLabel = (input: string): ClaseObjetivo => {
+    const s = normalizeLabel(input)
+    if (!s) return null
+    const compact = s.replace(/[\s._-]/g, '')
+
+    // Ordenar facturas
+    if (/orden\w*\s+factur\w*/.test(s) || /orden\w*factur\w*/.test(compact)) return 'orden'
+
+    // Complementaria: múltiples variantes y abreviaturas ("compl.", "complement.", "fc", "fact. compl.")
+    const hasFact = /fact/.test(s)
+    const hasCompl = /(compl\b|complem\w*|complement\w*)/.test(s) || /(compl)/.test(compact)
+    if ((hasFact && hasCompl) || /^fc$/.test(compact) || /^factcompl/.test(compact) || /^faccompl/.test(compact)) return 'comp'
+
+    // Enviado/a a facturar o facturación
+    if (/(envi\w*).*(factur\w*)/.test(s)) return 'envi'
+
+    // Anulada / Anuladora
+    if (/anulad\w*/.test(s) || /anulador\w*/.test(s)) return 'anul'
+
+    return null
+  }
   const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n))
   const fromExcelSerial = (serial: number): Date => {
     // Excel 1900 date system: serial 1 -> 1899-12-31; tomamos base 1899-12-30 por bug del 1900 leap
@@ -371,18 +395,6 @@ const ATRPreview: React.FC = () => {
       return
     }
 
-    // Valores objetivo (normalizados)
-    const valoresObjetivo = new Set([
-      'ordenar facturas',
-      'factura complementaria',
-      'enviado a facturar',
-      'enviada a facturar',
-      'enviado a facturacion',
-      'enviada a facturacion',
-      'anulada',
-      'anuladora'
-    ])
-
     const originales = filteredData.rows
     const restantes: Record<string,string>[] = []
     const eliminadas: Record<string,string>[] = []
@@ -390,29 +402,15 @@ const ATRPreview: React.FC = () => {
     let comp = 0, anul = 0, enviados = 0
 
     for (const r of originales) {
-      const tipoRaw = tipoHeader ? normalizeLabel(r[tipoHeader]) : ''
-      const estadoRaw = estadoHeader ? normalizeLabel(r[estadoHeader]) : ''
-      const matchTipo = tipoHeader ? (
-        valoresObjetivo.has(tipoRaw) ||
-        ((tipoRaw.includes('factura') || tipoRaw.includes('fact')) && (tipoRaw.includes('complementaria') || tipoRaw.includes('complem') || tipoRaw.includes('compl'))) ||
-        (tipoRaw.includes('envi') && tipoRaw.includes('factur')) ||
-        (tipoRaw.includes('anulad')) ||
-        (tipoRaw.includes('anulador')) ||
-        (tipoRaw.includes('ordenar') && tipoRaw.includes('factur'))
-      ) : false
-      const matchEstado = estadoHeader ? (
-        valoresObjetivo.has(estadoRaw) ||
-        (estadoRaw.includes('envi') && estadoRaw.includes('factur')) ||
-        (estadoRaw.includes('anulad')) ||
-        (estadoRaw.includes('anulador')) ||
-        (estadoRaw.includes('ordenar') && estadoRaw.includes('factur'))
-      ) : false
+      const tipoRaw = tipoHeader ? String(r[tipoHeader]) : ''
+      const estadoRaw = estadoHeader ? String(r[estadoHeader]) : ''
+      const clase = (tipoHeader && classifyLabel(tipoRaw)) || (estadoHeader && classifyLabel(estadoRaw)) || null
 
-      if (matchTipo || matchEstado) {
+      if (clase) {
         count++
-        if ((tipoRaw.includes('factura') || tipoRaw.includes('fact')) && (tipoRaw.includes('complementaria') || tipoRaw.includes('complem') || tipoRaw.includes('compl'))) comp++
-        else if ((tipoRaw.includes('envi') && tipoRaw.includes('factur')) || (estadoRaw.includes('envi') && estadoRaw.includes('factur'))) enviados++
-        else if (tipoRaw.includes('anulad') || tipoRaw.includes('anulador') || estadoRaw.includes('anulad') || estadoRaw.includes('anulador')) anul++
+        if (clase === 'comp') comp++
+        else if (clase === 'envi') enviados++
+        else if (clase === 'anul') anul++
         eliminadas.push(r)
         continue
       }
