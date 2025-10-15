@@ -124,32 +124,27 @@ export const Valoracion: React.FC = () => {
               type="button"
               onClick={() => setShowAveriaSubs(true)}
               style={{
-                background: 'rgba(255, 255, 255, 0.15)',
+                background: 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)',
                 color: '#FFFFFF',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
+                border: 'none',
                 padding: '1.75rem 4rem',
                 fontSize: '1.25rem',
                 fontWeight: 700,
                 borderRadius: '16px',
-                boxShadow: '0 8px 24px -8px rgba(0, 0, 0, 0.15)',
+                boxShadow: '0 12px 32px -8px rgba(255, 49, 132, 0.7)',
                 cursor: 'pointer',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                minWidth: '240px',
-                backdropFilter: 'blur(10px)'
+                minWidth: '240px'
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                 e.currentTarget.style.transform = 'translateY(-6px) scale(1.02)';
-                e.currentTarget.style.boxShadow = '0 16px 40px -8px rgba(0, 0, 0, 0.2)';
+                e.currentTarget.style.boxShadow = '0 20px 48px -8px rgba(255, 49, 132, 0.9)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                 e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = '0 8px 24px -8px rgba(0, 0, 0, 0.15)';
+                e.currentTarget.style.boxShadow = '0 12px 32px -8px rgba(255, 49, 132, 0.7)';
               }}
             >AVERÍA</button>
           </div>
