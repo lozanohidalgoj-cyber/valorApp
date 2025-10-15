@@ -1540,7 +1540,7 @@ const ATRPreview: React.FC = () => {
                 <AnomChart
                   data={serieAnom}
                   anomalyIdx={anomalyIdx}
-                  onHover={(info) => setTooltipAnom(info)}
+                  onHover={(v) => setTooltipAnom(v)}
                 />
               ) : (
                 <div style={{ padding: '1rem', color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>No se detectaron descensos anómalos en el consumo.</div>
@@ -1780,7 +1780,7 @@ export default ATRPreview
 // Tipos para el gráfico de anomalías
 type HoverInfo = { x: number; y: number; text: string }
 type AnomPoint = { fecha: Date; consumo: number; factura: string }
-interface AnomChartProps { data: Array<AnomPoint>; anomalyIdx: number | null; onHover: (info: HoverInfo | null) => void }
+interface AnomChartProps { data: Array<AnomPoint>; anomalyIdx: number | null; onHover: (_info: HoverInfo | null) => void }
 
 // Gráfico SVG para análisis de anomalías
 function AnomChart({ data, anomalyIdx, onHover }: AnomChartProps) {
