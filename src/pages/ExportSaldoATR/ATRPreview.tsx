@@ -1940,7 +1940,7 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
 }
 
 // Barras por mes cronológico con primera caída >=40% en rojo
-function BarsChart({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyIdx: number | null; onHover: (h: Hover | null) => void }) {
+function BarsChart({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyIdx: number | null; onHover: (_h: Hover | null) => void }) {
   const ordered = [...data].sort((a,b) => a.fecha.getTime() - b.fecha.getTime())
   const w = 600; const h = 260; const m = { l: 50, r: 20, t: 20, b: 60 }
   const innerW = w - m.l - m.r
