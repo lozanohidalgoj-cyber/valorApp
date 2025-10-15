@@ -521,7 +521,8 @@ const ATRPreview: React.FC = () => {
   const handleFiltrar = React.useCallback(() => {
     if (!filteredData) return
     // Criterios: detectar por cualquier columna usando la heurística classifyLabel
-    const originales = filteredData.rows
+  // Tomar como base las filas restantes (keptRows) para no volver a previsualizar anuladas
+  const originales = keptRows.length > 0 ? keptRows : (filteredRows.length > 0 ? filteredRows : filteredData.rows)
     const seleccionadas: Record<string,string>[] = []
     let comp = 0, anul = 0, enviados = 0
 
@@ -1514,7 +1515,10 @@ const ATRPreview: React.FC = () => {
                 setOrdenado(true)
                 setViewMode('restantes')
                 setActiveTab('vista')
+                // Limpiar el estado del modal de previsualización
                 setShowAnularPreview(false)
+                setAnularPreviewRows([])
+                setAnularPreviewDetalle({ comp: 0, anuladas: 0, enviados: 0 })
               }} style={{
                 borderRadius: 8, padding: '0.5rem 0.875rem', background: '#dc2626', border: 'none', color: '#fff', fontWeight: 900
               }}>Confirmar anulación</button>
