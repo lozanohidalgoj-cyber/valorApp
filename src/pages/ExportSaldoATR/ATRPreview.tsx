@@ -337,6 +337,18 @@ const ATRPreview: React.FC = () => {
     })
   }, [])
 
+  // Selector de año para resumen rápido junto al botón CAP
+  const yearsAvailable = React.useMemo(() => Array.from(yearlySummary.keys()).sort((a, b) => b - a), [yearlySummary])
+  const [selectedYear, setSelectedYear] = React.useState<number | null>(null)
+  React.useEffect(() => {
+    if (yearsAvailable.length > 0) setSelectedYear(prev => (prev ?? yearsAvailable[0]))
+    else setSelectedYear(null)
+  }, [yearsAvailable])
+  const selectedYearSummary = React.useMemo(() => {
+    if (selectedYear == null) return undefined
+    return yearlySummary.get(selectedYear)
+  }, [selectedYear, yearlySummary])
+
   // Duración total por contrato: desde primera "Fecha desde" hasta última "Fecha hasta"
   const plural = (n: number, s: string, p: string) => (n === 1 ? s : p)
   const diffMonthsDays = (start: Date, end: Date) => {
@@ -1410,6 +1422,49 @@ const ATRPreview: React.FC = () => {
                 }}>
                 {showYearPanel ? '◀ CAP' : '▶ CAP'}
               </button>
+              {/* Resumen breve por año seleccionado */}
+              {yearsAvailable.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <label style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.75rem' }}>Año</label>
+                  <select
+                    value={selectedYear ?? ''}
+                    onChange={e => setSelectedYear(Number(e.target.value))}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.15)',
+                      color: '#FFFFFF',
+                      border: '1px solid rgba(255,255,255,0.35)',
+                      borderRadius: 8,
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      outline: 'none'
+                    }}
+                  >
+                    {yearsAvailable.map(y => (
+                      <option key={y} value={y} style={{ color: '#0f172a' }}>{y}</option>
+                    ))}
+                  </select>
+                  <span style={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: '0.8rem',
+                    background: 'rgba(0,0,0,0.15)',
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    Contratos: <strong style={{ color: '#FFFFFF' }}>{selectedYearSummary?.contratosUnicos ?? 0}</strong>
+                  </span>
+                  <span style={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: '0.8rem',
+                    background: 'rgba(0,0,0,0.15)',
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}>
+                    Cambios contrato: <strong style={{ color: '#FFFFFF' }}>{selectedYearSummary?.cambiosContrato ?? 0}</strong>
+                  </span>
+                </div>
+              )}
               {/* Fila de métricas principales */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
