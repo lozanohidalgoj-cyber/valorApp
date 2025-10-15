@@ -783,6 +783,10 @@ const ATRPreview: React.FC = () => {
                               <div style={{ fontWeight: 800, color: '#FF3184' }}>{s.cambiosPotencia}</div>
                             </div>
                           </div>
+                          {/* Línea de resumen bajo el año */}
+                          <div style={{ marginTop: 6, fontSize: 12, color: '#334155' }}>
+                            Contratos en {y}: <strong style={{ color: '#0000D0' }}>{s.contratosUnicos}</strong>
+                          </div>
                           {expandedYears.has(y) && (
                             <div style={{
                               marginTop: 8,
