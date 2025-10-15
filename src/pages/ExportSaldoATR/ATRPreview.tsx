@@ -57,6 +57,7 @@ const ATRPreview: React.FC = () => {
   const [ordenado, setOrdenado] = React.useState<boolean>(false)
   const [viewMode, setViewMode] = React.useState<'restantes' | 'filtradas'>('restantes')
   const [showFilteredModal, setShowFilteredModal] = React.useState<boolean>(false)
+  const [activeTab, setActiveTab] = React.useState<'vista' | 'eliminadas'>('vista')
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -69,6 +70,7 @@ const ATRPreview: React.FC = () => {
       setOrdenado(false)
       setAnuladas(0)
       setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
+      setActiveTab('vista')
     }
   }, [filteredData])
 
@@ -105,7 +107,10 @@ const ATRPreview: React.FC = () => {
     const t = stripAccents(h).toLowerCase().trim()
     return t === 'tipo de factura' || t === 'tipo factura' || (t.includes('tipo') && t.includes('factur'))
   }
-  // (Eliminado isEstadoMedidaHeader por no usarse)
+  const isEstadoMedidaHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t === 'estado de medida' || t === 'estado medida' || (t.includes('estado') && t.includes('medida'))
+  }
   const normalizeNumber = (s: string) => {
     // Convierte "2.345,67" o "2,200" a número normalizado para comparar
     const t = (s || '').replace(/\./g, '').replace(/,/g, '.')
@@ -318,11 +323,26 @@ const ATRPreview: React.FC = () => {
     if (viewMode === 'restantes') {
       setFilteredRows(removedRows)
       setViewMode('filtradas')
+      setActiveTab('eliminadas')
     } else {
       setFilteredRows(keptRows)
       setViewMode('restantes')
+      setActiveTab('vista')
     }
   }, [ordenado, viewMode, removedRows, keptRows])
+
+  // Cambiar pestañas entre Vista previa y Eliminadas
+  const setTab = React.useCallback((tab: 'vista' | 'eliminadas') => {
+    if (!ordenado) return
+    setActiveTab(tab)
+    if (tab === 'vista') {
+      setFilteredRows(keptRows)
+      setViewMode('restantes')
+    } else {
+      setFilteredRows(removedRows)
+      setViewMode('filtradas')
+    }
+  }, [ordenado, keptRows, removedRows])
 
   // Eliminar datos ATR cargados y redirigir a exportación
   const handleEliminar = React.useCallback(() => {
@@ -340,6 +360,74 @@ const ATRPreview: React.FC = () => {
     setOrdenado(false)
     window.location.hash = '#/export-saldo-atr'
   }, [])
+
+  // Nuevo: Anular/copiar por Estado de medida o Tipo de factura y pasar a pestaña Eliminadas
+  const handleAnularEstadoTipo = React.useCallback(() => {
+    if (!filteredData || ordenado) return
+    const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
+    const estadoHeader = filteredData.headers.find(h => isEstadoMedidaHeader(h))
+    if (!tipoHeader && !estadoHeader) {
+      window.alert('No se encontraron columnas "Tipo de factura" ni "Estado de medida" en el archivo.')
+      return
+    }
+
+    // Valores objetivo (normalizados)
+    const valoresObjetivo = new Set([
+      'ordenar facturas',
+      'factura complementaria',
+      'enviado a facturar',
+      'enviada a facturar',
+      'enviado a facturacion',
+      'enviada a facturacion',
+      'anulada',
+      'anuladora'
+    ])
+
+    const originales = filteredData.rows
+    const restantes: Record<string,string>[] = []
+    const eliminadas: Record<string,string>[] = []
+    let count = 0
+    let comp = 0, anul = 0, enviados = 0
+
+    for (const r of originales) {
+      const tipoRaw = tipoHeader ? normalizeLabel(r[tipoHeader]) : ''
+      const estadoRaw = estadoHeader ? normalizeLabel(r[estadoHeader]) : ''
+      const matchTipo = tipoHeader ? (
+        valoresObjetivo.has(tipoRaw) ||
+        ((tipoRaw.includes('factura') || tipoRaw.includes('fact')) && (tipoRaw.includes('complementaria') || tipoRaw.includes('complem') || tipoRaw.includes('compl'))) ||
+        (tipoRaw.includes('envi') && tipoRaw.includes('factur')) ||
+        (tipoRaw.includes('anulad')) ||
+        (tipoRaw.includes('anulador')) ||
+        (tipoRaw.includes('ordenar') && tipoRaw.includes('factur'))
+      ) : false
+      const matchEstado = estadoHeader ? (
+        valoresObjetivo.has(estadoRaw) ||
+        (estadoRaw.includes('envi') && estadoRaw.includes('factur')) ||
+        (estadoRaw.includes('anulad')) ||
+        (estadoRaw.includes('anulador')) ||
+        (estadoRaw.includes('ordenar') && estadoRaw.includes('factur'))
+      ) : false
+
+      if (matchTipo || matchEstado) {
+        count++
+        if ((tipoRaw.includes('factura') || tipoRaw.includes('fact')) && (tipoRaw.includes('complementaria') || tipoRaw.includes('complem') || tipoRaw.includes('compl'))) comp++
+        else if ((tipoRaw.includes('envi') && tipoRaw.includes('factur')) || (estadoRaw.includes('envi') && estadoRaw.includes('factur'))) enviados++
+        else if (tipoRaw.includes('anulad') || tipoRaw.includes('anulador') || estadoRaw.includes('anulad') || estadoRaw.includes('anulador')) anul++
+        eliminadas.push(r)
+        continue
+      }
+      restantes.push(r)
+    }
+
+    setFilteredRows(eliminadas) // Mostrar primero Eliminadas
+    setRemovedRows(eliminadas)
+    setKeptRows(restantes)
+    setAnuladas(count)
+    setDetalleAnuladas({ comp, anuladas: anul, enviados })
+    setOrdenado(true)
+    setViewMode('filtradas')
+    setActiveTab('eliminadas')
+  }, [filteredData, ordenado])
 
   if (!filteredData || !filteredData.headers?.length) {
     return (
@@ -500,6 +588,76 @@ const ATRPreview: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+          {/* Pestañas: Vista previa | Eliminadas */}
+          {ordenado && (
+            <div style={{
+              display: 'inline-flex',
+              background: 'rgba(0,0,0,0.05)',
+              borderRadius: 10,
+              padding: 4,
+              marginRight: 8
+            }}>
+              <button
+                type="button"
+                onClick={() => setTab('vista')}
+                style={{
+                  borderRadius: 8,
+                  padding: '0.5rem 0.875rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.8125rem',
+                  color: activeTab === 'vista' ? '#FFFFFF' : '#1e293b',
+                  background: activeTab === 'vista' ? '#0000D0' : 'transparent'
+                }}
+              >Vista previa</button>
+              <button
+                type="button"
+                onClick={() => setTab('eliminadas')}
+                style={{
+                  borderRadius: 8,
+                  padding: '0.5rem 0.875rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.8125rem',
+                  color: activeTab === 'eliminadas' ? '#FFFFFF' : '#1e293b',
+                  background: activeTab === 'eliminadas' ? '#0000D0' : 'transparent'
+                }}
+              >Eliminadas</button>
+            </div>
+          )}
+          {/* Botón nuevo: Anular por Estado/Tipo */}
+          {!ordenado && (
+            <button
+              type="button"
+              onClick={handleAnularEstadoTipo}
+              style={{
+                borderRadius: 10,
+                padding: '0.625rem 1.25rem',
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '0.8125rem',
+                fontWeight: 700,
+                letterSpacing: '0.03em',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.35)',
+                transition: 'all 0.2s ease',
+                textTransform: 'uppercase',
+                fontFamily: "'Open Sans', sans-serif"
+              }}
+              title="Anular por Estado de medida o Tipo de factura y copiar a Eliminadas"
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(239, 68, 68, 0.45)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(239, 68, 68, 0.35)';
+              }}
+            >Anular por Estado/Tipo</button>
+          )}
           {ordenado && (
             <button
               type="button"
