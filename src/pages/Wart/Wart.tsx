@@ -204,17 +204,20 @@ export const Wart: React.FC = () => {
             flexDirection: 'column',
             gap: '1rem'
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              flexWrap: 'wrap',
-              width: '100%'
+            {/* Encabezado con numeración al estilo de los puntos 1 y 2 */}
+            <span style={{ 
+              fontSize: '1.35rem', 
+              lineHeight: 1.6, 
+              color: '#1a1a1a', 
+              fontWeight: 500,
+              fontFamily: "'Open Sans', sans-serif"
             }}>
-              <span style={{ fontSize: '1.35rem', color: '#1a1a1a', fontWeight: 600, fontFamily: "'Open Sans', sans-serif" }}>
-                ¿Tuvo cambio de titular?
-              </span>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <strong style={{ color: '#0000D0', fontWeight: 700 }}>3.</strong> ¿Tuvo cambio de titular?
+            </span>
+
+            {/* Opciones exclusivas No / Sí */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: "'Open Sans', sans-serif" }}>
                 <input
                   type="checkbox"
                   checked={cambioTitular === 'no'}
@@ -222,18 +225,18 @@ export const Wart: React.FC = () => {
                     setCambioTitular(cambioTitular === 'no' ? null : 'no')
                     if (cambioTitular !== 'no') setFechaCambio('')
                   }}
-                  style={{ width: 24, height: 24, accentColor: '#0000D0', cursor: 'pointer' }}
+                  style={{ width: 28, height: 28, accentColor: '#0000D0', cursor: 'pointer' }}
                 />
                 <span style={{ fontSize: '1.125rem', color: '#1a1a1a' }}>No</span>
               </label>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: "'Open Sans', sans-serif" }}>
                 <input
                   type="checkbox"
                   checked={cambioTitular === 'si'}
                   onChange={() => {
                     setCambioTitular(cambioTitular === 'si' ? null : 'si')
                   }}
-                  style={{ width: 24, height: 24, accentColor: '#0000D0', cursor: 'pointer' }}
+                  style={{ width: 28, height: 28, accentColor: '#0000D0', cursor: 'pointer' }}
                 />
                 <span style={{ fontSize: '1.125rem', color: '#1a1a1a' }}>Sí</span>
               </label>
@@ -241,7 +244,7 @@ export const Wart: React.FC = () => {
 
             {cambioTitular === 'si' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <label style={{ fontSize: '1.125rem', color: '#1a1a1a' }}>Fecha de cambio de titular:</label>
+                <label style={{ fontSize: '1.125rem', color: '#1a1a1a', fontFamily: "'Open Sans', sans-serif" }}>Fecha de cambio de titular:</label>
                 <input
                   type="date"
                   value={fechaCambio}
