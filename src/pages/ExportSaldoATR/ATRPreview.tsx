@@ -905,34 +905,7 @@ const ATRPreview: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={handleFiltrar}
-            style={{
-              borderRadius: 10,
-              padding: '0.625rem 1.25rem',
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-              border: 'none',
-              color: '#FFFFFF',
-              fontSize: '0.8125rem',
-              fontWeight: 700,
-              letterSpacing: '0.03em',
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px -2px rgba(139, 92, 246, 0.35)',
-              transition: 'all 0.2s ease',
-              textTransform: 'uppercase',
-              fontFamily: "'Open Sans', sans-serif"
-            }}
-            title="Filtrar por Tipo de factura (Factura complementaria, Enviado/a a facturar, Anulada) y Estado de medida (Anulada/Anuladora)"
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(139, 92, 246, 0.45)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(139, 92, 246, 0.35)';
-            }}
-          >Filtrar</button>
+          {/* Botón 'Filtrar' eliminado por solicitud */}
           {/* Pestañas: Vista previa | Eliminadas */}
           {ordenado && (
             <div style={{
