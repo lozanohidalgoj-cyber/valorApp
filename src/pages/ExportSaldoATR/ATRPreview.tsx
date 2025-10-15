@@ -385,6 +385,50 @@ const ATRPreview: React.FC = () => {
     window.location.hash = '#/export-saldo-atr'
   }, [])
 
+  // Botón: Filtrar (selecciona por Tipo/Estado y abre ventana con filtradas)
+  const handleFiltrar = React.useCallback(() => {
+    if (!filteredData) return
+    const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
+    const estadoHeader = filteredData.headers.find(h => isEstadoMedidaHeader(h))
+    if (!tipoHeader && !estadoHeader) {
+      window.alert('No se encontraron columnas "Tipo de factura" ni "Estado de medida" en el archivo.')
+      return
+    }
+
+    const originales = filteredData.rows
+    const seleccionadas: Record<string,string>[] = []
+    let comp = 0, anul = 0, enviados = 0
+
+    for (const r of originales) {
+      let match = false
+      if (tipoHeader) {
+        const c = classifyLabel(String(r[tipoHeader]))
+        if (c === 'comp' || c === 'envi' || c === 'anul') {
+          match = true
+          if (c === 'comp') comp++
+          else if (c === 'envi') enviados++
+          else if (c === 'anul') anul++
+        }
+      }
+      if (!match && estadoHeader) {
+        const c = classifyLabel(String(r[estadoHeader]))
+        if (c === 'anul') {
+          match = true
+          anul++
+        }
+      }
+      if (match) seleccionadas.push(r)
+    }
+
+    setRemovedRows(seleccionadas)
+    setDetalleAnuladas({ comp, anuladas: anul, enviados })
+    setAnuladas(seleccionadas.length)
+    setOrdenado(true)
+    setShowFilteredModal(true)
+    setActiveTab('eliminadas')
+    setViewMode('filtradas')
+  }, [filteredData])
+
   // Nuevo: Anular/copiar por Estado de medida o Tipo de factura y pasar a pestaña Eliminadas
   const handleAnularEstadoTipo = React.useCallback(() => {
     if (!filteredData || ordenado) return
@@ -586,6 +630,34 @@ const ATRPreview: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleFiltrar}
+            style={{
+              borderRadius: 10,
+              padding: '0.625rem 1.25rem',
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '0.8125rem',
+              fontWeight: 700,
+              letterSpacing: '0.03em',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px -2px rgba(139, 92, 246, 0.35)',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              fontFamily: "'Open Sans', sans-serif"
+            }}
+            title="Filtrar por Tipo de factura (Complementaria, Enviado a facturar, Anulada) y Estado de medida (Anulada/Anulador)"
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(139, 92, 246, 0.45)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(139, 92, 246, 0.35)';
+            }}
+          >Filtrar</button>
           {/* Pestañas: Vista previa | Eliminadas */}
           {ordenado && (
             <div style={{
@@ -625,37 +697,7 @@ const ATRPreview: React.FC = () => {
               >Eliminadas</button>
             </div>
           )}
-          {/* Botón nuevo: Anular por Estado/Tipo */}
-          {!ordenado && (
-            <button
-              type="button"
-              onClick={handleAnularEstadoTipo}
-              style={{
-                borderRadius: 10,
-                padding: '0.625rem 1.25rem',
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                border: 'none',
-                color: '#FFFFFF',
-                fontSize: '0.8125rem',
-                fontWeight: 700,
-                letterSpacing: '0.03em',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.35)',
-                transition: 'all 0.2s ease',
-                textTransform: 'uppercase',
-                fontFamily: "'Open Sans', sans-serif"
-              }}
-              title="Anular por Estado de medida o Tipo de factura y copiar a Eliminadas"
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(239, 68, 68, 0.45)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(239, 68, 68, 0.35)';
-              }}
-            >Anular por Estado/Tipo</button>
-          )}
+          {/* Botón "Anular por Estado/Tipo" desactivado por solicitud */}
           {ordenado && (
             <button
               type="button"
