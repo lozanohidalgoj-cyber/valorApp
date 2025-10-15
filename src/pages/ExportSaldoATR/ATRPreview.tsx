@@ -385,7 +385,7 @@ const ATRPreview: React.FC = () => {
     window.location.hash = '#/export-saldo-atr'
   }, [])
 
-  // Botón: Filtrar (selecciona por Tipo/Estado y abre ventana con filtradas)
+  // Botón: Filtrar (selecciona por Tipo/Estado exactos y abre ventana con filtradas)
   const handleFiltrar = React.useCallback(() => {
     if (!filteredData) return
     const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
@@ -395,6 +395,15 @@ const ATRPreview: React.FC = () => {
       return
     }
 
+    // Criterios exactos solicitados
+    const TIPOS_PERMITIDOS = new Set([
+      'factura complementaria',
+      'enviado a facturar',
+      'enviada a facturar',
+      'anulada'
+    ])
+    const ESTADOS_PERMITIDOS = new Set(['anulada', 'anuladora'])
+
     const originales = filteredData.rows
     const seleccionadas: Record<string,string>[] = []
     let comp = 0, anul = 0, enviados = 0
@@ -402,17 +411,17 @@ const ATRPreview: React.FC = () => {
     for (const r of originales) {
       let match = false
       if (tipoHeader) {
-        const c = classifyLabel(String(r[tipoHeader]))
-        if (c === 'comp' || c === 'envi' || c === 'anul') {
+        const t = normalizeLabel(String(r[tipoHeader]))
+        if (TIPOS_PERMITIDOS.has(t)) {
           match = true
-          if (c === 'comp') comp++
-          else if (c === 'envi') enviados++
-          else if (c === 'anul') anul++
+          if (t === 'factura complementaria') comp++
+          else if (t === 'anulada') anul++
+          else if (t === 'enviado a facturar' || t === 'enviada a facturar') enviados++
         }
       }
       if (!match && estadoHeader) {
-        const c = classifyLabel(String(r[estadoHeader]))
-        if (c === 'anul') {
+        const e = normalizeLabel(String(r[estadoHeader]))
+        if (ESTADOS_PERMITIDOS.has(e)) {
           match = true
           anul++
         }
@@ -425,8 +434,9 @@ const ATRPreview: React.FC = () => {
     setAnuladas(seleccionadas.length)
     setOrdenado(true)
     setShowFilteredModal(true)
-    setActiveTab('eliminadas')
-    setViewMode('filtradas')
+    // Mantener la vista principal en "restantes"; las filtradas se muestran en el modal
+    setActiveTab('vista')
+    setViewMode('restantes')
   }, [filteredData])
 
   // Nuevo: Anular/copiar por Estado de medida o Tipo de factura y pasar a pestaña Eliminadas
@@ -575,10 +585,10 @@ const ATRPreview: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span style={{ fontSize: '1.125rem' }}>✓</span>
-            <strong>Se han anulado {anuladas} factura{anuladas === 1 ? '' : 's'} del listado.</strong>
+            <strong>Se han filtrado {anuladas} factura{anuladas === 1 ? '' : 's'} del listado.</strong>
           </div>
           <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>
-            Detalle: Factura complementaria: {detalleAnuladas.comp} | Enviadas a facturar: {detalleAnuladas.enviados} | Anuladas: {detalleAnuladas.anuladas}
+            Detalle: Factura complementaria: {detalleAnuladas.comp} | Enviadas a facturar: {detalleAnuladas.enviados} | Anuladas/Anuladoras: {detalleAnuladas.anuladas}
           </span>
         </div>
       )}
@@ -648,7 +658,7 @@ const ATRPreview: React.FC = () => {
               textTransform: 'uppercase',
               fontFamily: "'Open Sans', sans-serif"
             }}
-            title="Filtrar por Tipo de factura (Complementaria, Enviado a facturar, Anulada) y Estado de medida (Anulada/Anulador)"
+            title="Filtrar por Tipo de factura (Factura complementaria, Enviado/a a facturar, Anulada) y Estado de medida (Anulada/Anuladora)"
             onMouseEnter={e => {
               e.currentTarget.style.transform = 'translateY(-1px)';
               e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(139, 92, 246, 0.45)';
