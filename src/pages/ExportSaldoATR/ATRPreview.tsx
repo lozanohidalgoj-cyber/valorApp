@@ -298,6 +298,45 @@ const ATRPreview: React.FC = () => {
     return result
   }, [filteredData, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader, potenciaHeaderMain])
 
+  // Contratos por año (lista) para mostrar bajo cada tarjeta del panel CAP
+  const yearlyContracts = React.useMemo(() => {
+    const map = new Map<number, string[]>()
+    if (!filteredData || !contractHeader) return map
+
+    const tmp = new Map<number, Set<string>>()
+    for (const r of filteredData.rows) {
+      // Fecha de referencia por orden: Fecha desde -> Fecha hasta -> Fecha envío a facturar
+      const dDesde = fechaDesdeHeader ? parseDateLoose(r[fechaDesdeHeader]) : null
+      const dHasta = (!dDesde && fechaHastaHeader) ? parseDateLoose(r[fechaHastaHeader]) : null
+      const dEnvio = (!dDesde && !dHasta && fechaEnvioHeader) ? parseDateLoose(r[fechaEnvioHeader]) : null
+      const d = dDesde || dHasta || dEnvio || null
+      if (!d) continue
+      const year = d.getFullYear()
+      if (!Number.isFinite(year)) continue
+
+      if (!tmp.has(year)) tmp.set(year, new Set<string>())
+      const c = String(r[contractHeader] ?? '').trim()
+      if (c) tmp.get(year)!.add(c)
+    }
+
+    for (const [y, set] of tmp.entries()) {
+      // Orden alfabético natural simple
+      map.set(y, Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })))
+    }
+    return map
+  }, [filteredData, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader])
+
+  // Años expandidos para ver contratos dentro del panel CAP
+  const [expandedYears, setExpandedYears] = React.useState<Set<number>>(new Set())
+  const toggleYearExpanded = React.useCallback((y: number) => {
+    setExpandedYears(prev => {
+      const next = new Set(prev)
+      if (next.has(y)) next.delete(y)
+      else next.add(y)
+      return next
+    })
+  }, [])
+
   // Duración total por contrato: desde primera "Fecha desde" hasta última "Fecha hasta"
   const plural = (n: number, s: string, p: string) => (n === 1 ? s : p)
   const diffMonthsDays = (start: Date, end: Date) => {
@@ -679,8 +718,25 @@ const ATRPreview: React.FC = () => {
                           padding: '0.625rem 0.75rem',
                           background: 'linear-gradient(135deg, rgba(248,250,252,1) 0%, rgba(241,245,249,1) 100%)'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ fontWeight: 800, color: '#0f172a' }}>Año {y}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{ fontWeight: 800, color: '#0f172a' }}>Año {y}</div>
+                              <button
+                                type="button"
+                                onClick={() => toggleYearExpanded(y)}
+                                style={{
+                                  border: '1px solid rgba(0,0,0,0.12)',
+                                  background: expandedYears.has(y) ? 'rgba(0,0,208,0.08)' : '#ffffff',
+                                  color: '#0f172a',
+                                  borderRadius: 8,
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                                title={expandedYears.has(y) ? 'Ocultar contratos del año' : 'Ver contratos del año'}
+                              >{expandedYears.has(y) ? 'Ocultar contratos' : 'Ver contratos'}</button>
+                            </div>
                             <div style={{ fontSize: 12, color: '#64748b' }}>{s.total} filas</div>
                           </div>
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
@@ -707,6 +763,30 @@ const ATRPreview: React.FC = () => {
                               <div style={{ fontWeight: 800, color: '#FF3184' }}>{s.cambiosPotencia}</div>
                             </div>
                           </div>
+                          {expandedYears.has(y) && (
+                            <div style={{
+                              marginTop: 8,
+                              borderTop: '1px solid rgba(0,0,0,0.06)',
+                              paddingTop: 8,
+                              maxHeight: 140,
+                              overflow: 'auto'
+                            }}>
+                              <div style={{ fontSize: 12, color: '#334155', marginBottom: 6, fontWeight: 700 }}>Contratos del año</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                {(yearlyContracts.get(y) || []).map((c, idx) => (
+                                  <span key={idx} style={{
+                                    background: 'rgba(0,0,208,0.06)',
+                                    color: '#0f172a',
+                                    border: '1px solid rgba(0,0,208,0.12)',
+                                    borderRadius: 999,
+                                    padding: '2px 8px',
+                                    fontSize: 12,
+                                    fontWeight: 700
+                                  }}>{c}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )
                     })}
