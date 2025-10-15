@@ -1911,18 +1911,21 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
   // Matriz por (y,m)
   const matrix = new Map<string, MonthlyPoint>()
   for (const d of data) matrix.set(`${d.year}-${d.month}`, d)
-  // Escala de color Azul->Amarillo->Rojo (baja->media->alta)
-  const max = Math.max(...data.map(d => d.consumo), 1)
+  // Escala de color Azul->Amarillo->Rojo (baja->media->alta) usando cuantiles para mejor distribución visual
+  const sorted = [...data.map(d => d.consumo)].sort((a,b) => a - b)
+  const min = sorted[0] || 0
+  const q50 = sorted[Math.floor(sorted.length * 0.5)] || 0
+  const max = sorted[sorted.length - 1] || 1
   const colorFor = (v: number) => {
-    const t = Math.max(0, Math.min(1, v / max))
-    // Interpolar: 0=azul #1d4ed8, 0.5=amarillo #fbbf24, 1=rojo #ef4444
-    if (t < 0.5) {
-      // azul->amarillo
-      const k = t / 0.5
-      return mixColor('#1d4ed8', '#fbbf24', k)
+    // Normalizar usando cuantiles: <q50 = azul->amarillo, >=q50 = amarillo->rojo
+    if (v <= q50) {
+      const range = q50 - min
+      const t = range > 0 ? (v - min) / range : 0
+      return mixColor('#1d4ed8', '#fbbf24', t)
     }
-    const k = (t - 0.5) / 0.5
-    return mixColor('#fbbf24', '#ef4444', k)
+    const range = max - q50
+    const t = range > 0 ? (v - q50) / range : 0
+    return mixColor('#fbbf24', '#ef4444', t)
   }
   const mixColor = (a: string, b: string, t: number) => {
     const pa = hexToRgb(a); const pb = hexToRgb(b)
