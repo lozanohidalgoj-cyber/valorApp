@@ -42,50 +42,7 @@ export const Wart: React.FC = () => {
     } catch { /* noop */ }
   }, [cambioTitular, fechaCambio])
 
-  // Utilidades locales para analizar dataset ATR vigente (post-anulación)
-  const stripAccents = (s: string) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '')
-  const normalizeLabel = (s: string) => stripAccents(String(s ?? '')).toLowerCase().trim()
-  const isFechaDesdeHeader = (h: string) => {
-    const t = normalizeLabel(h)
-    return t === 'fecha desde' || (t.includes('fecha') && t.includes('desde'))
-  }
-  const isPeriodoHeader = (h: string) => normalizeLabel(h).includes('periodo')
-  const isFechaFactHeader = (h: string) => {
-    const t = normalizeLabel(h)
-    return t.includes('fecha') && (t.includes('factur') || t.includes('emision'))
-  }
-  const isConsumoActivaHeader = (h: string) => {
-    const t = normalizeLabel(h)
-    return t.includes('consum') && (t.includes('activa') || t.includes('kwh') || t.includes('total'))
-  }
-  const parseDateLoose = (v: any): Date | null => {
-    if (v instanceof Date && !isNaN(v.getTime())) return v
-    if (typeof v === 'number' && isFinite(v)) {
-      if (v > 1000000000000) return new Date(v)
-    }
-    if (typeof v === 'string') {
-      const s = v.trim()
-      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/) // dd/MM/yyyy ...
-      if (m) {
-        const dd = Number(m[1]); const mm = Number(m[2]) - 1; const yyyy = Number(m[3].length === 2 ? `20${m[3]}` : m[3])
-        const d = new Date(yyyy, mm, dd)
-        if (!isNaN(d.getTime())) return d
-      }
-      const d2 = new Date(s)
-      if (!isNaN(d2.getTime())) return d2
-    }
-    return null
-  }
-  const parsePeriodoStart = (s: string): Date | null => {
-    // Intenta extraer la primera fecha de un rango "dd/MM/yyyy - dd/MM/yyyy"
-    const m = String(s || '').match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/)
-    return m ? parseDateLoose(m[1]) : parseDateLoose(s)
-  }
-  const parseNumber = (s: string): number => {
-    const t = String(s ?? '').replace(/\./g, '').replace(/,/g, '.')
-    const n = Number(t)
-    return Number.isFinite(n) ? n : NaN
-  }
+  // (Utilidades para análisis ATR eliminadas en WART; ahora se analizan en ATR)
 
   // handleDetectarAnomalias eliminado; el análisis se realiza ahora en ATR
 

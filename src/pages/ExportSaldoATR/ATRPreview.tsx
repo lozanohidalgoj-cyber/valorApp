@@ -431,42 +431,7 @@ const ATRPreview: React.FC = () => {
   // (Eliminado totalPotencia por no usarse actualmente)
 
 
-  const handleOrdenar = React.useCallback(() => {
-    if (!filteredData || ordenado) return
-    const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
-    // Solo anulamos por Tipo de factura para: Factura complementaria, Enviado a facturar, Anulada
-    if (!tipoHeader) return
-  const valoresAnularTipo = new Set(['factura complementaria','anulada','enviado a facturar','enviada a facturar','enviado a facturacion','enviada a facturacion'])
-    // Usar filteredData.rows para trabajar con datos ya filtrados (sin columna autofactura)
-  const originales = filteredData.rows
-  const restantes: Record<string,string>[] = []
-  const eliminadas: Record<string,string>[] = []
-    let count = 0
-    let comp = 0, anul = 0, enviados = 0
-    for (const r of originales) {
-      const tipo = normalizeLabel(r[tipoHeader])
-      const porTipo = valoresAnularTipo.has(tipo) ||
-        ((tipo.includes('factura') || tipo.includes('fact')) && (tipo.includes('complementaria') || tipo.includes('complem') || tipo.includes('compl'))) ||
-        (tipo.includes('envi') && tipo.includes('factur')) ||
-        (tipo.includes('anulad'))
-      if (porTipo) {
-        count++
-        if ((tipo.includes('factura') || tipo.includes('fact')) && (tipo.includes('complementaria') || tipo.includes('complem') || tipo.includes('compl'))) comp++
-        else if (tipo.includes('envi') && tipo.includes('factur')) enviados++
-        else if (tipo.includes('anulad')) anul++
-        eliminadas.push(r)
-        continue
-      }
-      restantes.push(r)
-    }
-    setFilteredRows(restantes)
-    setKeptRows(restantes)
-    setRemovedRows(eliminadas)
-    setAnuladas(count)
-    setDetalleAnuladas({ comp, anuladas: anul, enviados })
-    setOrdenado(true)
-    setViewMode('restantes')
-  }, [filteredData, ordenado])
+  // handleOrdenar eliminado (no usado)
 
   const toggleView = React.useCallback(() => {
     if (!ordenado) return
@@ -495,61 +460,10 @@ const ATRPreview: React.FC = () => {
   }, [ordenado, keptRows, removedRows])
 
   // Eliminar datos ATR cargados y redirigir a exportación
-  const handleEliminar = React.useCallback(() => {
-    const ok = window.confirm('¿Eliminar los datos ATR cargados? Esta acción no se puede deshacer.')
-    if (!ok) return
-    try {
-      localStorage.removeItem('valorApp.analisis.atrCsv')
-    } catch {
-      // ignorar errores de almacenamiento
-    }
-    // Limpiar estados locales y navegar a exportación
-    setFilteredRows([])
-    setAnuladas(0)
-    setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
-    setOrdenado(false)
-    window.location.hash = '#/export-saldo-atr'
-  }, [])
+  // handleEliminar eliminado (no usado)
 
   // Botón: Filtrar (selecciona por cualquier columna que contenga Complementaria / Enviado a facturar / Anulada / Anuladora y abre ventana con filtradas)
-  const handleFiltrar = React.useCallback(() => {
-    if (!filteredData) return
-    // Criterios: detectar por cualquier columna usando la heurística classifyLabel
-  // Tomar como base las filas restantes (keptRows) para no volver a previsualizar anuladas
-  const originales = keptRows.length > 0 ? keptRows : (filteredRows.length > 0 ? filteredRows : filteredData.rows)
-    const seleccionadas: Record<string,string>[] = []
-    let comp = 0, anul = 0, enviados = 0
-
-    for (const r of originales) {
-      let claseDetectada: ClaseObjetivo = null
-      // Recorremos todas las columnas para encontrar la primera coincidencia significativa
-      for (const h of filteredData.headers) {
-        const v = String(r[h] ?? '')
-        const c = classifyLabel(v)
-        if (c === 'comp' || c === 'envi' || c === 'anul') {
-          // Priorizamos: compl > envi > anul para recuentos
-          if (claseDetectada === null) claseDetectada = c
-          else if (claseDetectada !== 'comp' && c === 'comp') claseDetectada = 'comp'
-          else if (claseDetectada === 'anul' && c === 'envi') claseDetectada = 'envi'
-        }
-      }
-      if (claseDetectada) {
-        if (claseDetectada === 'comp') comp++
-        else if (claseDetectada === 'envi') enviados++
-        else if (claseDetectada === 'anul') anul++
-        seleccionadas.push(r)
-      }
-    }
-
-    setRemovedRows(seleccionadas)
-    setDetalleAnuladas({ comp, anuladas: anul, enviados })
-    setAnuladas(seleccionadas.length)
-    setOrdenado(true)
-    setShowFilteredModal(true)
-    // Mantener la vista principal en "restantes"; las filtradas se muestran en el modal
-    setActiveTab('vista')
-    setViewMode('restantes')
-  }, [filteredData])
+  // handleFiltrar eliminado (no usado)
 
   // Detectar anomalías de consumo en el dataset vigente (filas activas)
   const handleDetectarAnomalias = React.useCallback(() => {
@@ -1863,8 +1777,13 @@ const ATRPreview: React.FC = () => {
 
 export default ATRPreview
 
+// Tipos para el gráfico de anomalías
+type HoverInfo = { x: number; y: number; text: string }
+type AnomPoint = { fecha: Date; consumo: number; factura: string }
+interface AnomChartProps { data: Array<AnomPoint>; anomalyIdx: number | null; onHover: (info: HoverInfo | null) => void }
+
 // Gráfico SVG para análisis de anomalías
-function AnomChart({ data, anomalyIdx, onHover }: { data: Array<{ fecha: Date; consumo: number; factura: string }>; anomalyIdx: number | null; onHover: (info: { x: number; y: number; text: string } | null) => void }) {
+function AnomChart({ data, anomalyIdx, onHover }: AnomChartProps) {
   const width = 1000; const height = 320; const m = { l: 48, r: 24, t: 20, b: 40 }
   const innerW = width - m.l - m.r
   const innerH = height - m.t - m.b
