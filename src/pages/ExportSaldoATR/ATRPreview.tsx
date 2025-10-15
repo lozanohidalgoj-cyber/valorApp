@@ -216,6 +216,17 @@ const ATRPreview: React.FC = () => {
   // Cabecera de potencia principal (si existe)
   const potenciaHeaderMain = React.useMemo(() => (filteredData?.headers.find(h => isPotenciaHeader(h)) || null), [filteredData])
 
+  // Potencias únicas (kW) en las filas visibles actualmente
+  const potenciasUnicasVisibles = React.useMemo(() => {
+    if (!potenciaHeaderMain) return 0
+    const set = new Set<number>()
+    for (const r of filteredRows) {
+      const n = normalizeNumber(String(r[potenciaHeaderMain] ?? ''))
+      if (Number.isFinite(n)) set.add(n)
+    }
+    return set.size
+  }, [filteredRows, potenciaHeaderMain])
+
   // Resumen por año: contratos/potencias únicos y cambios por transiciones
   type YearSummary = { contratosUnicos: number; potenciasUnicas: number; cambiosContrato: number; cambiosPotencia: number; total: number }
   const yearlySummary = React.useMemo(() => {
@@ -1365,6 +1376,19 @@ const ATRPreview: React.FC = () => {
                     whiteSpace: 'nowrap'
                   }}>
                     Contratos únicos: <strong style={{ color: '#FFFFFF' }}>{contractColorMap.size}</strong>
+                  </span>
+                </div>
+              )}
+
+              {potenciaHeaderMain && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ 
+                    fontSize: '0.875rem', 
+                    color: 'rgba(255, 255, 255, 0.85)',
+                    fontFamily: "'Open Sans', sans-serif",
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Potencias únicas (kW): <strong style={{ color: '#FFFFFF' }}>{potenciasUnicasVisibles}</strong>
                   </span>
                 </div>
               )}
