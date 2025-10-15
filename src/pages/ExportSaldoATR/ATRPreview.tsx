@@ -1485,9 +1485,11 @@ const ATRPreview: React.FC = () => {
                 const originales = filteredData!.rows
                 const restantes: Record<string,string>[] = []
                 const eliminadas: Record<string,string>[] = []
-                const setSel = new Set(anularPreviewRows)
+                // Generar una clave estable por fila usando el orden actual de headers
+                const rowKey = (row: Record<string,string>) => filteredData!.headers.map(h => String(row[h] ?? '')).join('||')
+                const selKeys = new Set(anularPreviewRows.map(r => rowKey(r)))
                 for (const r of originales) {
-                  if (setSel.has(r)) eliminadas.push(r)
+                  if (selKeys.has(rowKey(r))) eliminadas.push(r)
                   else restantes.push(r)
                 }
                 // Vista principal: mostrar restantes (las anuladas desaparecen de la vista)
