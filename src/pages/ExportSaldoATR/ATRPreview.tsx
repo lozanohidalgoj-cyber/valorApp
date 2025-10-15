@@ -17,7 +17,8 @@ const useAtrCsv = (): ParsedCSV | null => {
 
 const ATRPreview: React.FC = () => {
   const data = useAtrCsv()
-  // Leer cambio de titular desde localStorage
+    // Leer cambio de titular desde localStorage
+    export default ATRPreview
   const cambioTitularInfo = React.useMemo(() => {
     try {
       const s = localStorage.getItem('valorApp.wart.cambioTitular')
@@ -74,6 +75,11 @@ const ATRPreview: React.FC = () => {
   const [showAnularPreview, setShowAnularPreview] = React.useState<boolean>(false)
   const [anularPreviewRows, setAnularPreviewRows] = React.useState<Record<string,string>[]>([])
   const [anularPreviewDetalle, setAnularPreviewDetalle] = React.useState<{comp: number; anuladas: number; enviados: number}>({ comp: 0, anuladas: 0, enviados: 0 })
+  // Análisis de anomalías (migrado desde WART)
+  const [showAnalisis, setShowAnalisis] = React.useState<boolean>(false)
+  const [serieAnom, setSerieAnom] = React.useState<Array<{ fecha: Date; consumo: number; factura: string }>>([])
+  const [anomalyIdx, setAnomalyIdx] = React.useState<number | null>(null)
+  const [tooltipAnom, setTooltipAnom] = React.useState<{ x: number; y: number; text: string } | null>(null)
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -117,6 +123,16 @@ const ATRPreview: React.FC = () => {
   const isFechaHastaHeader = (h: string) => {
     const t = stripAccents(h).toLowerCase().trim()
     return t === 'fecha hasta' || (t.includes('fecha') && t.includes('hasta'))
+  }
+  // Extras para análisis de consumo
+  const isPeriodoHeader = (h: string) => normalizeLabel(h).includes('periodo')
+  const isFechaFactHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t.includes('fecha') && (t.includes('factur') || t.includes('emision'))
+  }
+  const isConsumoActivaHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t.includes('consum') && (t.includes('activa') || t.includes('kwh') || t.includes('total'))
   }
   // Cabeceras robustas para "Tipo de factura" y "Estado de medida"
   const isTipoFacturaHeader = (h: string) => {
@@ -206,6 +222,10 @@ const ATRPreview: React.FC = () => {
     // Si hora es 00:00 y no hay indicios de tiempo, solo fecha
     if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) return `${D}/${M}/${Y}`
     return `${D}/${M}/${Y} ${time}`
+  }
+  const parsePeriodoStart = (s: string): Date | null => {
+    const m = String(s || '').match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/)
+    return m ? parseDateLoose(m[1]) : parseDateLoose(s)
   }
 
   // Colores por grupo de contrato (pasteles suaves)
@@ -530,6 +550,43 @@ const ATRPreview: React.FC = () => {
     // Mantener la vista principal en "restantes"; las filtradas se muestran en el modal
     setActiveTab('vista')
     setViewMode('restantes')
+  }, [filteredData])
+
+  // Detectar anomalías de consumo en el dataset vigente (filas activas)
+  const handleDetectarAnomalias = React.useCallback(() => {
+    try {
+      const headers = filteredData?.headers || []
+      const rows = filteredData?.rows || []
+      if (!headers.length || !rows.length) { window.alert('No hay datos para analizar.'); return }
+      const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
+      const consumoHeader = headers.find(h => isConsumoActivaHeader(h))
+      const facturaHeader = headers.find(h => normalizeLabel(h).includes('factura')) || null
+      if (!fechaHeader || !consumoHeader) { window.alert('No se encontró columna de fecha o consumo.'); return }
+      const items: Array<{ fecha: Date; consumo: number; factura: string }> = []
+      for (const r of rows) {
+        const fecha = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
+        const c = normalizeNumber(String(r[consumoHeader] ?? ''))
+        if (!fecha || !Number.isFinite(c)) continue
+        const factura = facturaHeader ? String(r[facturaHeader] ?? '') : ''
+        items.push({ fecha, consumo: c, factura })
+      }
+      items.sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
+      let idx: number | null = null
+      for (let i = 1; i < items.length; i++) {
+        const prev = items[i - 1].consumo
+        const cur = items[i].consumo
+        if (prev > 0) {
+          const drop = (prev - cur) / prev
+          if (drop > 0.4) { idx = i; break }
+        }
+      }
+      setSerieAnom(items)
+      setAnomalyIdx(idx)
+      setTooltipAnom(null)
+      setShowAnalisis(true)
+    } catch {
+      window.alert('Error al analizar anomalías.')
+    }
   }, [filteredData])
 
   // Nuevo: Anular/copiar por Estado de medida o Tipo de factura y pasar a pestaña Eliminadas
@@ -931,6 +988,35 @@ const ATRPreview: React.FC = () => {
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
+          {/* Botón Detectar anomalías de consumo (a la izquierda de Anular) */}
+          <button
+            type="button"
+            onClick={handleDetectarAnomalias}
+            style={{
+              borderRadius: 10,
+              padding: '0.625rem 1.25rem',
+              background: 'linear-gradient(135deg, #0000D0 0%, #2929E5 100%)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '0.8125rem',
+              fontWeight: 800,
+              letterSpacing: '0.03em',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px -2px rgba(0, 0, 208, 0.35)',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              fontFamily: "'Open Sans', sans-serif"
+            }}
+            title="Analizar visualmente el consumo y detectar la primera caída > 40%"
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(0, 0, 208, 0.45)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 208, 0.35)';
+            }}
+          >Detectar anomalías de consumo</button>
           {/* Botón 'Filtrar' eliminado por solicitud */}
           {/* Pestañas: Vista previa | Eliminadas */}
           {ordenado && (
@@ -1528,6 +1614,42 @@ const ATRPreview: React.FC = () => {
         </div>
       )}
 
+      {/* Modal de análisis visual de anomalías */}
+      {showAnalisis && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: '1rem' }}>
+          <div style={{ width: 'min(1100px, 96vw)', background: '#fff', borderRadius: 16, boxShadow: '0 20px 50px rgba(0,0,0,0.35)', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(0,0,0,0.08)', background: 'linear-gradient(135deg, rgba(0,0,208,0.06) 0%, rgba(41,41,229,0.04) 100%)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0000D0', fontWeight: 900, fontFamily: "'Lato', sans-serif" }}>Análisis visual de anomalías</h3>
+            </div>
+            <div style={{ padding: '1rem 1.25rem', position: 'relative' }}>
+              {serieAnom.length >= 2 ? (
+                <AnomChart
+                  data={serieAnom}
+                  anomalyIdx={anomalyIdx}
+                  onHover={(info) => setTooltipAnom(info)}
+                />
+              ) : (
+                <div style={{ padding: '1rem', color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>No se detectaron descensos anómalos en el consumo.</div>
+              )}
+              {tooltipAnom && (
+                <div style={{ position: 'absolute', transform: `translate(${tooltipAnom.x}px, ${tooltipAnom.y}px)`, background: '#111827', color: '#fff', padding: '6px 10px', borderRadius: 8, fontSize: 12, pointerEvents: 'none', boxShadow: '0 6px 16px rgba(0,0,0,0.3)' }}>
+                  {tooltipAnom.text}
+                </div>
+              )}
+              {anomalyIdx == null && serieAnom.length >= 2 && (
+                <div style={{ marginTop: 12, color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>No se detectaron descensos anómalos en el consumo.</div>
+              )}
+              {anomalyIdx != null && (
+                <div style={{ marginTop: 12, color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>El punto rojo indica el inicio del descenso anómalo detectado en el consumo.</div>
+              )}
+            </div>
+            <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowAnalisis(false)} style={{ background: '#0000D0', color: '#fff', border: 'none', padding: '0.6rem 1rem', borderRadius: 8, fontWeight: 800, cursor: 'pointer' }}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Bar - Barra inferior con scroll horizontal */}
       <div style={{
         position: 'fixed',
@@ -1740,3 +1862,47 @@ const ATRPreview: React.FC = () => {
 }
 
 export default ATRPreview
+
+// Gráfico SVG para análisis de anomalías
+function AnomChart({ data, anomalyIdx, onHover }: { data: Array<{ fecha: Date; consumo: number; factura: string }>; anomalyIdx: number | null; onHover: (info: { x: number; y: number; text: string } | null) => void }) {
+  const width = 1000; const height = 320; const m = { l: 48, r: 24, t: 20, b: 40 }
+  const innerW = width - m.l - m.r
+  const innerH = height - m.t - m.b
+  const maxY = Math.max(...data.map(d => d.consumo), 1)
+  const minY = 0
+  const x = (i: number) => m.l + (data.length <= 1 ? innerW / 2 : (i * innerW) / (data.length - 1))
+  const y = (v: number) => m.t + innerH - ((v - minY) / (maxY - minY)) * innerH
+  const pathD = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(d.consumo)}`).join(' ')
+
+  const handleEnter = (i: number, e: React.MouseEvent<SVGCircleElement>) => {
+    const d = data[i]
+    const text = anomalyIdx === i
+      ? `Inicio de anomalía detectado — Factura: ${d.factura || i + 1} — Fecha: ${d.fecha.toLocaleDateString('es-ES')}`
+      : `Factura: ${d.factura || i + 1} — Fecha: ${d.fecha.toLocaleDateString('es-ES')} — Consumo: ${new Intl.NumberFormat('es-ES').format(d.consumo)}`
+    onHover({ x: e.clientX + 12, y: e.clientY - 28, text })
+  }
+  const handleLeave = () => onHover(null)
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <svg width={width} height={height}>
+        <line x1={m.l} y1={m.t} x2={m.l} y2={m.t + innerH} stroke="#94a3b8" strokeWidth={1} />
+        <line x1={m.l} y1={m.t + innerH} x2={m.l + innerW} y2={m.t + innerH} stroke="#94a3b8" strokeWidth={1} />
+        <path d={pathD} fill="none" stroke="#0000D0" strokeWidth={2} />
+        {data.map((d, i) => (
+          <circle
+            key={i}
+            cx={x(i)}
+            cy={y(d.consumo)}
+            r={5}
+            fill={anomalyIdx === i ? '#dc2626' : '#1d4ed8'}
+            stroke="#fff"
+            strokeWidth={1.5}
+            onMouseEnter={(e) => handleEnter(i, e)}
+            onMouseLeave={handleLeave}
+          />
+        ))}
+      </svg>
+    </div>
+  )
+}
