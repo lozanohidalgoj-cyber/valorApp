@@ -627,41 +627,17 @@ const ATRPreview: React.FC = () => {
       background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
       paddingBottom: '70px' // Espacio para bottom bar
     }}>
-      {/* Panel lateral izquierdo: Resumen por año (plegable) */}
-      <div style={{
-        position: 'fixed',
-        left: 10,
-        top: 12,
-        bottom: 86, // deja espacio a la bottom bar
-        zIndex: 900,
-        display: 'flex',
-        alignItems: 'stretch',
-        gap: 8
-      }}>
-        {/* Botón/handler para plegar/desplegar */}
-        <button
-          type="button"
-          onClick={() => setShowYearPanel(v => !v)}
-          title={showYearPanel ? 'Ocultar resumen por año' : 'Mostrar resumen por año'}
-          style={{
-            height: 42,
-            alignSelf: 'flex-start',
-            border: 'none',
-            borderRadius: 10,
-            cursor: 'pointer',
-            background: showYearPanel
-              ? 'linear-gradient(135deg, #0000D0 0%, #2929E5 100%)'
-              : 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)',
-            color: showYearPanel ? '#ffffff' : '#0f172a',
-            fontWeight: 800,
-            padding: '0.5rem 0.75rem',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
-          }}>
-          {showYearPanel ? '◀' : '▶'} CAP
-        </button>
-
-        {/* Contenido del panel */}
-        {showYearPanel && (
+      {/* Panel lateral izquierdo: Resumen por año (contenido visible cuando showYearPanel = true) */}
+      {showYearPanel && (
+        <div style={{
+          position: 'fixed',
+          left: 10,
+          top: 12,
+          bottom: 86, // deja espacio a la bottom bar
+          zIndex: 900,
+          display: 'flex',
+          alignItems: 'stretch'
+        }}>
           <div style={{
             width: 360,
             maxWidth: '92vw',
@@ -739,8 +715,8 @@ const ATRPreview: React.FC = () => {
               })()}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Contenido principal (a ancho completo tras quitar sidebar) */}
       <div style={{ 
@@ -1332,9 +1308,31 @@ const ATRPreview: React.FC = () => {
             minWidth: 'max-content',
             gap: '1.5rem'
           }}>
-            {/* Sección izquierda - Información */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Sección izquierda - Información (columna con botón CAP arriba y datos debajo) */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem', flexShrink: 0 }}>
+              {/* Botón CAP (toggle del panel anual) */}
+              <button
+                type="button"
+                onClick={() => setShowYearPanel(v => !v)}
+                title={showYearPanel ? 'Ocultar resumen por año' : 'Mostrar resumen por año'}
+                style={{
+                  border: 'none',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  background: showYearPanel
+                    ? 'linear-gradient(135deg, #0000D0 0%, #2929E5 100%)'
+                    : 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)',
+                  color: showYearPanel ? '#ffffff' : '#0f172a',
+                  fontWeight: 800,
+                  padding: '0.4rem 0.65rem',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                  fontFamily: "'Lato', sans-serif"
+                }}>
+                {showYearPanel ? '◀ CAP' : '▶ CAP'}
+              </button>
+              {/* Fila de métricas principales */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ 
                   fontSize: '1.125rem', 
                   color: '#FFFFFF',
@@ -1350,7 +1348,7 @@ const ATRPreview: React.FC = () => {
                 }}>
                   Total: <strong style={{ fontSize: '1rem' }}>{total}</strong> {total === 1 ? 'registro' : 'registros'}
                 </span>
-              </div>
+                </div>
               
               {ordenado && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1402,6 +1400,7 @@ const ATRPreview: React.FC = () => {
                 }}>
                   Cambios Potencia (kW): <strong style={{ color: '#FFFFFF' }}>{new Intl.NumberFormat('es-ES').format(totalCambiosPotencia)}</strong>
                 </span>
+              </div>
               </div>
             </div>
             
