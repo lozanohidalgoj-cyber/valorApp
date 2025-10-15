@@ -58,6 +58,7 @@ const ATRPreview: React.FC = () => {
   const [viewMode, setViewMode] = React.useState<'restantes' | 'filtradas'>('restantes')
   const [showFilteredModal, setShowFilteredModal] = React.useState<boolean>(false)
   const [activeTab, setActiveTab] = React.useState<'vista' | 'eliminadas'>('vista')
+  const [showYearPanel, setShowYearPanel] = React.useState<boolean>(false)
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -195,6 +196,7 @@ const ATRPreview: React.FC = () => {
   // Colores por grupo de contrato (pasteles suaves)
   const groupPalette = ['#fefce8', '#eef2ff', '#ecfdf5', '#fdf2f8', '#f0f9ff', '#fff7ed', '#f5f3ff', '#e8f5e9', '#ede7f6', '#fffde7']
   const contractHeader = React.useMemo(() => (filteredData?.headers.find(h => isContratoHeader(h)) || null), [filteredData])
+  const fechaEnvioHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaEnvioHeader(h)) || null), [filteredData])
   const fechaDesdeHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaDesdeHeader(h)) || null), [filteredData])
   const fechaHastaHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaHastaHeader(h)) || null), [filteredData])
   const contractColorMap = React.useMemo(() => {
@@ -210,6 +212,80 @@ const ATRPreview: React.FC = () => {
     }
     return map
   }, [filteredRows, contractHeader, filteredData])
+
+  // Cabecera de potencia principal (si existe)
+  const potenciaHeaderMain = React.useMemo(() => (filteredData?.headers.find(h => isPotenciaHeader(h)) || null), [filteredData])
+
+  // Resumen por año: contratos/potencias únicos y cambios por transiciones
+  type YearSummary = { contratosUnicos: number; potenciasUnicas: number; cambiosContrato: number; cambiosPotencia: number; total: number }
+  const yearlySummary = React.useMemo(() => {
+    const result = new Map<number, YearSummary>()
+    if (!filteredData) return result
+
+    // Estructura temporal por año
+    const tmp = new Map<number, { rows: Array<{ d: Date | null; r: Record<string,string> }>; contratos: Set<string>; pots: Set<number> }>()
+
+    for (const r of filteredData.rows) {
+      // Fecha de referencia por orden: Fecha desde -> Fecha hasta -> Fecha envío a facturar
+      const dDesde = fechaDesdeHeader ? parseDateLoose(r[fechaDesdeHeader]) : null
+      const dHasta = (!dDesde && fechaHastaHeader) ? parseDateLoose(r[fechaHastaHeader]) : null
+      const dEnvio = (!dDesde && !dHasta && fechaEnvioHeader) ? parseDateLoose(r[fechaEnvioHeader]) : null
+      const d = dDesde || dHasta || dEnvio || null
+      if (!d) continue
+      const year = d.getFullYear()
+      if (!Number.isFinite(year)) continue
+
+      if (!tmp.has(year)) tmp.set(year, { rows: [], contratos: new Set<string>(), pots: new Set<number>() })
+      const bucket = tmp.get(year)!
+      bucket.rows.push({ d, r })
+      if (contractHeader) {
+        const c = String(r[contractHeader] ?? '').trim()
+        if (c) bucket.contratos.add(c)
+      }
+      if (potenciaHeaderMain) {
+        const n = normalizeNumber(String(r[potenciaHeaderMain] ?? ''))
+        if (Number.isFinite(n)) bucket.pots.add(n)
+      }
+    }
+
+    // Calcular cambios por año (ordenado por fecha)
+    for (const [year, bucket] of tmp.entries()) {
+      let cambiosContrato = 0
+      let cambiosPotencia = 0
+      // Orden cronológico
+      bucket.rows.sort((a, b) => {
+        if (!a.d && !b.d) return 0
+        if (!a.d) return -1
+        if (!b.d) return 1
+        return a.d.getTime() - b.d.getTime()
+      })
+      let prevContrato: string | null = null
+      let prevPot: number | null = null
+      for (const { r } of bucket.rows) {
+        if (contractHeader) {
+          const cur = String(r[contractHeader] ?? '').trim()
+          if (prevContrato !== null && cur && prevContrato && cur !== prevContrato) cambiosContrato++
+          if (cur) prevContrato = cur
+        }
+        if (potenciaHeaderMain) {
+          const curN = normalizeNumber(String(r[potenciaHeaderMain] ?? ''))
+          if (Number.isFinite(curN)) {
+            if (prevPot !== null && Number.isFinite(prevPot) && curN !== prevPot) cambiosPotencia++
+            prevPot = curN
+          }
+        }
+      }
+
+      result.set(year, {
+        contratosUnicos: bucket.contratos.size,
+        potenciasUnicas: bucket.pots.size,
+        cambiosContrato,
+        cambiosPotencia,
+        total: bucket.rows.length
+      })
+    }
+    return result
+  }, [filteredData, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader, potenciaHeaderMain])
 
   // Duración total por contrato: desde primera "Fecha desde" hasta última "Fecha hasta"
   const plural = (n: number, s: string, p: string) => (n === 1 ? s : p)
@@ -540,7 +616,120 @@ const ATRPreview: React.FC = () => {
       background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
       paddingBottom: '70px' // Espacio para bottom bar
     }}>
-      {/* (Eliminado: Panel lateral "Información de Contratos") */}
+      {/* Panel lateral derecho: Resumen por año (plegable) */}
+      <div style={{
+        position: 'fixed',
+        right: 10,
+        top: 12,
+        bottom: 86, // deja espacio a la bottom bar
+        zIndex: 900,
+        display: 'flex',
+        alignItems: 'stretch',
+        gap: 8
+      }}>
+        {/* Botón/handler para plegar/desplegar */}
+        <button
+          type="button"
+          onClick={() => setShowYearPanel(v => !v)}
+          title={showYearPanel ? 'Ocultar resumen por año' : 'Mostrar resumen por año'}
+          style={{
+            height: 42,
+            alignSelf: 'flex-start',
+            border: 'none',
+            borderRadius: 10,
+            cursor: 'pointer',
+            background: showYearPanel
+              ? 'linear-gradient(135deg, #0000D0 0%, #2929E5 100%)'
+              : 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)',
+            color: showYearPanel ? '#ffffff' : '#0f172a',
+            fontWeight: 800,
+            padding: '0.5rem 0.75rem',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
+          }}>
+          {showYearPanel ? '◀' : '▶'} Años
+        </button>
+
+        {/* Contenido del panel */}
+        {showYearPanel && (
+          <div style={{
+            width: 360,
+            maxWidth: '92vw',
+            height: '100%',
+            background: '#ffffff',
+            borderRadius: 12,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
+            border: '1px solid rgba(0,0,0,0.08)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              padding: '0.75rem 0.875rem',
+              borderBottom: '1px solid rgba(0,0,0,0.08)',
+              background: 'linear-gradient(135deg, rgba(0,0,208,0.06) 0%, rgba(41,41,229,0.04) 100%)'
+            }}>
+              <div style={{ fontWeight: 800, color: '#0000D0' }}>Cambios por año</div>
+              <div style={{ fontSize: 12, color: '#334155' }}>Contratos y potencia (kW)</div>
+            </div>
+            <div style={{ padding: '0.5rem 0.5rem 0.75rem 0.5rem', overflow: 'auto' }}>
+              {(() => {
+                const years = Array.from(yearlySummary.keys()).sort((a, b) => b - a)
+                if (years.length === 0) {
+                  return (
+                    <div style={{ padding: '0.5rem', color: '#475569', fontSize: 13 }}>
+                      No hay datos con fecha para resumir.
+                    </div>
+                  )
+                }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {years.map(y => {
+                      const s = yearlySummary.get(y)!
+                      return (
+                        <div key={y} style={{
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          borderRadius: 10,
+                          padding: '0.625rem 0.75rem',
+                          background: 'linear-gradient(135deg, rgba(248,250,252,1) 0%, rgba(241,245,249,1) 100%)'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ fontWeight: 800, color: '#0f172a' }}>Año {y}</div>
+                            <div style={{ fontSize: 12, color: '#64748b' }}>{s.total} filas</div>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+                            <div style={{
+                              background: 'rgba(0,0,208,0.06)',
+                              border: '1px solid rgba(0,0,208,0.12)',
+                              borderRadius: 8,
+                              padding: '0.5rem'
+                            }}>
+                              <div style={{ fontSize: 12, color: '#334155' }}>Contratos diferentes</div>
+                              <div style={{ fontWeight: 900, color: '#0000D0', fontSize: 18 }}>{s.contratosUnicos}</div>
+                              <div style={{ fontSize: 12, color: '#334155' }}>Cambios de contrato</div>
+                              <div style={{ fontWeight: 800, color: '#0000D0' }}>{s.cambiosContrato}</div>
+                            </div>
+                            <div style={{
+                              background: 'rgba(255,49,132,0.06)',
+                              border: '1px solid rgba(255,49,132,0.12)',
+                              borderRadius: 8,
+                              padding: '0.5rem'
+                            }}>
+                              <div style={{ fontSize: 12, color: '#334155' }}>Potencias diferentes (kW)</div>
+                              <div style={{ fontWeight: 900, color: '#FF3184', fontSize: 18 }}>{s.potenciasUnicas}</div>
+                              <div style={{ fontSize: 12, color: '#334155' }}>Cambios de potencia</div>
+                              <div style={{ fontWeight: 800, color: '#FF3184' }}>{s.cambiosPotencia}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Contenido principal (a ancho completo tras quitar sidebar) */}
       <div style={{ 
