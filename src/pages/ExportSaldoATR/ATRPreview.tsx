@@ -74,11 +74,13 @@ const ATRPreview: React.FC = () => {
   const [showAnularPreview, setShowAnularPreview] = React.useState<boolean>(false)
   const [anularPreviewRows, setAnularPreviewRows] = React.useState<Record<string,string>[]>([])
   const [anularPreviewDetalle, setAnularPreviewDetalle] = React.useState<{comp: number; anuladas: number; enviados: number}>({ comp: 0, anuladas: 0, enviados: 0 })
-  // Análisis de anomalías (migrado desde WART)
-  const [showAnalisis, setShowAnalisis] = React.useState<boolean>(false)
-  const [serieAnom, setSerieAnom] = React.useState<Array<{ fecha: Date; consumo: number; factura: string }>>([])
-  const [anomalyIdx, setAnomalyIdx] = React.useState<number | null>(null)
-  const [tooltipAnom, setTooltipAnom] = React.useState<{ x: number; y: number; text: string } | null>(null)
+  // Análisis de anomalías (nuevo panel): dependencia tras anulación y visualizaciones Heatmap + Barras
+  const [allowAnalysis, setAllowAnalysis] = React.useState<boolean>(false)
+  const [showAnalisisPanel, setShowAnalisisPanel] = React.useState<boolean>(false)
+  const [monthlySeries, setMonthlySeries] = React.useState<Array<{ key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }>>([])
+  const [anomalyMonthIdx, setAnomalyMonthIdx] = React.useState<number | null>(null)
+  const [heatmapTooltip, setHeatmapTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
+  const [barTooltip, setBarTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -92,6 +94,9 @@ const ATRPreview: React.FC = () => {
       setAnuladas(0)
       setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
       setActiveTab('vista')
+      // Deshabilitar análisis hasta que se confirme una anulación
+      setAllowAnalysis(false)
+      setShowAnalisisPanel(false)
     }
   }, [filteredData])
 
@@ -465,43 +470,76 @@ const ATRPreview: React.FC = () => {
   // Botón: Filtrar (selecciona por cualquier columna que contenga Complementaria / Enviado a facturar / Anulada / Anuladora y abre ventana con filtradas)
   // handleFiltrar eliminado (no usado)
 
-  // Detectar anomalías de consumo en el dataset vigente (filas activas)
+  // Construir serie mensual y abrir panel con Heatmap + Barras
   const handleDetectarAnomalias = React.useCallback(() => {
     try {
+      if (!allowAnalysis) return
       const headers = filteredData?.headers || []
-      // Analizar siempre la vista vigente: si hay 'keptRows' (post-anulación), usarla; si no, usar dataset filtrado original
-      const rows = (keptRows && keptRows.length > 0) ? keptRows : (filteredData?.rows || [])
+      const rows = keptRows && keptRows.length > 0 ? keptRows : (filteredData?.rows || [])
       if (!headers.length || !rows.length) { window.alert('No hay datos para analizar.'); return }
-      const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
+      const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isFechaHastaHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
       const consumoHeader = headers.find(h => isConsumoActivaHeader(h))
-      const facturaHeader = headers.find(h => normalizeLabel(h).includes('factura')) || null
       if (!fechaHeader || !consumoHeader) { window.alert('No se encontró columna de fecha o consumo.'); return }
-      const items: Array<{ fecha: Date; consumo: number; factura: string }> = []
+
+      // Paso 1: recolectar pares fecha(consolidada a mes) y consumo
+      const points: Array<{ ymKey: string; year: number; month: number; fecha: Date; consumo: number }> = []
       for (const r of rows) {
-        const fecha = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
-        const c = normalizeNumber(String(r[consumoHeader] ?? ''))
-        if (!fecha || !Number.isFinite(c)) continue
-        const factura = facturaHeader ? String(r[facturaHeader] ?? '') : ''
-        items.push({ fecha, consumo: c, factura })
+        const d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
+        const n = normalizeNumber(String(r[consumoHeader] ?? ''))
+        if (!d || !Number.isFinite(n)) continue
+        const year = d.getFullYear(); const month = d.getMonth() + 1
+        const key = `${year}-${pad2(month)}`
+        const firstDay = new Date(year, month - 1, 1)
+        points.push({ ymKey: key, year, month, fecha: firstDay, consumo: n })
       }
-      items.sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
-      let idx: number | null = null
-      for (let i = 1; i < items.length; i++) {
-        const prev = items[i - 1].consumo
-        const cur = items[i].consumo
+      if (!points.length) { window.alert('No hay consumos válidos para analizar.'); return }
+
+      // Paso 2: agregar por mes (sumar consumos por (año,mes))
+      const agg = new Map<string, { year: number; month: number; fecha: Date; consumo: number }>()
+      for (const p of points) {
+        const prev = agg.get(p.ymKey)
+        if (prev) prev.consumo += p.consumo
+        else agg.set(p.ymKey, { year: p.year, month: p.month, fecha: p.fecha, consumo: p.consumo })
+      }
+      // Rango temporal completo de meses contiguos
+      const keys = Array.from(agg.values()).sort((a,b) => a.fecha.getTime() - b.fecha.getTime())
+      const minD = keys[0].fecha
+      const maxD = keys[keys.length - 1].fecha
+      const full: Array<{ key: string; year: number; month: number; fecha: Date; consumo: number }> = []
+      const cur = new Date(minD.getFullYear(), minD.getMonth(), 1)
+      while (cur <= maxD) {
+        const ym = `${cur.getFullYear()}-${pad2(cur.getMonth() + 1)}`
+        const found = agg.get(ym)
+        full.push({ key: ym, year: cur.getFullYear(), month: cur.getMonth() + 1, fecha: new Date(cur), consumo: found ? found.consumo : 0 })
+        // siguiente mes
+        cur.setMonth(cur.getMonth() + 1)
+      }
+      // Variación vs mes anterior
+      const withVar: Array<{ key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }> = full.map((p, i) => {
+        if (i === 0) return { ...p, variacion: null }
+        const prev = full[i - 1]
+        const v = prev.consumo > 0 ? (p.consumo - prev.consumo) / prev.consumo : null
+        return { ...p, variacion: v }
+      })
+      // Detectar primera caída >= 40%
+      let firstDrop: number | null = null
+      for (let i = 1; i < withVar.length; i++) {
+        const prev = withVar[i - 1].consumo
+        const curV = withVar[i].consumo
         if (prev > 0) {
-          const drop = (prev - cur) / prev
-          if (drop > 0.4) { idx = i; break }
+          const drop = (prev - curV) / prev
+          if (drop >= 0.4) { firstDrop = i; break }
         }
       }
-      setSerieAnom(items)
-      setAnomalyIdx(idx)
-      setTooltipAnom(null)
-      setShowAnalisis(true)
+      setMonthlySeries(withVar)
+      setAnomalyMonthIdx(firstDrop)
+      setHeatmapTooltip(null)
+      setBarTooltip(null)
+      setShowAnalisisPanel(true)
     } catch {
       window.alert('Error al analizar anomalías.')
     }
-  }, [filteredData, keptRows])
+  }, [allowAnalysis, filteredData, keptRows])
 
   // Nuevo: Anular/copiar por Estado de medida o Tipo de factura y pasar a pestaña Eliminadas
   const handleAnularEstadoTipo = React.useCallback(() => {
@@ -909,26 +947,31 @@ const ATRPreview: React.FC = () => {
             style={{
               borderRadius: 10,
               padding: '0.625rem 1.25rem',
-              background: 'linear-gradient(135deg, #0000D0 0%, #2929E5 100%)',
+              background: allowAnalysis ? 'linear-gradient(135deg, #0000D0 0%, #2929E5 100%)' : 'rgba(0,0,0,0.08)',
               border: 'none',
-              color: '#FFFFFF',
+              color: allowAnalysis ? '#FFFFFF' : '#64748b',
               fontSize: '0.8125rem',
               fontWeight: 800,
               letterSpacing: '0.03em',
-              cursor: 'pointer',
+              cursor: allowAnalysis ? 'pointer' : 'not-allowed',
               boxShadow: '0 4px 12px -2px rgba(0, 0, 208, 0.35)',
               transition: 'all 0.2s ease',
               textTransform: 'uppercase',
               fontFamily: "'Open Sans', sans-serif"
             }}
             title="Analizar visualmente el consumo y detectar la primera caída > 40%"
+            disabled={!allowAnalysis}
             onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(0, 0, 208, 0.45)';
+              if (allowAnalysis) {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(0, 0, 208, 0.45)';
+              }
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 208, 0.35)';
+              if (allowAnalysis) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(0, 0, 208, 0.35)';
+              }
             }}
           >Detectar anomalías de consumo</button>
           {/* Botón 'Filtrar' eliminado por solicitud */}
@@ -1516,6 +1559,8 @@ const ATRPreview: React.FC = () => {
                 setOrdenado(true)
                 setViewMode('restantes')
                 setActiveTab('vista')
+                // Habilitar análisis tras una anulación confirmada
+                setAllowAnalysis(true)
                 // Limpiar el estado del modal de previsualización
                 setShowAnularPreview(false)
                 setAnularPreviewRows([])
@@ -1528,37 +1573,59 @@ const ATRPreview: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de análisis visual de anomalías */}
-      {showAnalisis && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2100, padding: '1rem' }}>
-          <div style={{ width: 'min(1100px, 96vw)', background: '#fff', borderRadius: 16, boxShadow: '0 20px 50px rgba(0,0,0,0.35)', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(0,0,0,0.08)', background: 'linear-gradient(135deg, rgba(0,0,208,0.06) 0%, rgba(41,41,229,0.04) 100%)' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0000D0', fontWeight: 900, fontFamily: "'Lato', sans-serif" }}>Análisis visual de anomalías</h3>
+      {/* Panel derecho de análisis (Heatmap + Barras) */}
+      {showAnalisisPanel && (
+        <div style={{
+          position: 'fixed',
+          top: 12,
+          right: 10,
+          bottom: 86, // deja espacio a la bottom bar
+          width: 'min(680px, 95vw)',
+          background: '#ffffff',
+          borderRadius: 12,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
+          border: '1px solid rgba(0,0,0,0.08)',
+          zIndex: 2000,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            padding: '0.75rem 0.875rem',
+            borderBottom: '1px solid rgba(0,0,0,0.08)',
+            background: 'linear-gradient(135deg, rgba(0,0,208,0.06) 0%, rgba(41,41,229,0.04) 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+          }}>
+            <div>
+              <div style={{ fontWeight: 900, color: '#0000D0', fontFamily: "'Lato', sans-serif" }}>Análisis de consumo tras anulación</div>
+              <div style={{ fontSize: 12, color: '#334155' }}>Visualización mensual y anual</div>
             </div>
-            <div style={{ padding: '1rem 1.25rem', position: 'relative' }}>
-              {serieAnom.length >= 2 ? (
-                <AnomChart
-                  data={serieAnom}
-                  anomalyIdx={anomalyIdx}
-                  onHover={(v) => setTooltipAnom(v)}
-                />
-              ) : (
-                <div style={{ padding: '1rem', color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>No se detectaron descensos anómalos en el consumo.</div>
-              )}
-              {tooltipAnom && (
-                <div style={{ position: 'absolute', transform: `translate(${tooltipAnom.x}px, ${tooltipAnom.y}px)`, background: '#111827', color: '#fff', padding: '6px 10px', borderRadius: 8, fontSize: 12, pointerEvents: 'none', boxShadow: '0 6px 16px rgba(0,0,0,0.3)' }}>
-                  {tooltipAnom.text}
-                </div>
-              )}
-              {anomalyIdx == null && serieAnom.length >= 2 && (
-                <div style={{ marginTop: 12, color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>No se detectaron descensos anómalos en el consumo.</div>
-              )}
-              {anomalyIdx != null && (
-                <div style={{ marginTop: 12, color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>El punto rojo indica el inicio del descenso anómalo detectado en el consumo.</div>
-              )}
-            </div>
-            <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowAnalisis(false)} style={{ background: '#0000D0', color: '#fff', border: 'none', padding: '0.6rem 1rem', borderRadius: 8, fontWeight: 800, cursor: 'pointer' }}>Cerrar</button>
+            <button type="button" onClick={() => setShowAnalisisPanel(false)} style={{ border: 'none', background: '#0000D0', color: '#fff', borderRadius: 8, padding: '0.4rem 0.7rem', fontWeight: 800, cursor: 'pointer' }}>Cerrar</button>
+          </div>
+          <div style={{ padding: '0.75rem', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <Heatmap
+              data={monthlySeries}
+              anomalyIdx={anomalyMonthIdx}
+              onHover={(v) => setHeatmapTooltip(v)}
+            />
+            {heatmapTooltip && (
+              <div style={{ position: 'fixed', transform: `translate(${heatmapTooltip.x}px, ${heatmapTooltip.y}px)`, background: '#111827', color: '#fff', padding: '6px 10px', borderRadius: 8, fontSize: 12, pointerEvents: 'none', boxShadow: '0 6px 16px rgba(0,0,0,0.3)' }}>
+                {heatmapTooltip.text}
+              </div>
+            )}
+            <BarsChart
+              data={monthlySeries}
+              anomalyIdx={anomalyMonthIdx}
+              onHover={(v) => setBarTooltip(v)}
+            />
+            {barTooltip && (
+              <div style={{ position: 'fixed', transform: `translate(${barTooltip.x}px, ${barTooltip.y}px)`, background: '#111827', color: '#fff', padding: '6px 10px', borderRadius: 8, fontSize: 12, pointerEvents: 'none', boxShadow: '0 6px 16px rgba(0,0,0,0.3)' }}>
+                {barTooltip.text}
+              </div>
+            )}
+            <div style={{ fontSize: 12, color: '#334155' }}>
+              • El punto/borde rojo indica el inicio del descenso anómalo detectado en el consumo mensual. <br/>
+              • El mapa de calor muestra la evolución temporal de los consumos para facilitar la identificación de patrones.
             </div>
           </div>
         </div>
@@ -1821,6 +1888,150 @@ function AnomChart({ data, anomalyIdx, onHover }: AnomChartProps) {
             onMouseLeave={handleLeave}
           />
         ))}
+      </svg>
+    </div>
+  )
+}
+
+// ==== Visualizaciones del panel secundario ====
+type MonthlyPoint = { key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }
+type Hover = { x: number; y: number; text: string }
+
+// Heatmap: x = Años, y = Meses (1..12). Color por consumo. Borde rojo en primera anomalía.
+function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyIdx: number | null; onHover: (h: Hover | null) => void }) {
+  // Determinar rango de años presentes
+  const years = Array.from(new Set(data.map(d => d.year))).sort((a,b) => a - b)
+  const yearIndex = new Map<number, number>(years.map((y, i) => [y, i]))
+  const cols = years.length
+  const rows = 12
+  const cell = 36
+  const m = { l: 60, t: 24, r: 12, b: 28 }
+  const width = m.l + cols * cell + m.r
+  const height = m.t + rows * cell + m.b
+  // Matriz por (y,m)
+  const matrix = new Map<string, MonthlyPoint>()
+  for (const d of data) matrix.set(`${d.year}-${d.month}`, d)
+  // Escala de color Azul->Amarillo->Rojo (baja->media->alta)
+  const max = Math.max(...data.map(d => d.consumo), 1)
+  const colorFor = (v: number) => {
+    const t = Math.max(0, Math.min(1, v / max))
+    // Interpolar: 0=azul #1d4ed8, 0.5=amarillo #fbbf24, 1=rojo #ef4444
+    if (t < 0.5) {
+      // azul->amarillo
+      const k = t / 0.5
+      return mixColor('#1d4ed8', '#fbbf24', k)
+    }
+    const k = (t - 0.5) / 0.5
+    return mixColor('#fbbf24', '#ef4444', k)
+  }
+  const mixColor = (a: string, b: string, t: number) => {
+    const pa = hexToRgb(a); const pb = hexToRgb(b)
+    const r = Math.round(pa.r + (pb.r - pa.r) * t)
+    const g = Math.round(pa.g + (pb.g - pa.g) * t)
+    const bl = Math.round(pa.b + (pb.b - pa.b) * t)
+    return `rgb(${r},${g},${bl})`
+  }
+  const hexToRgb = (hex: string) => {
+    const m = hex.replace('#','')
+    const bigint = parseInt(m, 16)
+    return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 }
+  }
+
+  // Construir lista en orden por fecha para localizar anomalía por índice
+  const ordered = [...data].sort((a,b) => a.fecha.getTime() - b.fecha.getTime())
+  const anomalyKey = anomalyIdx != null && anomalyIdx >= 0 && anomalyIdx < ordered.length ? ordered[anomalyIdx].key : null
+
+  const monthsES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+  const handleEnter = (pt: MonthlyPoint, e: React.MouseEvent<SVGRectElement>) => {
+    const varPct = pt.variacion == null ? '—' : `${(pt.variacion * 100).toFixed(1)}%`
+    onHover({ x: e.clientX + 12, y: e.clientY - 28, text: `Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} — Variación: ${varPct}` })
+  }
+  const handleLeave = () => onHover(null)
+
+  return (
+    <div>
+      <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>Mapa de calor mensual</div>
+      <svg width={width} height={height}>
+        {/* Eje Y meses */}
+        {monthsES.map((mname, i) => (
+          <text key={i} x={6} y={m.t + i * cell + cell * 0.65} fontSize={12} fill="#334155">{mname}</text>
+        ))}
+        {/* Eje X años */}
+        {years.map((y, i) => (
+          <text key={y} x={m.l + i * cell + cell * 0.5} y={16} fontSize={12} fill="#334155" textAnchor="middle">{y}</text>
+        ))}
+        {/* Celdas */}
+        {years.map((y, cx) => (
+          Array.from({ length: 12 }).map((_, mi) => {
+            const mm = mi + 1
+            const pt = matrix.get(`${y}-${mm}`)
+            const val = pt ? pt.consumo : 0
+            const fill = colorFor(val)
+            const isAnomaly = pt && pt.key === anomalyKey
+            const x = m.l + cx * cell
+            const ypix = m.t + mi * cell
+            return (
+              <rect key={`${y}-${mm}`}
+                x={x} y={ypix} width={cell-4} height={cell-4} fill={fill} rx={6} ry={6}
+                stroke={isAnomaly ? '#dc2626' : 'rgba(0,0,0,0.06)'} strokeWidth={isAnomaly ? 3 : 1}
+                onMouseEnter={(e) => pt && handleEnter(pt, e)}
+                onMouseLeave={handleLeave}
+              />
+            )
+          })
+        ))}
+      </svg>
+    </div>
+  )
+}
+
+// Barras por mes cronológico con primera caída >=40% en rojo
+function BarsChart({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyIdx: number | null; onHover: (h: Hover | null) => void }) {
+  const ordered = [...data].sort((a,b) => a.fecha.getTime() - b.fecha.getTime())
+  const w = 600; const h = 260; const m = { l: 50, r: 20, t: 20, b: 60 }
+  const innerW = w - m.l - m.r
+  const innerH = h - m.t - m.b
+  const maxY = Math.max(...ordered.map(d => d.consumo), 1)
+  const x = (i: number) => m.l + (ordered.length === 0 ? 0 : (i * innerW) / Math.max(1, ordered.length))
+  const barW = Math.max(6, innerW / Math.max(1, ordered.length) - 4)
+  const y = (v: number) => m.t + innerH - (v / maxY) * innerH
+  const monthsES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  const anomalyKey = anomalyIdx != null && anomalyIdx >= 0 && anomalyIdx < ordered.length ? ordered[anomalyIdx].key : null
+
+  const handleEnter = (pt: MonthlyPoint, i: number, e: React.MouseEvent<SVGRectElement>) => {
+    const prev = i > 0 ? ordered[i-1] : null
+    const varPct = prev && prev.consumo > 0 ? (((pt.consumo - prev.consumo) / prev.consumo) * 100).toFixed(1) + '%' : '—'
+    const label = `${monthsES[pt.month-1]}/${pt.year}`
+    onHover({ x: e.clientX + 12, y: e.clientY - 28, text: `Periodo: ${label} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} — Variación: ${varPct}` })
+  }
+  const handleLeave = () => onHover(null)
+
+  return (
+    <div>
+      <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>Consumo mensual (barras)</div>
+      <svg width={w} height={h}>
+        {/* Ejes */}
+        <line x1={m.l} y1={m.t} x2={m.l} y2={m.t + innerH} stroke="#94a3b8" strokeWidth={1} />
+        <line x1={m.l} y1={m.t + innerH} x2={m.l + innerW} y2={m.t + innerH} stroke="#94a3b8" strokeWidth={1} />
+        {/* Barras */}
+        {ordered.map((pt, i) => {
+          const isAnomaly = pt.key === anomalyKey
+          const label = `${monthsES[pt.month-1]}/${pt.year}`
+          return (
+            <g key={pt.key}>
+              <rect x={x(i) + 2} width={barW} y={y(pt.consumo)} height={Math.max(1, m.t + innerH - y(pt.consumo))}
+                fill={isAnomaly ? '#dc2626' : '#1d4ed8'} stroke="#ffffff" strokeWidth={1}
+                rx={4} ry={4}
+                onMouseEnter={(e) => handleEnter(pt, i, e)} onMouseLeave={handleLeave}
+              />
+              {/* Etiquetas X espaciadas */}
+              {i % Math.ceil(ordered.length / 10 || 1) === 0 && (
+                <text x={x(i) + 2 + barW / 2} y={m.t + innerH + 14} fontSize={11} fill="#334155" textAnchor="middle">{label}</text>
+              )}
+            </g>
+          )
+        })}
       </svg>
     </div>
   )
