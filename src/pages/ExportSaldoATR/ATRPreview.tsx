@@ -50,15 +50,25 @@ const ATRPreview: React.FC = () => {
   }, [data])
   
   const [filteredRows, setFilteredRows] = React.useState<Record<string,string>[]>(() => filteredData?.rows || [])
+  const [removedRows, setRemovedRows] = React.useState<Record<string,string>[]>([])
+  const [keptRows, setKeptRows] = React.useState<Record<string,string>[]>([])
   const [anuladas, setAnuladas] = React.useState<number>(0)
   const [detalleAnuladas, setDetalleAnuladas] = React.useState<{comp: number; anuladas: number; enviados: number}>({ comp: 0, anuladas: 0, enviados: 0 })
   const [ordenado, setOrdenado] = React.useState<boolean>(false)
+  const [viewMode, setViewMode] = React.useState<'restantes' | 'filtradas'>('restantes')
+  const [showFilteredModal, setShowFilteredModal] = React.useState<boolean>(false)
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
   React.useEffect(() => {
     if (filteredData?.rows) {
       setFilteredRows(filteredData.rows)
+      setKeptRows(filteredData.rows)
+      setRemovedRows([])
+      setViewMode('restantes')
+      setOrdenado(false)
+      setAnuladas(0)
+      setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
     }
   }, [filteredData])
 
@@ -273,8 +283,9 @@ const ATRPreview: React.FC = () => {
     if (!tipoHeader) return
   const valoresAnularTipo = new Set(['factura complementaria','anulada','enviado a facturar','enviada a facturar','enviado a facturacion','enviada a facturacion'])
     // Usar filteredData.rows para trabajar con datos ya filtrados (sin columna autofactura)
-    const originales = filteredData.rows
-    const restantes: Record<string,string>[] = []
+  const originales = filteredData.rows
+  const restantes: Record<string,string>[] = []
+  const eliminadas: Record<string,string>[] = []
     let count = 0
     let comp = 0, anul = 0, enviados = 0
     for (const r of originales) {
@@ -288,15 +299,30 @@ const ATRPreview: React.FC = () => {
         if ((tipo.includes('factura') || tipo.includes('fact')) && (tipo.includes('complementaria') || tipo.includes('complem') || tipo.includes('compl'))) comp++
         else if (tipo.includes('envi') && tipo.includes('factur')) enviados++
         else if (tipo.includes('anulad')) anul++
+        eliminadas.push(r)
         continue
       }
       restantes.push(r)
     }
     setFilteredRows(restantes)
+    setKeptRows(restantes)
+    setRemovedRows(eliminadas)
     setAnuladas(count)
     setDetalleAnuladas({ comp, anuladas: anul, enviados })
     setOrdenado(true)
+    setViewMode('restantes')
   }, [filteredData, ordenado])
+
+  const toggleView = React.useCallback(() => {
+    if (!ordenado) return
+    if (viewMode === 'restantes') {
+      setFilteredRows(removedRows)
+      setViewMode('filtradas')
+    } else {
+      setFilteredRows(keptRows)
+      setViewMode('restantes')
+    }
+  }, [ordenado, viewMode, removedRows, keptRows])
 
   // Eliminar datos ATR cargados y redirigir a exportación
   const handleEliminar = React.useCallback(() => {
@@ -459,6 +485,18 @@ const ATRPreview: React.FC = () => {
               fontWeight: 600,
               fontSize: '0.8125rem'
             }}>{total} {total === 1 ? 'fila' : 'filas'}</span>
+            {ordenado && (
+              <span style={{ 
+                marginLeft: '0.5rem',
+                background: viewMode === 'filtradas' ? 'rgba(34, 197, 94, 0.12)' : 'rgba(0, 0, 208, 0.08)',
+                padding: '0.25rem 0.625rem', 
+                borderRadius: '6px',
+                display: 'inline-block',
+                color: viewMode === 'filtradas' ? '#16a34a' : '#0000D0',
+                fontWeight: 700,
+                fontSize: '0.75rem'
+              }}>{viewMode === 'filtradas' ? 'Viendo filtradas' : 'Viendo restantes'}</span>
+            )}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
@@ -531,6 +569,66 @@ const ATRPreview: React.FC = () => {
             }}
             >Eliminar</button>
           </div>
+          {ordenado && (
+            <button
+              type="button"
+              onClick={toggleView}
+              style={{
+                borderRadius: 10,
+                padding: '0.625rem 1.25rem',
+                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '0.8125rem',
+                fontWeight: 700,
+                letterSpacing: '0.03em',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px -2px rgba(34, 197, 94, 0.35)',
+                transition: 'all 0.2s ease',
+                textTransform: 'uppercase',
+                fontFamily: "'Open Sans', sans-serif"
+              }}
+              title={viewMode === 'restantes' ? 'Ver facturas filtradas' : 'Ver restantes'}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(34, 197, 94, 0.45)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(34, 197, 94, 0.35)';
+              }}
+            >{viewMode === 'restantes' ? 'Ver filtradas' : 'Ver restantes'}</button>
+          )}
+          {ordenado && removedRows.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowFilteredModal(true)}
+              style={{
+                borderRadius: 10,
+                padding: '0.625rem 1.25rem',
+                background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '0.8125rem',
+                fontWeight: 700,
+                letterSpacing: '0.03em',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px -2px rgba(14, 165, 233, 0.35)',
+                transition: 'all 0.2s ease',
+                textTransform: 'uppercase',
+                fontFamily: "'Open Sans', sans-serif"
+              }}
+              title="Ver facturas filtradas en ventana"
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(14, 165, 233, 0.45)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(14, 165, 233, 0.35)';
+              }}
+            >Ver filtradas (ventana)</button>
+          )}
           <a 
             href="#/export-saldo-atr"
             style={{ 
@@ -770,6 +868,117 @@ const ATRPreview: React.FC = () => {
         </table>
       </div>
       </div> {/* Cierre del contenido principal */}
+
+      {/* Modal de facturas filtradas */}
+      {showFilteredModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            width: 'min(1200px, 96vw)',
+            maxHeight: '80vh',
+            background: '#FFFFFF',
+            borderRadius: 12,
+            boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            border: '1px solid rgba(0,0,0,0.08)'
+          }}>
+            <div style={{
+              padding: '0.875rem 1rem',
+              borderBottom: '1px solid rgba(0,0,0,0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(135deg, rgba(0, 0, 208, 0.06) 0%, rgba(41, 41, 229, 0.04) 100%)'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', color: '#0000D0', fontWeight: 800, fontFamily: "'Lato', sans-serif" }}>
+                  Facturas filtradas
+                </h3>
+                <div style={{ marginTop: 4, fontSize: '0.8125rem', color: '#334155' }}>
+                  Total: <strong>{removedRows.length}</strong>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFilteredModal(false)}
+                style={{
+                  borderRadius: 8,
+                  padding: '0.5rem 0.875rem',
+                  background: '#0000D0',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: '0.8125rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.03em',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px -2px rgba(0, 0, 208, 0.35)'
+                }}
+              >Cerrar</button>
+            </div>
+            <div style={{ padding: '0.75rem 0.75rem 1rem 0.75rem', overflow: 'auto' }}>
+              <div style={{ minWidth: '900px' }}>
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <thead>
+                    <tr>
+                      {filteredData.headers.map((h, idx) => (
+                        <th key={idx} style={{
+                          padding: '0.5rem 0.75rem',
+                          borderBottom: '1px solid rgba(0,0,0,0.08)',
+                          textAlign: 'left',
+                          color: '#0000D0',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          textTransform: 'uppercase',
+                          background: 'rgba(0,0,0,0.02)'
+                        }}>{h || '\u00A0'}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {removedRows.map((r, i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : 'rgba(0,0,0,0.02)' }}>
+                        {filteredData.headers.map((h, j) => {
+                          const val = String(r[h] ?? '')
+                          const isFecha = isFechaEnvioHeader(h) || isFechaDesdeHeader(h) || isFechaHastaHeader(h)
+                          const isNumeric = !isFecha && (/^-?[0-9.,]+$/.test(val) || isPotenciaHeader(h))
+                          const align = isNumeric ? 'right' as const : 'left' as const
+                          const display = isFecha
+                            ? formatDateES(r[h])
+                            : (isNumeric && !isNaN(normalizeNumber(val))
+                              ? new Intl.NumberFormat('es-ES', { maximumFractionDigits: 6 }).format(normalizeNumber(val))
+                              : val)
+                          return (
+                            <td key={j} style={{
+                              padding: '0.5rem 0.75rem',
+                              borderTop: '1px solid rgba(0,0,0,0.06)',
+                              borderRight: '1px solid rgba(0,0,0,0.04)',
+                              color: '#1e293b',
+                              textAlign: align,
+                              fontSize: '0.8125rem'
+                            }}>
+                              {display}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Bar - Barra inferior con scroll horizontal */}
       <div style={{
