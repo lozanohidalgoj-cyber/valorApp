@@ -5,11 +5,7 @@ export const Wart: React.FC = () => {
   // Nuevo: cambio de titular (checklist exclusivo) y fecha
   const [cambioTitular, setCambioTitular] = useState<'si' | 'no' | null>(null)
   const [fechaCambio, setFechaCambio] = useState<string>('')
-  // Nuevo: análisis de anomalías
-  const [showAnalisis, setShowAnalisis] = useState(false)
-  const [serie, setSerie] = useState<Array<{ fecha: Date; consumo: number; factura: string }>>([])
-  const [anomalyIdx, setAnomalyIdx] = useState<number | null>(null)
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
+  // Análisis de anomalías movido a ATR (se retira de WART para evitar duplicidad)
 
   const toggle = (key: 'c1'|'c2') => {
     setChecks(prev => ({ ...prev, [key]: !prev[key] }))
@@ -91,48 +87,7 @@ export const Wart: React.FC = () => {
     return Number.isFinite(n) ? n : NaN
   }
 
-  const handleDetectarAnomalias = () => {
-    try {
-      const raw = localStorage.getItem('valorApp.analisis.atrCsv')
-      if (!raw) { window.alert('No hay saldo ATR cargado.'); return }
-      const parsed = JSON.parse(raw) as { headers: string[]; rows: Record<string,string>[] }
-      const headers = parsed.headers || []
-      const rows = parsed.rows || []
-      if (!headers.length || !rows.length) { window.alert('No hay datos para analizar.'); return }
-
-      const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
-      const consumoHeader = headers.find(h => isConsumoActivaHeader(h))
-      const facturaHeader = headers.find(h => normalizeLabel(h).includes('factura')) || null
-      if (!fechaHeader || !consumoHeader) { window.alert('No se encontró columna de fecha o consumo.'); return }
-
-      const items: Array<{ fecha: Date; consumo: number; factura: string }> = []
-      for (const r of rows) {
-        const fecha = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
-        const c = parseNumber(String(r[consumoHeader] ?? ''))
-        if (!fecha || !Number.isFinite(c)) continue
-        const factura = facturaHeader ? String(r[facturaHeader] ?? '') : ''
-        items.push({ fecha, consumo: c, factura })
-      }
-      // Orden cronológico
-      items.sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
-      // Detectar primera anomalía: caída > 40%
-      let idx: number | null = null
-      for (let i = 1; i < items.length; i++) {
-        const prev = items[i - 1].consumo
-        const cur = items[i].consumo
-        if (prev > 0) {
-          const drop = (prev - cur) / prev
-          if (drop > 0.4) { idx = i; break }
-        }
-      }
-      setSerie(items)
-      setAnomalyIdx(idx)
-      setShowAnalisis(true)
-      setTooltip(null)
-    } catch (e) {
-      window.alert('Error al analizar anomalías.')
-    }
-  }
+  // handleDetectarAnomalias eliminado; el análisis se realiza ahora en ATR
 
   return (
     <div style={{
@@ -363,33 +318,7 @@ export const Wart: React.FC = () => {
           flexWrap: 'wrap',
           paddingTop: '1.5rem'
         }}>
-          <button
-            type="button"
-            onClick={handleDetectarAnomalias}
-            style={{
-              background: 'linear-gradient(135deg, #0000D0 0%, #2929E5 100%)',
-              color: '#FFFFFF',
-              border: 'none',
-              padding: '1.1rem 2rem',
-              fontSize: '1.1rem',
-              fontWeight: 800,
-              borderRadius: '10px',
-              cursor: 'pointer',
-              boxShadow: '0 10px 25px -8px rgba(0, 0, 208, 0.35)',
-              transition: 'all 0.2s ease',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              fontFamily: "'Lato', sans-serif"
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-3px)'
-              e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(0, 0, 208, 0.5)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(0, 0, 208, 0.35)'
-            }}
-          >Detectar anomalías de consumo</button>
+          {/* Botón de anomalías movido a ATR */}
           <a
             href="#/"
             style={{
@@ -451,91 +380,9 @@ export const Wart: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de análisis visual de anomalías */}
-      {showAnalisis && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem' }}>
-          <div style={{ width: 'min(1100px, 96vw)', background: '#fff', borderRadius: 16, boxShadow: '0 20px 50px rgba(0,0,0,0.35)', overflow: 'hidden', border: '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(0,0,0,0.08)', background: 'linear-gradient(135deg, rgba(0,0,208,0.06) 0%, rgba(41,41,229,0.04) 100%)' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0000D0', fontWeight: 900, fontFamily: "'Lato', sans-serif" }}>Análisis visual de anomalías</h3>
-            </div>
-            <div style={{ padding: '1rem 1.25rem' }}>
-              {serie.length >= 2 ? (
-                <AnomChart
-                  data={serie}
-                  anomalyIdx={anomalyIdx}
-                  onHover={(info) => setTooltip(info)}
-                />
-              ) : (
-                <div style={{ padding: '1rem', color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>No se detectaron descensos anómalos en el consumo.</div>
-              )}
-              {/* Tooltip */}
-              {tooltip && (
-                <div style={{ position: 'absolute', transform: `translate(${tooltip.x}px, ${tooltip.y}px)`, background: '#111827', color: '#fff', padding: '6px 10px', borderRadius: 8, fontSize: 12, pointerEvents: 'none', boxShadow: '0 6px 16px rgba(0,0,0,0.3)' }}>
-                  {tooltip.text}
-                </div>
-              )}
-              {anomalyIdx == null && serie.length >= 2 && (
-                <div style={{ marginTop: 12, color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>No se detectaron descensos anómalos en el consumo.</div>
-              )}
-              {anomalyIdx != null && (
-                <div style={{ marginTop: 12, color: '#334155', fontFamily: "'Open Sans', sans-serif" }}>El punto rojo indica el inicio del descenso de la anomalia detectado en el consumo.</div>
-              )}
-            </div>
-            <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowAnalisis(false)} style={{ background: '#0000D0', color: '#fff', border: 'none', padding: '0.6rem 1rem', borderRadius: 8, fontWeight: 800, cursor: 'pointer' }}>Cerrar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal de análisis eliminado en WART (se realiza en ATR) */}
     </div>
   )
 }
 
 export default Wart
-
-// Componente de gráfico simple en SVG
-function AnomChart({ data, anomalyIdx, onHover }: { data: Array<{ fecha: Date; consumo: number; factura: string }>; anomalyIdx: number | null; onHover: (info: { x: number; y: number; text: string } | null) => void }) {
-  const width = 1000; const height = 320; const m = { l: 48, r: 24, t: 20, b: 40 }
-  const innerW = width - m.l - m.r
-  const innerH = height - m.t - m.b
-  const maxY = Math.max(...data.map(d => d.consumo), 1)
-  const minY = 0
-  const x = (i: number) => m.l + (data.length <= 1 ? innerW / 2 : (i * innerW) / (data.length - 1))
-  const y = (v: number) => m.t + innerH - ((v - minY) / (maxY - minY)) * innerH
-  const pathD = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(d.consumo)}`).join(' ')
-
-  const handleEnter = (i: number, e: React.MouseEvent<SVGCircleElement>) => {
-    const d = data[i]
-    const text = anomalyIdx === i
-      ? `Inicio de anomalía detectado — Factura: ${d.factura || i + 1} — Fecha: ${d.fecha.toLocaleDateString('es-ES')}`
-      : `Factura: ${d.factura || i + 1} — Fecha: ${d.fecha.toLocaleDateString('es-ES')} — Consumo: ${new Intl.NumberFormat('es-ES').format(d.consumo)}`
-    onHover({ x: e.clientX + 12, y: e.clientY - 28, text })
-  }
-  const handleLeave = () => onHover(null)
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <svg width={width} height={height}>
-        {/* Ejes simples */}
-        <line x1={m.l} y1={m.t} x2={m.l} y2={m.t + innerH} stroke="#94a3b8" strokeWidth={1} />
-        <line x1={m.l} y1={m.t + innerH} x2={m.l + innerW} y2={m.t + innerH} stroke="#94a3b8" strokeWidth={1} />
-        {/* Path de la serie */}
-        <path d={pathD} fill="none" stroke="#0000D0" strokeWidth={2} />
-        {/* Puntos */}
-        {data.map((d, i) => (
-          <circle
-            key={i}
-            cx={x(i)}
-            cy={y(d.consumo)}
-            r={5}
-            fill={anomalyIdx === i ? '#dc2626' : '#1d4ed8'}
-            stroke="#fff"
-            strokeWidth={1.5}
-            onMouseEnter={(e) => handleEnter(i, e)}
-            onMouseLeave={handleLeave}
-          />
-        ))}
-      </svg>
-    </div>
-  )
-}
