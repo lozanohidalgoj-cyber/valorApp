@@ -616,10 +616,10 @@ const ATRPreview: React.FC = () => {
       background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
       paddingBottom: '70px' // Espacio para bottom bar
     }}>
-      {/* Panel lateral derecho: Resumen por año (plegable) */}
+      {/* Panel lateral izquierdo: Resumen por año (plegable) */}
       <div style={{
         position: 'fixed',
-        right: 10,
+        left: 10,
         top: 12,
         bottom: 86, // deja espacio a la bottom bar
         zIndex: 900,
@@ -646,7 +646,7 @@ const ATRPreview: React.FC = () => {
             padding: '0.5rem 0.75rem',
             boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
           }}>
-          {showYearPanel ? '◀' : '▶'} Años
+          {showYearPanel ? '◀' : '▶'} CAP
         </button>
 
         {/* Contenido del panel */}
