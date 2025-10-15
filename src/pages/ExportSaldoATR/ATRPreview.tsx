@@ -237,10 +237,10 @@ const ATRPreview: React.FC = () => {
     const result = new Map<number, YearSummary>()
     if (!filteredData) return result
 
-    // Estructura temporal por año
+    // Estructura temporal por año basada en filas visibles actualmente
     const tmp = new Map<number, { rows: Array<{ d: Date | null; r: Record<string,string> }>; contratos: Set<string>; pots: Set<number> }>()
 
-    for (const r of filteredData.rows) {
+    for (const r of filteredRows) {
       // Fecha de referencia por orden: Fecha desde -> Fecha hasta -> Fecha envío a facturar
       const dDesde = fechaDesdeHeader ? parseDateLoose(r[fechaDesdeHeader]) : null
       const dHasta = (!dDesde && fechaHastaHeader) ? parseDateLoose(r[fechaHastaHeader]) : null
@@ -300,15 +300,16 @@ const ATRPreview: React.FC = () => {
       })
     }
     return result
-  }, [filteredData, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader, potenciaHeaderMain])
+  }, [filteredData, filteredRows, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader, potenciaHeaderMain])
 
   // Contratos por año (lista) para mostrar bajo cada tarjeta del panel CAP
   const yearlyContracts = React.useMemo(() => {
     const map = new Map<number, string[]>()
     if (!filteredData || !contractHeader) return map
 
+    // Basado en filas visibles actualmente
     const tmp = new Map<number, Set<string>>()
-    for (const r of filteredData.rows) {
+    for (const r of filteredRows) {
       // Fecha de referencia por orden: Fecha desde -> Fecha hasta -> Fecha envío a facturar
       const dDesde = fechaDesdeHeader ? parseDateLoose(r[fechaDesdeHeader]) : null
       const dHasta = (!dDesde && fechaHastaHeader) ? parseDateLoose(r[fechaHastaHeader]) : null
@@ -328,7 +329,7 @@ const ATRPreview: React.FC = () => {
       map.set(y, Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })))
     }
     return map
-  }, [filteredData, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader])
+  }, [filteredData, filteredRows, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader])
 
   // Años expandidos para ver contratos dentro del panel CAP
   const [expandedYears, setExpandedYears] = React.useState<Set<number>>(new Set())
@@ -1480,7 +1481,7 @@ const ATRPreview: React.FC = () => {
                 borderRadius: 8, padding: '0.5rem 0.875rem', background: '#e5e7eb', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 700
               }}>Cancelar</button>
               <button type="button" onClick={() => {
-                // Al confirmar, mover a Eliminadas y aplicar vista
+                // Al confirmar, mover a Eliminadas y mantener la vista en las restantes
                 const originales = filteredData!.rows
                 const restantes: Record<string,string>[] = []
                 const eliminadas: Record<string,string>[] = []
@@ -1489,14 +1490,16 @@ const ATRPreview: React.FC = () => {
                   if (setSel.has(r)) eliminadas.push(r)
                   else restantes.push(r)
                 }
-                setFilteredRows(eliminadas)
-                setRemovedRows(eliminadas)
+                // Vista principal: mostrar restantes (las anuladas desaparecen de la vista)
+                setFilteredRows(restantes)
                 setKeptRows(restantes)
+                // Guardar eliminadas para poder consultarlas en pestaña/modal si se desea
+                setRemovedRows(eliminadas)
                 setAnuladas(eliminadas.length)
                 setDetalleAnuladas(anularPreviewDetalle)
                 setOrdenado(true)
-                setViewMode('filtradas')
-                setActiveTab('eliminadas')
+                setViewMode('restantes')
+                setActiveTab('vista')
                 setShowAnularPreview(false)
               }} style={{
                 borderRadius: 8, padding: '0.5rem 0.875rem', background: '#dc2626', border: 'none', color: '#fff', fontWeight: 900
