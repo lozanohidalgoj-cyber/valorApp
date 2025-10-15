@@ -1,13 +1,45 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 export const Wart: React.FC = () => {
   const [checks, setChecks] = useState({ c1: false, c2: false })
+  // Nuevo: cambio de titular (checklist exclusivo) y fecha
+  const [cambioTitular, setCambioTitular] = useState<'si' | 'no' | null>(null)
+  const [fechaCambio, setFechaCambio] = useState<string>('')
 
   const toggle = (key: 'c1'|'c2') => {
     setChecks(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
   const allOk = checks.c1 && checks.c2
+  const canContinue = useMemo(() => {
+    if (!allOk) return false
+    if (cambioTitular === 'si') return Boolean(fechaCambio)
+    return true
+  }, [allOk, cambioTitular, fechaCambio])
+
+  // Cargar estado previo (si existe)
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem('valorApp.wart.cambioTitular')
+      if (s) {
+        const obj = JSON.parse(s)
+        if (obj && typeof obj === 'object') {
+          setCambioTitular(obj.tuvoCambioTitular === true ? 'si' : obj.tuvoCambioTitular === false ? 'no' : null)
+          setFechaCambio(typeof obj.fecha === 'string' ? obj.fecha : '')
+        }
+      }
+    } catch { /* noop */ }
+  }, [])
+
+  // Persistir cuando cambia
+  useEffect(() => {
+    try {
+      localStorage.setItem('valorApp.wart.cambioTitular', JSON.stringify({
+        tuvoCambioTitular: cambioTitular === 'si',
+        fecha: cambioTitular === 'si' ? fechaCambio : ''
+      }))
+    } catch { /* noop */ }
+  }, [cambioTitular, fechaCambio])
 
   return (
     <div style={{
@@ -160,6 +192,71 @@ export const Wart: React.FC = () => {
               </span>
             </label>
           </li>
+          {/* Bloque nuevo: ¿Tuvo cambio de titular? */}
+          <li style={{ 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            background: 'rgba(0, 0, 208, 0.03)',
+            padding: '1.75rem',
+            borderRadius: '12px',
+            border: '2px solid rgba(0, 0, 208, 0.1)',
+            transition: 'all 0.2s ease',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              flexWrap: 'wrap',
+              width: '100%'
+            }}>
+              <span style={{ fontSize: '1.35rem', color: '#1a1a1a', fontWeight: 600, fontFamily: "'Open Sans', sans-serif" }}>
+                ¿Tuvo cambio de titular?
+              </span>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={cambioTitular === 'no'}
+                  onChange={() => {
+                    setCambioTitular(cambioTitular === 'no' ? null : 'no')
+                    if (cambioTitular !== 'no') setFechaCambio('')
+                  }}
+                  style={{ width: 24, height: 24, accentColor: '#0000D0', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '1.125rem', color: '#1a1a1a' }}>No</span>
+              </label>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={cambioTitular === 'si'}
+                  onChange={() => {
+                    setCambioTitular(cambioTitular === 'si' ? null : 'si')
+                  }}
+                  style={{ width: 24, height: 24, accentColor: '#0000D0', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '1.125rem', color: '#1a1a1a' }}>Sí</span>
+              </label>
+            </div>
+
+            {cambioTitular === 'si' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <label style={{ fontSize: '1.125rem', color: '#1a1a1a' }}>Fecha de cambio de titular:</label>
+                <input
+                  type="date"
+                  value={fechaCambio}
+                  onChange={e => setFechaCambio(e.target.value)}
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: 8,
+                    border: '2px solid rgba(0, 0, 208, 0.1)',
+                    fontSize: '1rem',
+                    fontFamily: "'Open Sans', sans-serif"
+                  }}
+                />
+              </div>
+            )}
+          </li>
         </ul>
 
         <div style={{ 
@@ -195,34 +292,34 @@ export const Wart: React.FC = () => {
           >← Volver</a>
           <button
             type="button"
-            disabled={!allOk}
+            disabled={!canContinue}
             onClick={() => { window.location.hash = '#/analisis-expediente' }}
             style={{
-              background: allOk 
+              background: canContinue 
                 ? 'linear-gradient(135deg, #FF3184 0%, #FF1493 100%)' 
                 : 'rgba(0, 0, 208, 0.15)',
-              color: allOk ? '#FFFFFF' : 'rgba(0, 0, 208, 0.4)',
+              color: canContinue ? '#FFFFFF' : 'rgba(0, 0, 208, 0.4)',
               border: 'none',
               padding: '1.25rem 3rem',
               fontSize: '1.25rem',
               fontWeight: 700,
               borderRadius: '12px',
-              cursor: allOk ? 'pointer' : 'not-allowed',
-              boxShadow: allOk ? '0 10px 25px -8px rgba(255, 49, 132, 0.6)' : 'none',
+              cursor: canContinue ? 'pointer' : 'not-allowed',
+              boxShadow: canContinue ? '0 10px 25px -8px rgba(255, 49, 132, 0.6)' : 'none',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              opacity: allOk ? 1 : 0.6,
+              opacity: canContinue ? 1 : 0.6,
               fontFamily: "'Lato', sans-serif"
             }}
             onMouseEnter={e => { 
-              if (allOk) {
+              if (canContinue) {
                 e.currentTarget.style.transform = 'translateY(-3px)';
                 e.currentTarget.style.boxShadow = '0 14px 32px -8px rgba(255, 49, 132, 0.8)';
               }
             }}
             onMouseLeave={e => { 
-              if (allOk) {
+              if (canContinue) {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 10px 25px -8px rgba(255, 49, 132, 0.6)';
               }

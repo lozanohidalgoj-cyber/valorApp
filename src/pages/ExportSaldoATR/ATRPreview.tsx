@@ -17,6 +17,17 @@ const useAtrCsv = (): ParsedCSV | null => {
 
 const ATRPreview: React.FC = () => {
   const data = useAtrCsv()
+  // Leer cambio de titular desde localStorage
+  const cambioTitularInfo = React.useMemo(() => {
+    try {
+      const s = localStorage.getItem('valorApp.wart.cambioTitular')
+      if (!s) return { tuvo: false, fecha: '' }
+      const obj = JSON.parse(s)
+      const tuvo = Boolean(obj?.tuvoCambioTitular)
+      const fecha = typeof obj?.fecha === 'string' ? obj.fecha : ''
+      return { tuvo, fecha }
+    } catch { return { tuvo: false, fecha: '' } }
+  }, [])
   
   // Filtrar columna "Autofactura" de los encabezados
   const filteredData = React.useMemo(() => {
@@ -939,6 +950,21 @@ const ATRPreview: React.FC = () => {
               }}>{viewMode === 'filtradas' ? 'Viendo filtradas' : 'Viendo restantes'}</span>
             )}
           </p>
+          {cambioTitularInfo.tuvo && cambioTitularInfo.fecha && (
+            <div style={{
+              marginTop: '0.5rem',
+              background: 'rgba(0, 0, 208, 0.06)',
+              border: '1px solid rgba(0, 0, 208, 0.15)',
+              color: '#0f172a',
+              padding: '0.4rem 0.6rem',
+              borderRadius: 8,
+              display: 'inline-block',
+              fontSize: '0.875rem',
+              fontWeight: 600
+            }}>
+              Cambio de titular desde la fecha: <strong style={{ color: '#0000D0' }}>{new Date(cambioTitularInfo.fecha).toLocaleDateString('es-ES')}</strong>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
           {/* Botón 'Filtrar' eliminado por solicitud */}
@@ -1659,6 +1685,18 @@ const ATRPreview: React.FC = () => {
                   Cambios Potencia (kW): <strong style={{ color: '#FFFFFF' }}>{new Intl.NumberFormat('es-ES').format(totalCambiosPotencia)}</strong>
                 </span>
               </div>
+              {cambioTitularInfo.tuvo && cambioTitularInfo.fecha && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ 
+                    fontSize: '0.875rem', 
+                    color: 'rgba(255, 255, 255, 0.95)',
+                    fontFamily: "'Open Sans', sans-serif",
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Cambio de titular desde la fecha: <strong style={{ color: '#FFFFFF' }}>{new Date(cambioTitularInfo.fecha).toLocaleDateString('es-ES')}</strong>
+                  </span>
+                </div>
+              )}
               </div>
             </div>
             
