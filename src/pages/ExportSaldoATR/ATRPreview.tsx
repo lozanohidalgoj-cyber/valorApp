@@ -411,42 +411,6 @@ const ATRPreview: React.FC = () => {
 
   // (Eliminado totalPotencia por no usarse actualmente)
 
-  // Contar cuántas veces hubo cambio de Potencia (kW) por contrato (transiciones)
-  const totalCambiosPotencia = React.useMemo(() => {
-    if (!filteredData) return 0
-    // Tomamos una cabecera de potencia principal para evaluar cambios
-    const potenciaHeader = filteredData.headers.find(h => isPotenciaHeader(h))
-    if (!potenciaHeader) return 0
-
-    let cambios = 0
-
-    if (contractHeader) {
-      const lastByContract = new Map<string, number | undefined>()
-      for (const r of filteredRows) {
-        const contractKey = String(r[contractHeader] ?? '').trim()
-        const current = normalizeNumber(String(r[potenciaHeader] ?? ''))
-        const prev = lastByContract.get(contractKey)
-        if (Number.isFinite(current) && Number.isFinite(prev) && current !== prev) {
-          cambios++
-        }
-        if (Number.isFinite(current)) {
-          lastByContract.set(contractKey, current)
-        }
-      }
-    } else {
-      // Sin contrato: contar cambios globales por fila
-      let prev: number | undefined = undefined
-      for (const r of filteredRows) {
-        const current = normalizeNumber(String(r[potenciaHeader] ?? ''))
-        if (Number.isFinite(current) && Number.isFinite(prev) && current !== prev) {
-          cambios++
-        }
-        if (Number.isFinite(current)) prev = current
-      }
-    }
-
-    return cambios
-  }, [filteredRows, filteredData, contractHeader])
 
   const handleOrdenar = React.useCallback(() => {
     if (!filteredData || ordenado) return
@@ -1675,16 +1639,7 @@ const ATRPreview: React.FC = () => {
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ 
-                  fontSize: '0.875rem', 
-                  color: 'rgba(255, 255, 255, 0.85)',
-                  fontFamily: "'Open Sans', sans-serif",
-                  whiteSpace: 'nowrap'
-                }}>
-                  Cambios Potencia (kW): <strong style={{ color: '#FFFFFF' }}>{new Intl.NumberFormat('es-ES').format(totalCambiosPotencia)}</strong>
-                </span>
-              </div>
+              {/* Campo 'Cambios Potencia (kW)' eliminado por solicitud */}
               {cambioTitularInfo.tuvo && cambioTitularInfo.fecha && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ 
