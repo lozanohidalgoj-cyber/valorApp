@@ -59,6 +59,10 @@ const ATRPreview: React.FC = () => {
   const [showFilteredModal, setShowFilteredModal] = React.useState<boolean>(false)
   const [activeTab, setActiveTab] = React.useState<'vista' | 'eliminadas'>('vista')
   const [showYearPanel, setShowYearPanel] = React.useState<boolean>(false)
+  // Modal de previsualización de anulación por Estado/Tipo
+  const [showAnularPreview, setShowAnularPreview] = React.useState<boolean>(false)
+  const [anularPreviewRows, setAnularPreviewRows] = React.useState<Record<string,string>[]>([])
+  const [anularPreviewDetalle, setAnularPreviewDetalle] = React.useState<{comp: number; anuladas: number; enviados: number}>({ comp: 0, anuladas: 0, enviados: 0 })
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -553,7 +557,7 @@ const ATRPreview: React.FC = () => {
 
   // Nuevo: Anular/copiar por Estado de medida o Tipo de factura y pasar a pestaña Eliminadas
   const handleAnularEstadoTipo = React.useCallback(() => {
-    if (!filteredData || ordenado) return
+    if (!filteredData) return
     const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
     const estadoHeader = filteredData.headers.find(h => isEstadoMedidaHeader(h))
     if (!tipoHeader && !estadoHeader) {
@@ -561,37 +565,55 @@ const ATRPreview: React.FC = () => {
       return
     }
 
+    const mustTipo = new Set([
+      'factura complementaria',
+      'enviado a facturar',
+      'enviada a facturar',
+      'enviado a facturacion',
+      'enviada a facturacion',
+      'anulada'
+    ])
     const originales = filteredData.rows
-    const restantes: Record<string,string>[] = []
-    const eliminadas: Record<string,string>[] = []
-    let count = 0
+    const seleccionadas: Record<string,string>[] = []
     let comp = 0, anul = 0, enviados = 0
 
     for (const r of originales) {
-      const tipoRaw = tipoHeader ? String(r[tipoHeader]) : ''
-      const estadoRaw = estadoHeader ? String(r[estadoHeader]) : ''
-      const clase = (tipoHeader && classifyLabel(tipoRaw)) || (estadoHeader && classifyLabel(estadoRaw)) || null
-
-      if (clase) {
-        count++
-        if (clase === 'comp') comp++
-        else if (clase === 'envi') enviados++
-        else if (clase === 'anul') anul++
-        eliminadas.push(r)
-        continue
+      let match = false
+      // Revisar solo columnas objetivo
+      if (tipoHeader) {
+        const t = normalizeLabel(String(r[tipoHeader] ?? ''))
+        if (
+          mustTipo.has(t) ||
+          ((t.includes('factura') || t.includes('fact')) && (t.includes('complementaria') || t.includes('complem') || t.includes('compl')))
+          || (t.includes('envi') && t.includes('factur'))
+          || t.includes('anulad')
+        ) {
+          match = true
+          // Clasificar para detalle
+          if ((t.includes('factura') || t.includes('fact')) && (t.includes('complementaria') || t.includes('complem') || t.includes('compl'))) comp++
+          else if (t.includes('envi') && t.includes('factur')) enviados++
+          else if (t.includes('anulad')) anul++
+        }
       }
-      restantes.push(r)
+      if (!match && estadoHeader) {
+        const e = normalizeLabel(String(r[estadoHeader] ?? ''))
+        if (e.includes('anulad')) {
+          match = true
+          anul++
+        }
+      }
+      if (match) seleccionadas.push(r)
     }
 
-    setFilteredRows(eliminadas) // Mostrar primero Eliminadas
-    setRemovedRows(eliminadas)
-    setKeptRows(restantes)
-    setAnuladas(count)
-    setDetalleAnuladas({ comp, anuladas: anul, enviados })
-    setOrdenado(true)
-    setViewMode('filtradas')
-    setActiveTab('eliminadas')
-  }, [filteredData, ordenado])
+    if (seleccionadas.length === 0) {
+      window.alert('No se encontraron filas para anular con los criterios indicados.')
+      return
+    }
+
+    setAnularPreviewRows(seleccionadas)
+    setAnularPreviewDetalle({ comp, anuladas: anul, enviados })
+    setShowAnularPreview(true)
+  }, [filteredData])
 
   if (!filteredData || !filteredData.headers?.length) {
     return (
@@ -945,6 +967,35 @@ const ATRPreview: React.FC = () => {
               >Eliminadas</button>
             </div>
           )}
+          {/* Botón para anular por Estado/Tipo con confirmación previa */}
+          <button
+            type="button"
+            onClick={handleAnularEstadoTipo}
+            style={{
+              borderRadius: 10,
+              padding: '0.625rem 1.25rem',
+              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '0.8125rem',
+              fontWeight: 800,
+              letterSpacing: '0.03em',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px -2px rgba(239, 68, 68, 0.35)',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              fontFamily: "'Open Sans', sans-serif"
+            }}
+            title="Previsualizar y anular por Tipo de factura (complementaria, enviado a facturar, anulada) o Estado de medida (anulada/anuladora)"
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(239, 68, 68, 0.45)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(239, 68, 68, 0.35)';
+            }}
+          >Anular por Estado/Tipo</button>
           {/* Botón "Anular por Estado/Tipo" desactivado por solicitud */}
           {ordenado && (
             <button
@@ -1352,6 +1403,104 @@ const ATRPreview: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de previsualización para anular por Estado/Tipo */}
+      {showAnularPreview && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', zIndex: 2100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+        }}>
+          <div style={{
+            width: 'min(1200px, 96vw)', maxHeight: '80vh', background: '#fff', borderRadius: 12,
+            boxShadow: '0 20px 50px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            border: '1px solid rgba(0,0,0,0.08)'
+          }}>
+            <div style={{
+              padding: '0.875rem 1rem', borderBottom: '1px solid rgba(0,0,0,0.08)', display: 'flex',
+              alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(220,38,38,0.06) 100%)'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', color: '#dc2626', fontWeight: 900, fontFamily: "'Lato', sans-serif" }}>
+                  Previsualización de anulación
+                </h3>
+                <div style={{ marginTop: 4, fontSize: '0.8125rem', color: '#334155' }}>
+                  Se encontraron <strong>{anularPreviewRows.length}</strong> filas a anular. Detalle: Complementaria: <strong>{anularPreviewDetalle.comp}</strong> · Enviado a facturar: <strong>{anularPreviewDetalle.enviados}</strong> · Anulada/Anuladora: <strong>{anularPreviewDetalle.anuladas}</strong>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAnularPreview(false)}
+                style={{ borderRadius: 8, padding: '0.5rem 0.875rem', background: '#64748b', border: 'none', color: '#fff', fontWeight: 700 }}
+              >Cerrar</button>
+            </div>
+            <div style={{ padding: '0.75rem', overflow: 'auto' }}>
+              <div style={{ minWidth: '900px' }}>
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <thead>
+                    <tr>
+                      {filteredData!.headers.map((h, idx) => (
+                        <th key={idx} style={{
+                          padding: '0.5rem 0.75rem', borderBottom: '1px solid rgba(0,0,0,0.08)', textAlign: 'left', color: '#0000D0',
+                          fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', background: 'rgba(0,0,0,0.02)'
+                        }}>{h || '\u00A0'}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {anularPreviewRows.map((r, i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : 'rgba(0,0,0,0.02)' }}>
+                        {filteredData!.headers.map((h, j) => {
+                          const val = String(r[h] ?? '')
+                          const isFecha = isFechaEnvioHeader(h) || isFechaDesdeHeader(h) || isFechaHastaHeader(h)
+                          const isNumeric = !isFecha && (/^-?[0-9.,]+$/.test(val) || isPotenciaHeader(h))
+                          const align = isNumeric ? 'right' as const : 'left' as const
+                          const display = isFecha
+                            ? formatDateES(r[h])
+                            : (isNumeric && !isNaN(normalizeNumber(val))
+                              ? new Intl.NumberFormat('es-ES', { maximumFractionDigits: 6 }).format(normalizeNumber(val))
+                              : val)
+                          return (
+                            <td key={j} style={{ padding: '0.5rem 0.75rem', borderTop: '1px solid rgba(0,0,0,0.06)', borderRight: '1px solid rgba(0,0,0,0.04)', color: '#1e293b', textAlign: align, fontSize: '0.8125rem' }}>
+                              {display}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '0.75rem 1rem', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+              <button type="button" onClick={() => setShowAnularPreview(false)} style={{
+                borderRadius: 8, padding: '0.5rem 0.875rem', background: '#e5e7eb', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 700
+              }}>Cancelar</button>
+              <button type="button" onClick={() => {
+                // Al confirmar, mover a Eliminadas y aplicar vista
+                const originales = filteredData!.rows
+                const restantes: Record<string,string>[] = []
+                const eliminadas: Record<string,string>[] = []
+                const setSel = new Set(anularPreviewRows)
+                for (const r of originales) {
+                  if (setSel.has(r)) eliminadas.push(r)
+                  else restantes.push(r)
+                }
+                setFilteredRows(eliminadas)
+                setRemovedRows(eliminadas)
+                setKeptRows(restantes)
+                setAnuladas(eliminadas.length)
+                setDetalleAnuladas(anularPreviewDetalle)
+                setOrdenado(true)
+                setViewMode('filtradas')
+                setActiveTab('eliminadas')
+                setShowAnularPreview(false)
+              }} style={{
+                borderRadius: 8, padding: '0.5rem 0.875rem', background: '#dc2626', border: 'none', color: '#fff', fontWeight: 900
+              }}>Confirmar anulación</button>
             </div>
           </div>
         </div>
