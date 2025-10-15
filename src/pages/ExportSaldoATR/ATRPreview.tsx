@@ -579,8 +579,8 @@ const ATRPreview: React.FC = () => {
     let comp = 0, anul = 0, enviados = 0
 
     for (const r of originales) {
-      let match = false
-      // Revisar solo columnas objetivo
+      let match: ClaseObjetivo | null = null
+      // Revisar columnas objetivo
       if (tipoHeader) {
         const t = normalizeLabel(String(r[tipoHeader] ?? ''))
         if (
@@ -589,21 +589,33 @@ const ATRPreview: React.FC = () => {
           || (t.includes('envi') && t.includes('factur'))
           || t.includes('anulad')
         ) {
-          match = true
-          // Clasificar para detalle
-          if ((t.includes('factura') || t.includes('fact')) && (t.includes('complementaria') || t.includes('complem') || t.includes('compl'))) comp++
-          else if (t.includes('envi') && t.includes('factur')) enviados++
-          else if (t.includes('anulad')) anul++
+          // Clasificar prioridad: compl > envi > anul
+          if ((t.includes('factura') || t.includes('fact')) && (t.includes('complementaria') || t.includes('complem') || t.includes('compl'))) match = 'comp'
+          else if (t.includes('envi') && t.includes('factur')) match = 'envi'
+          else if (t.includes('anulad')) match = 'anul'
         }
       }
       if (!match && estadoHeader) {
         const e = normalizeLabel(String(r[estadoHeader] ?? ''))
-        if (e.includes('anulad')) {
-          match = true
-          anul++
+        if (e.includes('anulad')) match = 'anul'
+      }
+      // Respaldo: buscar por cualquier columna con classifyLabel
+      if (!match) {
+        for (const h of filteredData.headers) {
+          const c = classifyLabel(String(r[h] ?? ''))
+          if (c === 'comp' || c === 'envi' || c === 'anul') {
+            // Priorización: comp > envi > anul
+            match = c
+            if (match === 'comp') break
+          }
         }
       }
-      if (match) seleccionadas.push(r)
+      if (match) {
+        if (match === 'comp') comp++
+        else if (match === 'envi') enviados++
+        else if (match === 'anul') anul++
+        seleccionadas.push(r)
+      }
     }
 
     if (seleccionadas.length === 0) {
