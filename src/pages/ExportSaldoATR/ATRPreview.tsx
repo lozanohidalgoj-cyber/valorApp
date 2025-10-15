@@ -719,9 +719,28 @@ const ATRPreview: React.FC = () => {
                           padding: '0.625rem 0.75rem',
                           background: 'linear-gradient(135deg, rgba(248,250,252,1) 0%, rgba(241,245,249,1) 100%)'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                               <div style={{ fontWeight: 800, color: '#0f172a' }}>Año {y}</div>
+                              {/* Badges rápidos: contratos y cambios de contrato */}
+                              <span style={{
+                                color: '#0f172a',
+                                fontSize: 12,
+                                background: 'rgba(0,0,208,0.08)',
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                                border: '1px solid rgba(0,0,208,0.15)',
+                                fontWeight: 700
+                              }}>Contratos: {s.contratosUnicos}</span>
+                              <span style={{
+                                color: '#0f172a',
+                                fontSize: 12,
+                                background: 'rgba(0,0,208,0.08)',
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                                border: '1px solid rgba(0,0,208,0.15)',
+                                fontWeight: 700
+                              }}>Cambios contrato: {s.cambiosContrato}</span>
                               <button
                                 type="button"
                                 onClick={() => toggleYearExpanded(y)}
