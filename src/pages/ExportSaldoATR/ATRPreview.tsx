@@ -51,7 +51,7 @@ const ATRPreview: React.FC = () => {
   
   const [filteredRows, setFilteredRows] = React.useState<Record<string,string>[]>(() => filteredData?.rows || [])
   const [anuladas, setAnuladas] = React.useState<number>(0)
-  const [detalleAnuladas, setDetalleAnuladas] = React.useState<{comp: number; anuladas: number; anuladoras: number}>({ comp: 0, anuladas: 0, anuladoras: 0 })
+  const [detalleAnuladas, setDetalleAnuladas] = React.useState<{comp: number; anuladas: number; enviados: number}>({ comp: 0, anuladas: 0, enviados: 0 })
   const [ordenado, setOrdenado] = React.useState<boolean>(false)
   const total = filteredRows.length
   
@@ -104,6 +104,14 @@ const ATRPreview: React.FC = () => {
     const t = (s || '').replace(/\./g, '').replace(/,/g, '.')
     const n = Number(t)
     return Number.isFinite(n) ? n : NaN
+  }
+  const normalizeLabel = (s: string) => {
+    const t = stripAccents(String(s ?? ''))
+      .toLowerCase()
+      .replace(/["'`]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    return t
   }
   const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n))
   const fromExcelSerial = (serial: number): Date => {
@@ -329,39 +337,32 @@ const ATRPreview: React.FC = () => {
   const handleOrdenar = React.useCallback(() => {
     if (!filteredData || ordenado) return
     const tipoHeader = filteredData.headers.find(h => isTipoFacturaHeader(h))
-    const estadoMedidaHeader = filteredData.headers.find(h => isEstadoMedidaHeader(h))
-    if (!tipoHeader && !estadoMedidaHeader) return
-  const valoresAnularTipo = new Set(['factura complementaria','anulada','anuladora','enviado a facturar','enviada a facturar','enviado a facturacion','enviada a facturacion'])
-  const valoresAnularEstado = new Set(['anulada','anuladora'])
+    // Solo anulamos por Tipo de factura para: Factura complementaria, Enviado a facturar, Anulada
+    if (!tipoHeader) return
+    const valoresAnularTipo = new Set(['factura complementaria','anulada','enviado a facturar','enviada a facturar','enviado a facturacion','enviada a facturacion'])
     // Usar filteredData.rows para trabajar con datos ya filtrados (sin columna autofactura)
     const originales = filteredData.rows
     const restantes: Record<string,string>[] = []
     let count = 0
-    let comp = 0, anul = 0, anuladora = 0, estadoAnulada = 0, estadoAnuladora = 0
+    let comp = 0, anul = 0, enviados = 0
     for (const r of originales) {
-  const tipo = tipoHeader ? stripAccents((r[tipoHeader] || '').toString()).toLowerCase().trim() : ''
-  const estado = estadoMedidaHeader ? stripAccents((r[estadoMedidaHeader] || '').toString()).toLowerCase().trim() : ''
-      const porTipo = tipoHeader ? valoresAnularTipo.has(tipo) : false
-      const porEstado = estadoMedidaHeader ? valoresAnularEstado.has(estado) : false
-      if (porTipo || porEstado) {
+      const tipo = normalizeLabel(r[tipoHeader])
+      const porTipo = valoresAnularTipo.has(tipo) ||
+        (tipo.includes('factura') && tipo.includes('complementaria')) ||
+        (tipo.includes('envi') && tipo.includes('factur')) ||
+        (tipo === 'anulada')
+      if (porTipo) {
         count++
-        if (porTipo) {
-          if (tipo === 'factura complementaria') comp++
-          else if (tipo === 'anulada') anul++
-          else if (tipo === 'anuladora') anuladora++
-        }
-        if (porEstado) {
-          if (estado === 'anulada') estadoAnulada++
-          else if (estado === 'anuladora') estadoAnuladora++
-        }
+        if (tipo.includes('factura') && tipo.includes('complementaria')) comp++
+        else if (tipo.includes('envi') && tipo.includes('factur')) enviados++
+        else if (tipo === 'anulada') anul++
         continue
       }
       restantes.push(r)
     }
     setFilteredRows(restantes)
     setAnuladas(count)
-    // Unificamos anuladas y anuladoras por ambos criterios
-    setDetalleAnuladas({ comp, anuladas: anul + estadoAnulada, anuladoras: anuladora + estadoAnuladora })
+    setDetalleAnuladas({ comp, anuladas: anul, enviados })
     setOrdenado(true)
   }, [filteredData, ordenado])
 
@@ -579,7 +580,7 @@ const ATRPreview: React.FC = () => {
             <strong>Se han anulado {anuladas} factura{anuladas === 1 ? '' : 's'} del listado.</strong>
           </div>
           <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>
-            Detalle: Factura complementaria: {detalleAnuladas.comp} | Anuladas: {detalleAnuladas.anuladas} | Anuladoras: {detalleAnuladas.anuladoras}
+            Detalle: Factura complementaria: {detalleAnuladas.comp} | Enviadas a facturar: {detalleAnuladas.enviados} | Anuladas: {detalleAnuladas.anuladas}
           </span>
         </div>
       )}
