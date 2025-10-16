@@ -1854,7 +1854,7 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
   const years = Array.from(new Set(data.map(d => d.year))).sort((a,b) => a - b)
   const cols = years.length
   const rows = 12
-  const cell = 36
+  const cell = 52 // Aumentado para mostrar valores dentro
   const m = { l: 60, t: 24, r: 12, b: 28 }
   const width = m.l + cols * cell + m.r
   const height = m.t + rows * cell + m.b
@@ -1890,6 +1890,24 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
     return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 }
   }
 
+  // Función para determinar contraste de texto: blanco para fondos oscuros, negro para claros
+  const getTextColor = (bgColor: string) => {
+    const rgb = hexToRgb(bgColor.startsWith('#') ? bgColor : '#000000')
+    // Si es rgb(), extraer valores
+    if (bgColor.startsWith('rgb')) {
+      const match = bgColor.match(/\d+/g)
+      if (match && match.length >= 3) {
+        const r = parseInt(match[0])
+        const g = parseInt(match[1])
+        const b = parseInt(match[2])
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        return luminance > 0.6 ? '#1f2937' : '#ffffff'
+      }
+    }
+    const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255
+    return luminance > 0.6 ? '#1f2937' : '#ffffff'
+  }
+
   // Construir lista en orden por fecha para localizar anomalía por índice
   const ordered = [...data].sort((a,b) => a.fecha.getTime() - b.fecha.getTime())
   const anomalyKey = anomalyIdx != null && anomalyIdx >= 0 && anomalyIdx < ordered.length ? ordered[anomalyIdx].key : null
@@ -1909,13 +1927,39 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
     const varPct = pt.variacion == null ? '—' : `${(pt.variacion * 100).toFixed(1)}%`
     const isAnomaly = pt.key === anomalyKey
     const motivo = getMotivoColor(pt.consumo, isAnomaly)
-    onHover({ x: e.clientX + 12, y: e.clientY - 28, text: `Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct} — Motivo del color: ${motivo}` })
+    
+    // Tooltip mejorado para anomalías
+    if (isAnomaly) {
+      onHover({ 
+        x: e.clientX + 12, 
+        y: e.clientY - 28, 
+        text: `⚠️ INICIO DEL DESCENSO DETECTADO — Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct}` 
+      })
+    } else {
+      onHover({ 
+        x: e.clientX + 12, 
+        y: e.clientY - 28, 
+        text: `Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct} — Motivo del color: ${motivo}` 
+      })
+    }
   }
   const handleLeave = () => onHover(null)
 
   return (
     <div>
       <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 6, fontFamily: "'Lato', sans-serif" }}>Mapa de calor mensual</div>
+      
+      {/* Estilos CSS para animación de anomalía */}
+      <style>{`
+        @keyframes pulse-glow {
+          0%, 100% { filter: drop-shadow(0 0 4px rgba(220, 38, 38, 0.6)); }
+          50% { filter: drop-shadow(0 0 12px rgba(220, 38, 38, 1)); }
+        }
+        .anomaly-cell {
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+      `}</style>
+      
       <svg width={width} height={height}>
         {/* Eje Y meses */}
         {monthsES.map((mname, i) => (
@@ -1935,13 +1979,58 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
             const isAnomaly = pt && pt.key === anomalyKey
             const x = m.l + cx * cell
             const ypix = m.t + mi * cell
+            const textColor = getTextColor(fill)
+            
+            // Formatear valor: si es >1000, mostrar en K (miles), sino mostrar entero
+            const displayValue = val === 0 ? '—' : val >= 1000 
+              ? `${(val / 1000).toFixed(1)}K` 
+              : Math.round(val).toString()
+            
             return (
-              <rect key={`${y}-${mm}`}
-                x={x} y={ypix} width={cell-4} height={cell-4} fill={fill} rx={6} ry={6}
-                stroke={isAnomaly ? '#dc2626' : 'rgba(0,0,0,0.06)'} strokeWidth={isAnomaly ? 3 : 1}
-                onMouseEnter={(e) => pt && handleEnter(pt, e)}
-                onMouseLeave={handleLeave}
-              />
+              <g key={`${y}-${mm}`}>
+                {/* Celda de fondo */}
+                <rect
+                  x={x} y={ypix} width={cell-4} height={cell-4} fill={fill} rx={6} ry={6}
+                  stroke={isAnomaly ? '#dc2626' : 'rgba(0,0,0,0.06)'} 
+                  strokeWidth={isAnomaly ? 3 : 1}
+                  onMouseEnter={(e) => pt && handleEnter(pt, e)}
+                  onMouseLeave={handleLeave}
+                  style={{ 
+                    cursor: pt ? 'pointer' : 'default',
+                    filter: isAnomaly ? 'drop-shadow(0 0 8px rgba(220, 38, 38, 0.8))' : 'none'
+                  }}
+                />
+                
+                {/* Valor de consumo centrado */}
+                {pt && (
+                  <text
+                    x={x + (cell - 4) / 2}
+                    y={ypix + (cell - 4) / 2 + (isAnomaly ? -6 : 4)}
+                    fontSize={10}
+                    fontWeight={700}
+                    fill={textColor}
+                    textAnchor="middle"
+                    fontFamily="'Open Sans', sans-serif"
+                    pointerEvents="none"
+                  >
+                    {displayValue}
+                  </text>
+                )}
+                
+                {/* Indicador de anomalía: icono de advertencia */}
+                {isAnomaly && (
+                  <text
+                    x={x + (cell - 4) / 2}
+                    y={ypix + (cell - 4) / 2 + 10}
+                    fontSize={14}
+                    textAnchor="middle"
+                    pointerEvents="none"
+                    style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))' }}
+                  >
+                    ⚠️
+                  </text>
+                )}
+              </g>
             )
           })
         ))}
