@@ -1461,6 +1461,7 @@ const ATRPreview: React.FC = () => {
                     const prevVal = prev ? String(prev[h] ?? '') : ''
                     const contrato = isContratoHeader(h)
                     const potencia = isPotenciaHeader(h)
+                    const isConsumoActiva = isConsumoActivaHeader(h)
                     let changed = false
                     if (prev) {
                       if (contrato) {
@@ -1471,19 +1472,26 @@ const ATRPreview: React.FC = () => {
                         changed = Number.isFinite(a) && Number.isFinite(b) ? a !== b : val.trim() !== prevVal.trim()
                       }
                     }
+                    
+                    // Detectar si esta celda de consumo activa es la de la anomalía
+                    const isAnomalyCell = isHighlighted && isConsumoActiva
+                    
                     // Colores corporativos para cambios: contrato -> Primary #0000D0, potencia -> Secondary #FF3184
-                    const color = changed ? (contrato ? '#0000D0' : '#FF3184') : (isHighlighted ? '#92400E' : '#1e293b')
-                    // Fondos corporativos para cambios: contrato -> azul suave, potencia -> rosa suave
-                    // Si la fila está resaltada, usar amarillo brillante
-                    const bg = isHighlighted 
-                      ? '#FCD34D' // Amarillo brillante uniforme para todas las celdas resaltadas
-                      : (changed && contrato 
-                        ? 'rgba(0, 0, 208, 0.08)' 
-                        : changed && potencia 
-                          ? 'rgba(255, 49, 132, 0.08)' 
-                          : (rowBg || undefined))
-                    const fontWeight = isHighlighted ? 800 : (changed ? 700 : 400)
-                    const fontSize = isHighlighted ? '1rem' : '0.8125rem'
+                    const color = isAnomalyCell 
+                      ? '#92400E' // Marrón oscuro para buen contraste sobre amarillo
+                      : (changed ? (contrato ? '#0000D0' : '#FF3184') : (isHighlighted ? '#92400E' : '#1e293b'))
+                    // Si es la celda de consumo activa de la anomalía, usar amarillo brillante con efectos especiales
+                    const bg = isAnomalyCell
+                      ? '#FDE047' // Amarillo más brillante para la celda de anomalía
+                      : (isHighlighted 
+                        ? '#FCD34D' // Amarillo brillante uniforme para todas las celdas resaltadas
+                        : (changed && contrato 
+                          ? 'rgba(0, 0, 208, 0.08)' 
+                          : changed && potencia 
+                            ? 'rgba(255, 49, 132, 0.08)' 
+                            : (rowBg || undefined)))
+                    const fontWeight = isAnomalyCell ? 900 : (isHighlighted ? 800 : (changed ? 700 : 400))
+                    const fontSize = isAnomalyCell ? '1.125rem' : (isHighlighted ? '1rem' : '0.8125rem')
                     const isFechaEnvio = isFechaEnvioHeader(h)
                     const isFechaDesde = isFechaDesdeHeader(h)
                     const isFechaHasta = isFechaHastaHeader(h)
@@ -1498,7 +1506,7 @@ const ATRPreview: React.FC = () => {
                     return (
                       <React.Fragment key={j}>
                         <td style={{ 
-                          padding: '0.5rem 0.75rem', 
+                          padding: isAnomalyCell ? '0.75rem 1rem' : '0.5rem 0.75rem', 
                           borderTop: '1px solid rgba(0, 0, 208, 0.06)', 
                           borderRight: '1px solid rgba(0, 0, 208, 0.06)', 
                           color, 
@@ -1507,7 +1515,10 @@ const ATRPreview: React.FC = () => {
                           textAlign: align,
                           fontSize,
                           transition: 'all 0.3s ease',
-                          fontFamily: "'Open Sans', sans-serif"
+                          fontFamily: "'Open Sans', sans-serif",
+                          boxShadow: isAnomalyCell ? '0 0 0 4px #FBBF24 inset, 0 8px 20px rgba(251, 191, 36, 0.6)' : 'none',
+                          border: isAnomalyCell ? '3px solid #F59E0B' : undefined,
+                          position: isAnomalyCell ? 'relative' : undefined
                         }}>
                           {display}
                         </td>
