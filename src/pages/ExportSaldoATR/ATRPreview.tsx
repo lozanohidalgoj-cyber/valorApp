@@ -1437,17 +1437,18 @@ const ATRPreview: React.FC = () => {
                       }
                     }
                     // Colores corporativos para cambios: contrato -> Primary #0000D0, potencia -> Secondary #FF3184
-                    const color = changed ? (contrato ? '#0000D0' : '#FF3184') : '#1e293b'
+                    const color = changed ? (contrato ? '#0000D0' : '#FF3184') : (isHighlighted ? '#78350f' : '#1e293b')
                     // Fondos corporativos para cambios: contrato -> azul suave, potencia -> rosa suave
                     // Si la fila está resaltada, usar amarillo en lugar de rowBg
                     const bg = isHighlighted 
-                      ? (changed && contrato ? 'rgba(0, 0, 208, 0.12)' : changed && potencia ? 'rgba(255, 49, 132, 0.12)' : '#FFF176')
+                      ? (changed && contrato ? '#fcd34d' : changed && potencia ? '#fde047' : '#fbbf24')
                       : (changed && contrato 
                         ? 'rgba(0, 0, 208, 0.08)' 
                         : changed && potencia 
                           ? 'rgba(255, 49, 132, 0.08)' 
                           : (rowBg || undefined))
-                    const fontWeight = changed ? 700 : 400
+                    const fontWeight = isHighlighted ? 700 : (changed ? 700 : 400)
+                    const fontSize = isHighlighted ? '0.9375rem' : '0.8125rem'
                     const isFechaEnvio = isFechaEnvioHeader(h)
                     const isFechaDesde = isFechaDesdeHeader(h)
                     const isFechaHasta = isFechaHastaHeader(h)
@@ -1469,8 +1470,8 @@ const ATRPreview: React.FC = () => {
                           background: bg, 
                           fontWeight, 
                           textAlign: align,
-                          fontSize: '0.8125rem',
-                          transition: 'background 0.15s ease',
+                          fontSize,
+                          transition: 'all 0.3s ease',
                           fontFamily: "'Open Sans', sans-serif"
                         }}>
                           {display}
@@ -1480,12 +1481,12 @@ const ATRPreview: React.FC = () => {
                             padding: '0.5rem 0.75rem', 
                             borderTop: '1px solid rgba(0, 0, 208, 0.06)', 
                             borderRight: '1px solid rgba(0, 0, 208, 0.06)', 
-                            color: '#0000D0', 
-                            background: isHighlighted ? '#FFF176' : (rowBg || undefined), 
-                            fontWeight: 700,
-                            fontSize: '0.8125rem',
+                            color: isHighlighted ? '#78350f' : '#0000D0', 
+                            background: isHighlighted ? '#fbbf24' : (rowBg || undefined), 
+                            fontWeight: isHighlighted ? 800 : 700,
+                            fontSize: isHighlighted ? '0.9375rem' : '0.8125rem',
                             fontFamily: "'Open Sans', sans-serif",
-                            transition: 'background 0.3s ease'
+                            transition: 'all 0.3s ease'
                           }}>
                             {contractDurationText.get(contractKey) || ''}
                           </td>
