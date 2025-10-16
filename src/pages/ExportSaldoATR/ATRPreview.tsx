@@ -81,6 +81,8 @@ const ATRPreview: React.FC = () => {
   const [anomalyMonthIdx, setAnomalyMonthIdx] = React.useState<number | null>(null)
   const [heatmapTooltip, setHeatmapTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
   const [barTooltip, setBarTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
+  // Estado para resaltar fila con anomalía en la tabla
+  const [highlightedRowKey, setHighlightedRowKey] = React.useState<string | null>(null)
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -96,6 +98,8 @@ const ATRPreview: React.FC = () => {
       setActiveTab('vista')
       // Habilitar análisis si hay datos cargados (no requiere anulación previa)
       setAllowAnalysis(filteredData.rows.length > 0)
+      // Limpiar resaltado previo al cargar nuevos datos
+      setHighlightedRowKey(null)
       // No cerramos el panel aquí para permitir que persista hasta que el usuario lo cierre manualmente
     }
   }, [filteredData])
@@ -523,16 +527,41 @@ const ATRPreview: React.FC = () => {
       })
       // Detectar primera caída >= 40%
       let firstDrop: number | null = null
+      let anomalyYearMonth: { year: number; month: number } | null = null
       for (let i = 1; i < withVar.length; i++) {
         const prev = withVar[i - 1].consumo
         const curV = withVar[i].consumo
         if (prev > 0) {
           const drop = (prev - curV) / prev
-          if (drop >= 0.4) { firstDrop = i; break }
+          if (drop >= 0.4) { 
+            firstDrop = i
+            anomalyYearMonth = { year: withVar[i].year, month: withVar[i].month }
+            break 
+          }
         }
       }
+      
+      // Identificar la primera fila en la tabla que corresponde al mes de la anomalía
+      let rowKeyToHighlight: string | null = null
+      if (anomalyYearMonth && fechaHeader) {
+        for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+          const r = rows[rowIdx]
+          const d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
+          if (d) {
+            const rowYear = d.getFullYear()
+            const rowMonth = d.getMonth() + 1
+            if (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month) {
+              // Crear clave única para la fila (usando índice + valores clave)
+              rowKeyToHighlight = `${rowIdx}-${r[fechaHeader]}-${r[consumoHeader]}`
+              break
+            }
+          }
+        }
+      }
+      
       setMonthlySeries(withVar)
       setAnomalyMonthIdx(firstDrop)
+      setHighlightedRowKey(rowKeyToHighlight)
       setHeatmapTooltip(null)
       setBarTooltip(null)
       setShowAnalisisPanel(true)
@@ -1249,24 +1278,38 @@ const ATRPreview: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map((r, i) => {
-              const prev = i > 0 ? filteredRows[i - 1] : null
-              const contractKey = contractHeader ? String(r[contractHeader] ?? '').trim() : ''
-              const rowBg = contractColorMap.get(contractKey)
-              return (
-                <tr key={i} style={{ background: rowBg || (i % 2 === 0 ? '#ffffff' : 'rgba(0, 0, 208, 0.02)') }}>
+            {(() => {
+              // Headers para crear clave de resaltado
+              const fechaHeaderForKey = filteredData.headers.find(h => isFechaDesdeHeader(h)) || filteredData.headers.find(h => isFechaHastaHeader(h)) || filteredData.headers.find(h => isPeriodoHeader(h)) || filteredData.headers.find(h => isFechaFactHeader(h))
+              const consumoHeaderForKey = filteredData.headers.find(h => isConsumoActivaHeader(h))
+              
+              return filteredRows.map((r, i) => {
+                const prev = i > 0 ? filteredRows[i - 1] : null
+                const contractKey = contractHeader ? String(r[contractHeader] ?? '').trim() : ''
+                const rowBg = contractColorMap.get(contractKey)
+                
+                // Crear clave única para esta fila y verificar si debe resaltarse
+                const rowKey = fechaHeaderForKey && consumoHeaderForKey 
+                  ? `${i}-${r[fechaHeaderForKey]}-${r[consumoHeaderForKey]}`
+                  : null
+                const isHighlighted = rowKey === highlightedRowKey
+                const finalBg = isHighlighted ? '#FFF176' : (rowBg || (i % 2 === 0 ? '#ffffff' : 'rgba(0, 0, 208, 0.02)'))
+                
+                return (
+                  <tr key={i} style={{ background: finalBg, transition: 'background 0.3s ease' }}>
                   <td style={{ 
                     position: 'sticky', 
                     left: 0, 
                     zIndex: 1, 
-                    background: rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.02)' : 'rgba(0, 0, 208, 0.04)'), 
+                    background: isHighlighted ? '#FFF176' : (rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.02)' : 'rgba(0, 0, 208, 0.04)')), 
                     borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
                     color: '#64748b', 
                     padding: '0.5rem 0.75rem', 
                     textAlign: 'right',
                     fontWeight: 600,
                     fontSize: '0.75rem',
-                    fontFamily: "'Open Sans', sans-serif"
+                    fontFamily: "'Open Sans', sans-serif",
+                    transition: 'background 0.3s ease'
                   }}>
                     {i + 1}
                   </td>
@@ -1288,11 +1331,14 @@ const ATRPreview: React.FC = () => {
                     // Colores corporativos para cambios: contrato -> Primary #0000D0, potencia -> Secondary #FF3184
                     const color = changed ? (contrato ? '#0000D0' : '#FF3184') : '#1e293b'
                     // Fondos corporativos para cambios: contrato -> azul suave, potencia -> rosa suave
-                    const bg = changed && contrato 
-                      ? 'rgba(0, 0, 208, 0.08)' 
-                      : changed && potencia 
-                        ? 'rgba(255, 49, 132, 0.08)' 
-                        : (rowBg || undefined)
+                    // Si la fila está resaltada, usar amarillo en lugar de rowBg
+                    const bg = isHighlighted 
+                      ? (changed && contrato ? 'rgba(0, 0, 208, 0.12)' : changed && potencia ? 'rgba(255, 49, 132, 0.12)' : '#FFF176')
+                      : (changed && contrato 
+                        ? 'rgba(0, 0, 208, 0.08)' 
+                        : changed && potencia 
+                          ? 'rgba(255, 49, 132, 0.08)' 
+                          : (rowBg || undefined))
                     const fontWeight = changed ? 700 : 400
                     const isFechaEnvio = isFechaEnvioHeader(h)
                     const isFechaDesde = isFechaDesdeHeader(h)
@@ -1327,10 +1373,12 @@ const ATRPreview: React.FC = () => {
                             borderTop: '1px solid rgba(0, 0, 208, 0.06)', 
                             borderRight: '1px solid rgba(0, 0, 208, 0.06)', 
                             color: '#0000D0', 
-                            background: rowBg || undefined, 
+                            background: isHighlighted ? '#FFF176' : (rowBg || undefined), 
                             fontWeight: 700,
                             fontSize: '0.8125rem',
-                            fontFamily: "'Open Sans', sans-serif"
+                            fontFamily: "'Open Sans', sans-serif",
+                            transition: 'background 0.3s ease'
+                          }}>
                           }}>
                             {contractDurationText.get(contractKey) || ''}
                           </td>
@@ -1340,7 +1388,8 @@ const ATRPreview: React.FC = () => {
                   })}
                 </tr>
               )
-            })}
+              })
+            })()}
           </tbody>
         </table>
       </div>
