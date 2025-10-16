@@ -97,7 +97,9 @@ const ATRPreview: React.FC = () => {
       setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
       setActiveTab('vista')
       // Habilitar análisis siempre que haya datos cargados
-      setAllowAnalysis(filteredData.rows.length > 0)
+      const shouldAllow = filteredData.rows.length > 0
+      console.log('🔄 useEffect filteredData ejecutado:', { rowsCount: filteredData.rows.length, allowAnalysis: shouldAllow })
+      setAllowAnalysis(shouldAllow)
       // Limpiar resaltado previo al cargar nuevos datos
       setAnomalyYearMonth(null)
       // No cerramos el panel aquí para permitir que persista hasta que el usuario lo cierre manualmente
@@ -476,10 +478,15 @@ const ATRPreview: React.FC = () => {
 
   // Construir serie mensual y abrir panel con Heatmap + Barras
   const handleDetectarAnomalias = React.useCallback(() => {
+    console.log('🔍 handleDetectarAnomalias llamado', { allowAnalysis, hasFilteredData: !!filteredData, keptRowsLength: keptRows?.length, filteredRowsLength: filteredData?.rows?.length })
     try {
-      if (!allowAnalysis) return
+      if (!allowAnalysis) {
+        console.log('❌ Análisis bloqueado: allowAnalysis =', allowAnalysis)
+        return
+      }
       const headers = filteredData?.headers || []
       const rows = keptRows && keptRows.length > 0 ? keptRows : (filteredData?.rows || [])
+      console.log('📊 Datos para análisis:', { headersLength: headers.length, rowsLength: rows.length })
       if (!headers.length || !rows.length) { window.alert('No hay datos para analizar.'); return }
       
       // Buscar headers exactamente como en la tabla (mismo orden de prioridad)
@@ -530,14 +537,17 @@ const ATRPreview: React.FC = () => {
       // Detectar primera caída >= 40%
       let firstDrop: number | null = null
       let detectedAnomalyYM: { year: number; month: number } | null = null
+      console.log('🔎 Analizando', withVar.length, 'meses para detectar anomalías...')
       for (let i = 1; i < withVar.length; i++) {
         const prev = withVar[i - 1].consumo
         const curV = withVar[i].consumo
         if (prev > 0) {
           const drop = (prev - curV) / prev
+          console.log(`📉 Mes ${i}: ${withVar[i].year}-${pad2(withVar[i].month)} | Anterior: ${prev.toFixed(2)} | Actual: ${curV.toFixed(2)} | Caída: ${(drop * 100).toFixed(1)}%`)
           if (drop >= 0.4) { 
             firstDrop = i
             detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
+            console.log('⚠️ ANOMALÍA DETECTADA en mes', firstDrop, ':', detectedAnomalyYM)
             break 
           }
         }
@@ -549,7 +559,9 @@ const ATRPreview: React.FC = () => {
       setHeatmapTooltip(null)
       setBarTooltip(null)
       setShowAnalisisPanel(true)
-    } catch {
+      console.log('✅ Panel de análisis abierto:', { series: withVar.length, anomalyIdx: firstDrop, anomalyYM: detectedAnomalyYM })
+    } catch (err) {
+      console.error('❌ Error en análisis:', err)
       window.alert('Error al analizar anomalías.')
     }
   }, [allowAnalysis, filteredData, keptRows])
