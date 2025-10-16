@@ -1384,6 +1384,9 @@ const ATRPreview: React.FC = () => {
                     const rowYear = d.getFullYear()
                     const rowMonth = d.getMonth() + 1
                     isHighlighted = (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month)
+                    if (isHighlighted) {
+                      console.log('🎯 Fila resaltada encontrada:', { rowIndex: i + 1, rowYear, rowMonth, anomalyYearMonth })
+                    }
                   }
                 }
                 
@@ -1412,7 +1415,8 @@ const ATRPreview: React.FC = () => {
                     fontFamily: "'Open Sans', sans-serif",
                     transition: 'all 0.3s ease'
                   }}>
-                    {isHighlighted && '👉 '}{i + 1}
+                    {isHighlighted && <span style={{ marginRight: '0.25rem', fontSize: '1rem' }}>&#128073;</span>}
+                    {i + 1}
                   </td>
                   {filteredData.headers.map((h, j) => {
                     const val = String(r[h] ?? '')
