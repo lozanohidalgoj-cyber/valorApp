@@ -122,9 +122,9 @@ const ATRPreview: React.FC = () => {
     }
   }, [filteredData])
 
-  // Scroll automático a la fila con anomalía cuando se detecta
+  // Scroll automático a la fila con anomalía cuando se detecta o cambia
   React.useEffect(() => {
-    if (anomalyYearMonth && showAnalisisPanel) {
+    if (anomalyYearMonth) {
       // Esperar a que el DOM se actualice
       setTimeout(() => {
         // Buscar la fila resaltada en la tabla
@@ -132,20 +132,18 @@ const ATRPreview: React.FC = () => {
         if (table) {
           const rows = table.querySelectorAll('tbody tr')
           rows.forEach((row, index) => {
-            const firstCell = row.querySelector('td')
-            // Buscar por el emoji usando código Unicode o verificar el estilo de fondo
-            const rowStyle = window.getComputedStyle(row)
-            const hasHighlight = rowStyle.backgroundImage.includes('linear-gradient') && rowStyle.boxShadow !== 'none'
-            if (firstCell && hasHighlight) {
+            // Verificar si la fila tiene el atributo data-highlighted
+            const isHighlighted = row.getAttribute('data-highlighted') === 'true'
+            if (isHighlighted) {
               // Scroll suave a la fila
               row.scrollIntoView({ behavior: 'smooth', block: 'center' })
               console.log('📍 Scroll automático a fila', index + 1, 'con anomalía')
             }
           })
         }
-      }, 500) // Delay para asegurar que el panel y la tabla están renderizados
+      }, 300) // Delay para asegurar que la tabla está renderizada
     }
-  }, [anomalyYearMonth, showAnalisisPanel])
+  }, [anomalyYearMonth]) // Solo depende de anomalyYearMonth, no del panel
 
   const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
   // Detección robusta de columna de potencia: acepta variantes como "Pot(kW)", "Potencia(kW)", "Potencia kW", etc.
@@ -1812,23 +1810,8 @@ const ATRPreview: React.FC = () => {
                 console.log('👆 Click en celda del Heatmap:', { year, month })
                 // Actualizar anomalyYearMonth con el mes clickeado
                 setAnomalyYearMonth({ year, month })
-                // Cerrar el panel de análisis
-                setShowAnalisisPanel(false)
-                // Hacer scroll a la fila en la tabla
-                setTimeout(() => {
-                  const table = document.querySelector('table')
-                  if (table) {
-                    const rows = table.querySelectorAll('tbody tr')
-                    rows.forEach((row) => {
-                      const rowStyle = window.getComputedStyle(row)
-                      const hasHighlight = rowStyle.backgroundColor.includes('252, 211, 77') || row.getAttribute('data-highlighted') === 'true'
-                      if (hasHighlight) {
-                        row.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                        console.log('📍 Scroll a fila resaltada')
-                      }
-                    })
-                  }
-                }, 300)
+                // NO cerrar el panel - dejar que el usuario vea el resaltado
+                console.log('✅ Anomalía actualizada a:', { year, month }, '- Revisa la tabla de Vista previa ATR')
               }}
             />
             {heatmapTooltip && (
