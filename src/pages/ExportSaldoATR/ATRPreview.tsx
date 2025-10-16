@@ -122,6 +122,28 @@ const ATRPreview: React.FC = () => {
     }
   }, [filteredData])
 
+  // Scroll automático a la fila con anomalía cuando se detecta
+  React.useEffect(() => {
+    if (anomalyYearMonth && showAnalisisPanel) {
+      // Esperar a que el DOM se actualice
+      setTimeout(() => {
+        // Buscar la fila resaltada en la tabla
+        const table = document.querySelector('table')
+        if (table) {
+          const rows = table.querySelectorAll('tbody tr')
+          rows.forEach((row, index) => {
+            const firstCell = row.querySelector('td')
+            if (firstCell && firstCell.textContent?.includes('👉')) {
+              // Scroll suave a la fila
+              row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              console.log('📍 Scroll automático a fila', index + 1, 'con anomalía')
+            }
+          })
+        }
+      }, 500) // Delay para asegurar que el panel y la tabla están renderizados
+    }
+  }, [anomalyYearMonth, showAnalisisPanel])
+
   const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
   // Detección robusta de columna de potencia: acepta variantes como "Pot(kW)", "Potencia(kW)", "Potencia kW", etc.
   const isPotenciaHeader = (h: string) => {
@@ -728,6 +750,20 @@ const ATRPreview: React.FC = () => {
       background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
       paddingBottom: '70px' // Espacio para bottom bar
     }}>
+      {/* Estilos globales para animaciones */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { 
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+            transform: scale(1);
+          }
+          50% { 
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+            transform: scale(1.01);
+          }
+        }
+      `}</style>
+      
       {/* Panel lateral izquierdo: Resumen por año (contenido visible cuando showYearPanel = true) */}
       {showYearPanel && (
         <div style={{
@@ -993,6 +1029,30 @@ const ATRPreview: React.FC = () => {
               fontWeight: 600
             }}>
               Fecha del acta: <strong style={{ color: '#FF3184' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
+            </div>
+          )}
+          {/* Mensaje informativo cuando hay anomalía detectada */}
+          {anomalyYearMonth && (
+            <div style={{
+              marginTop: '0.75rem',
+              background: 'linear-gradient(135deg, #fbbf24 0%, #fcd34d 100%)',
+              border: '2px solid #f59e0b',
+              color: '#78350f',
+              padding: '0.75rem 1rem',
+              borderRadius: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)',
+              animation: 'pulse 2s ease-in-out infinite'
+            }}>
+              <span style={{ fontSize: '1.25rem' }}>👉</span>
+              <span>
+                Anomalía detectada en {new Date(anomalyYearMonth.year, anomalyYearMonth.month - 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()} 
+                — La fila correspondiente está resaltada en la tabla
+              </span>
             </div>
           )}
         </div>
