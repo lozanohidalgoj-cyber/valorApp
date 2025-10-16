@@ -1953,17 +1953,17 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
   // Matriz por (y,m)
   const matrix = new Map<string, MonthlyPoint>()
   for (const d of data) matrix.set(`${d.year}-${d.month}`, d)
-  // Escala de color Azul->Amarillo->Rojo (baja->media->alta) usando cuantiles para mejor distribución visual
+  // Escala de color Verde->Amarillo->Rojo (baja->media->alta) usando cuantiles para mejor distribución visual
   const sorted = [...data.map(d => d.consumo)].sort((a,b) => a - b)
   const min = sorted[0] || 0
   const q50 = sorted[Math.floor(sorted.length * 0.5)] || 0
   const max = sorted[sorted.length - 1] || 1
   const colorFor = (v: number) => {
-    // Normalizar usando cuantiles: <q50 = azul->amarillo, >=q50 = amarillo->rojo
+    // Normalizar usando cuantiles: <q50 = verde->amarillo, >=q50 = amarillo->rojo
     if (v <= q50) {
       const range = q50 - min
       const t = range > 0 ? (v - min) / range : 0
-      return mixColor('#1d4ed8', '#fbbf24', t)
+      return mixColor('#10b981', '#fbbf24', t)
     }
     const range = max - q50
     const t = range > 0 ? (v - q50) / range : 0
@@ -2140,16 +2140,16 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
         <div style={{ fontWeight: 700, color: '#0000D0', fontSize: '0.875rem', marginBottom: '0.5rem', fontFamily: "'Lato', sans-serif" }}>📊 Leyenda del mapa de calor</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8125rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#1d4ed8', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Azul:</strong> Consumo bajo</span>
+            <div style={{ width: 24, height: 24, background: '#10b981', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Verde:</strong> Consumo bajo (valores normales)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#60a5fa', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Azul claro:</strong> Consumo dentro del promedio</span>
+            <div style={{ width: 24, height: 24, background: '#84cc16', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Verde claro:</strong> Consumo dentro del promedio</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 24, height: 24, background: '#fbbf24', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Amarillo:</strong> Consumo medio-alto</span>
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Amarillo:</strong> Consumo medio-alto (advertencia)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 24, height: 24, background: '#f97316', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
@@ -2204,7 +2204,7 @@ function BarsChart({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomal
           return (
             <g key={pt.key}>
               <rect x={x(i) + 2} width={barW} y={y(pt.consumo)} height={Math.max(1, m.t + innerH - y(pt.consumo))}
-                fill={isAnomaly ? '#dc2626' : '#1d4ed8'} stroke="#ffffff" strokeWidth={1}
+                fill={isAnomaly ? '#dc2626' : '#10b981'} stroke="#ffffff" strokeWidth={1}
                 rx={4} ry={4}
                 onMouseEnter={(e) => handleEnter(pt, i, e)} onMouseLeave={handleLeave}
               />
