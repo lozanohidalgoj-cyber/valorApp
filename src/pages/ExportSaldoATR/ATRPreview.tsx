@@ -1406,8 +1406,13 @@ const ATRPreview: React.FC = () => {
                 totalRows: filteredRows.length, 
                 anomalyYearMonth, 
                 fechaHeaderForKey,
-                hasAnomaly: !!anomalyYearMonth 
+                hasAnomaly: !!anomalyYearMonth,
+                headers: filteredData.headers 
               })
+              
+              if (anomalyYearMonth) {
+                console.log('🎯 Buscando fila con anomalía:', anomalyYearMonth)
+              }
               
               return filteredRows.map((r, i) => {
                 const prev = i > 0 ? filteredRows[i - 1] : null
@@ -1420,29 +1425,48 @@ const ATRPreview: React.FC = () => {
                   const fechaVal = String(r[fechaHeaderForKey] ?? '')
                   const d = isPeriodoHeader(fechaHeaderForKey) ? parsePeriodoStart(fechaVal) : parseDateLoose(fechaVal)
                   if (d) {
-                    const rowYear = d.getFullYear()
-                    const rowMonth = d.getMonth() + 1
+                    // Si es "Fecha desde", el consumo corresponde al mes ANTERIOR
+                    // Por ejemplo: Fecha desde 02/12/2022 contiene el consumo de noviembre 2022
+                    let rowYear = d.getFullYear()
+                    let rowMonth = d.getMonth() + 1
+                    
+                    if (isFechaDesdeHeader(fechaHeaderForKey)) {
+                      // Restar un mes para obtener el mes del consumo
+                      const consumptionDate = new Date(d)
+                      consumptionDate.setMonth(consumptionDate.getMonth() - 1)
+                      rowYear = consumptionDate.getFullYear()
+                      rowMonth = consumptionDate.getMonth() + 1
+                    }
+                    
                     isHighlighted = (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month)
                     
-                    // Log de cada fila para debugging
-                    if (i < 3 || isHighlighted) {
-                      console.log(`🔍 Fila ${i + 1}:`, { 
-                        fechaVal, 
-                        rowYear, 
-                        rowMonth, 
-                        anomalyYear: anomalyYearMonth.year, 
-                        anomalyMonth: anomalyYearMonth.month,
-                        isHighlighted 
-                      })
-                    }
+                    // Log TODAS las filas para debugging
+                    console.log(`🔍 Fila ${i + 1}:`, { 
+                      fechaHeader: fechaHeaderForKey,
+                      fechaVal, 
+                      parsedDate: d.toISOString(),
+                      rowYear, 
+                      rowMonth, 
+                      anomalyYear: anomalyYearMonth.year, 
+                      anomalyMonth: anomalyYearMonth.month,
+                      match: isHighlighted 
+                    })
                     
                     if (isHighlighted) {
-                      console.log('🎯 ✅ FILA RESALTADA ENCONTRADA:', { rowIndex: i + 1, rowYear, rowMonth, anomalyYearMonth })
+                      console.log('🎯 ✅ ✅ ✅ FILA RESALTADA ENCONTRADA:', { 
+                        rowIndex: i + 1, 
+                        rowYear, 
+                        rowMonth, 
+                        anomalyYearMonth,
+                        fechaVal 
+                      })
                     }
                   } else {
-                    if (i < 3) {
-                      console.log(`⚠️ Fila ${i + 1}: No se pudo parsear fecha`, fechaVal)
-                    }
+                    console.log(`⚠️ Fila ${i + 1}: No se pudo parsear fecha`, { fechaHeader: fechaHeaderForKey, fechaVal })
+                  }
+                } else {
+                  if (i === 0) {
+                    console.log('❌ No hay anomalyYearMonth o fechaHeaderForKey:', { anomalyYearMonth, fechaHeaderForKey })
                   }
                 }
                 
