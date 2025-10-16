@@ -645,6 +645,7 @@ const ATRPreview: React.FC = () => {
             const mesesParaVerificar = Math.min(3, withVar.length - i - 1) // 2-3 meses siguientes (si existen)
             const umbralRecuperacion = prev * 0.9 // 90% del consumo previo a la caída
             
+            // IMPORTANTE: Solo marcar como anomalía si HAY suficientes meses para verificar persistencia
             if (mesesParaVerificar >= 2) {
               let seMantieneAnomalia = true
               
@@ -667,13 +668,12 @@ const ATRPreview: React.FC = () => {
                 detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
                 console.log('⚠️ ANOMALÍA CONFIRMADA (se mantiene baja por', mesesParaVerificar, 'meses) en mes', firstDrop, ':', detectedAnomalyYM)
                 break
+              } else {
+                console.log(`  ℹ️ Descenso temporal (se recupera). No es anomalía sostenida.`)
               }
             } else {
-              // Si no hay suficientes meses siguientes para verificar, marcar como anomalía (caso borde)
-              console.log(`  ⚠️ No hay suficientes meses siguientes para confirmar. Marcando como anomalía.`)
-              firstDrop = i
-              detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
-              break
+              // Si no hay suficientes meses siguientes, NO marcar como anomalía (no hay confirmación)
+              console.log(`  ℹ️ No hay suficientes meses siguientes (solo ${mesesParaVerificar}) para confirmar persistencia. No se marca como anomalía.`)
             }
           }
         }
