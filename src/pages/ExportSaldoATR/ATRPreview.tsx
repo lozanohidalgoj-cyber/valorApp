@@ -133,7 +133,10 @@ const ATRPreview: React.FC = () => {
           const rows = table.querySelectorAll('tbody tr')
           rows.forEach((row, index) => {
             const firstCell = row.querySelector('td')
-            if (firstCell && firstCell.textContent?.includes('👉')) {
+            // Buscar por el emoji usando código Unicode o verificar el estilo de fondo
+            const rowStyle = window.getComputedStyle(row)
+            const hasHighlight = rowStyle.backgroundImage.includes('linear-gradient') && rowStyle.boxShadow !== 'none'
+            if (firstCell && hasHighlight) {
               // Scroll suave a la fila
               row.scrollIntoView({ behavior: 'smooth', block: 'center' })
               console.log('📍 Scroll automático a fila', index + 1, 'con anomalía')
@@ -1048,7 +1051,7 @@ const ATRPreview: React.FC = () => {
               boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)',
               animation: 'pulse 2s ease-in-out infinite'
             }}>
-              <span style={{ fontSize: '1.25rem' }}>👉</span>
+              <span style={{ fontSize: '1.25rem' }} dangerouslySetInnerHTML={{ __html: '&#128073;' }} />
               <span>
                 Anomalía detectada en {new Date(anomalyYearMonth.year, anomalyYearMonth.month - 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()} 
                 — La fila correspondiente está resaltada en la tabla
