@@ -1442,17 +1442,18 @@ const ATRPreview: React.FC = () => {
                     position: 'sticky', 
                     left: 0, 
                     zIndex: 1, 
-                    background: isHighlighted ? '#fbbf24' : (rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.02)' : 'rgba(0, 0, 208, 0.04)')), 
-                    borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
-                    color: isHighlighted ? '#78350f' : '#64748b', 
-                    padding: '0.5rem 0.75rem', 
+                    background: isHighlighted ? '#F59E0B' : (rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.02)' : 'rgba(0, 0, 208, 0.04)')), 
+                    borderRight: isHighlighted ? '2px solid #D97706' : '1px solid rgba(0, 0, 208, 0.08)', 
+                    color: isHighlighted ? '#FFFFFF' : '#64748b', 
+                    padding: isHighlighted ? '0.625rem 0.875rem' : '0.5rem 0.75rem', 
                     textAlign: 'right',
-                    fontWeight: isHighlighted ? 800 : 600,
-                    fontSize: isHighlighted ? '0.875rem' : '0.75rem',
+                    fontWeight: isHighlighted ? 900 : 600,
+                    fontSize: isHighlighted ? '1rem' : '0.75rem',
                     fontFamily: "'Open Sans', sans-serif",
-                    transition: 'all 0.3s ease'
+                    transition: 'all 0.3s ease',
+                    boxShadow: isHighlighted ? '0 2px 8px rgba(245, 158, 11, 0.3)' : 'none'
                   }}>
-                    {isHighlighted && <span style={{ marginRight: '0.25rem', fontSize: '1rem' }}>&#128073;</span>}
+                    {isHighlighted && <span style={{ marginRight: '0.375rem', fontSize: '1.125rem' }}>&#128073;</span>}
                     {i + 1}
                   </td>
                   {filteredData.headers.map((h, j) => {
@@ -1471,18 +1472,18 @@ const ATRPreview: React.FC = () => {
                       }
                     }
                     // Colores corporativos para cambios: contrato -> Primary #0000D0, potencia -> Secondary #FF3184
-                    const color = changed ? (contrato ? '#0000D0' : '#FF3184') : (isHighlighted ? '#78350f' : '#1e293b')
+                    const color = changed ? (contrato ? '#0000D0' : '#FF3184') : (isHighlighted ? '#92400E' : '#1e293b')
                     // Fondos corporativos para cambios: contrato -> azul suave, potencia -> rosa suave
-                    // Si la fila está resaltada, usar amarillo en lugar de rowBg
+                    // Si la fila está resaltada, usar amarillo brillante
                     const bg = isHighlighted 
-                      ? (changed && contrato ? '#fcd34d' : changed && potencia ? '#fde047' : '#fbbf24')
+                      ? '#FCD34D' // Amarillo brillante uniforme para todas las celdas resaltadas
                       : (changed && contrato 
                         ? 'rgba(0, 0, 208, 0.08)' 
                         : changed && potencia 
                           ? 'rgba(255, 49, 132, 0.08)' 
                           : (rowBg || undefined))
-                    const fontWeight = isHighlighted ? 700 : (changed ? 700 : 400)
-                    const fontSize = isHighlighted ? '0.9375rem' : '0.8125rem'
+                    const fontWeight = isHighlighted ? 800 : (changed ? 700 : 400)
+                    const fontSize = isHighlighted ? '1rem' : '0.8125rem'
                     const isFechaEnvio = isFechaEnvioHeader(h)
                     const isFechaDesde = isFechaDesdeHeader(h)
                     const isFechaHasta = isFechaHastaHeader(h)
@@ -1512,13 +1513,13 @@ const ATRPreview: React.FC = () => {
                         </td>
                         {j === cupsIndex && (
                           <td style={{ 
-                            padding: '0.5rem 0.75rem', 
+                            padding: isHighlighted ? '0.625rem 0.875rem' : '0.5rem 0.75rem', 
                             borderTop: '1px solid rgba(0, 0, 208, 0.06)', 
                             borderRight: '1px solid rgba(0, 0, 208, 0.06)', 
-                            color: isHighlighted ? '#78350f' : '#0000D0', 
-                            background: isHighlighted ? '#fbbf24' : (rowBg || undefined), 
+                            color: isHighlighted ? '#92400E' : '#0000D0', 
+                            background: isHighlighted ? '#FCD34D' : (rowBg || undefined), 
                             fontWeight: isHighlighted ? 800 : 700,
-                            fontSize: isHighlighted ? '0.9375rem' : '0.8125rem',
+                            fontSize: isHighlighted ? '1rem' : '0.8125rem',
                             fontFamily: "'Open Sans', sans-serif",
                             transition: 'all 0.3s ease'
                           }}>
