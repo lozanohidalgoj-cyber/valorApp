@@ -1423,17 +1423,21 @@ const ATRPreview: React.FC = () => {
                   }
                 }
                 
-                // Color de resaltado más visible: degradado naranja-amarillo con borde
-                const highlightBg = 'linear-gradient(90deg, #fbbf24 0%, #fcd34d 100%)'
+                // Color de resaltado más visible: amarillo brillante con borde y sombra
+                const highlightBg = '#FCD34D' // Amarillo brillante sólido
                 const finalBg = isHighlighted ? highlightBg : (rowBg || (i % 2 === 0 ? '#ffffff' : 'rgba(0, 0, 208, 0.02)'))
                 
                 return (
-                  <tr key={i} style={{ 
-                    background: finalBg, 
-                    transition: 'all 0.3s ease',
-                    boxShadow: isHighlighted ? '0 0 0 2px #f59e0b inset, 0 4px 12px rgba(245, 158, 11, 0.3)' : 'none',
-                    position: 'relative'
-                  }}>
+                  <tr 
+                    key={i} 
+                    data-highlighted={isHighlighted ? 'true' : 'false'}
+                    style={{ 
+                      background: finalBg, 
+                      transition: 'all 0.3s ease',
+                      boxShadow: isHighlighted ? '0 0 0 3px #F59E0B inset, 0 6px 16px rgba(245, 158, 11, 0.4)' : 'none',
+                      position: 'relative',
+                      borderLeft: isHighlighted ? '5px solid #F59E0B' : 'none'
+                    }}>
                   <td style={{ 
                     position: 'sticky', 
                     left: 0, 
