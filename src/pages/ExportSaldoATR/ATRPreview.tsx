@@ -96,10 +96,6 @@ const ATRPreview: React.FC = () => {
   const [monthlySeries, setMonthlySeries] = React.useState<Array<{ key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }>>([])
   const [anomalyMonthIdx, setAnomalyMonthIdx] = React.useState<number | null>(null)
   const [heatmapTooltip, setHeatmapTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
-    Variación = (ConsumoAnterior - ConsumoActual) / ConsumoAnterior
-  
-  Si el resultado es POSITIVO → el consumo BAJÓ
-  Si el resultado es NEGATIVO → el consumo SUBIÓBarTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
   // Estado para resaltar fila con anomalía en la tabla (guardar año/mes en lugar de clave)
   const [anomalyYearMonth, setAnomalyYearMonth] = React.useState<{ year: number; month: number } | null>(null)
   const total = filteredRows.length
