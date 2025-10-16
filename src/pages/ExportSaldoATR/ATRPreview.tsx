@@ -87,8 +87,18 @@ const ATRPreview: React.FC = () => {
   const justConfirmedAnulacion = React.useRef<boolean>(false)
   const total = filteredRows.length
   
+  // Debug: log estado de allowAnalysis
+  React.useEffect(() => {
+    console.log('🔘 allowAnalysis cambió a:', allowAnalysis)
+  }, [allowAnalysis])
+  
   // Actualizar filteredRows cuando cambien los datos
   React.useEffect(() => {
+    console.log('🔄 useEffect filteredData ejecutado', { 
+      hasRows: !!filteredData?.rows, 
+      justConfirmed: justConfirmedAnulacion.current 
+    })
+    
     if (filteredData?.rows) {
       setFilteredRows(filteredData.rows)
       setKeptRows(filteredData.rows)
@@ -100,8 +110,10 @@ const ATRPreview: React.FC = () => {
       setActiveTab('vista')
       // Solo deshabilitar análisis si NO venimos de una confirmación de anulación
       if (!justConfirmedAnulacion.current) {
+        console.log('⚠️ Deshabilitando allowAnalysis')
         setAllowAnalysis(false)
       } else {
+        console.log('✅ Manteniendo allowAnalysis (viene de confirmación)')
         // Resetear la bandera después de usar
         justConfirmedAnulacion.current = false
       }
@@ -1606,6 +1618,7 @@ const ATRPreview: React.FC = () => {
                 setActiveTab('vista')
                 // Marcar que venimos de una confirmación para que el useEffect no resetee allowAnalysis
                 justConfirmedAnulacion.current = true
+                console.log('🎯 Confirmación de anulación - marcando bandera y habilitando análisis')
                 // Habilitar análisis tras una anulación confirmada
                 setAllowAnalysis(true)
                 // Limpiar el estado del modal de previsualización
