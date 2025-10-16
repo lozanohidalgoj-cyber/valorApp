@@ -1953,21 +1953,22 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
   // Matriz por (y,m)
   const matrix = new Map<string, MonthlyPoint>()
   for (const d of data) matrix.set(`${d.year}-${d.month}`, d)
-  // Escala de color Verde->Amarillo->Rojo (baja->media->alta) usando cuantiles para mejor distribución visual
+  // Escala de color Rojo->Amarillo->Verde (baja->media->alta) usando cuantiles para mejor distribución visual
+  // Invertida: consumos bajos son problemáticos (rojo), consumos altos son normales (verde)
   const sorted = [...data.map(d => d.consumo)].sort((a,b) => a - b)
   const min = sorted[0] || 0
   const q50 = sorted[Math.floor(sorted.length * 0.5)] || 0
   const max = sorted[sorted.length - 1] || 1
   const colorFor = (v: number) => {
-    // Normalizar usando cuantiles: <q50 = verde->amarillo, >=q50 = amarillo->rojo
+    // Normalizar usando cuantiles: <q50 = rojo->amarillo, >=q50 = amarillo->verde
     if (v <= q50) {
       const range = q50 - min
       const t = range > 0 ? (v - min) / range : 0
-      return mixColor('#10b981', '#fbbf24', t)
+      return mixColor('#ef4444', '#fbbf24', t)
     }
     const range = max - q50
     const t = range > 0 ? (v - q50) / range : 0
-    return mixColor('#fbbf24', '#ef4444', t)
+    return mixColor('#fbbf24', '#10b981', t)
   }
   const mixColor = (a: string, b: string, t: number) => {
     const pa = hexToRgb(a); const pb = hexToRgb(b)
@@ -2006,13 +2007,13 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
 
   const monthsES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
-  // Función para determinar el motivo del color según el consumo y la escala de cuantiles
+  // Función para determinar el motivo del color según el consumo y la escala de cuantiles (invertida)
   const getMotivoColor = (v: number, isAnomaly: boolean) => {
     if (isAnomaly) return 'Descenso anómalo detectado (≥40%)'
-    if (v <= min + (q50 - min) * 0.33) return 'Consumo bajo'
-    if (v <= q50) return 'Consumo dentro del promedio'
-    if (v <= q50 + (max - q50) * 0.5) return 'Consumo medio-alto'
-    return 'Consumo alto o pico'
+    if (v <= min + (q50 - min) * 0.33) return 'Consumo bajo o anómalo (posible irregularidad)'
+    if (v <= q50) return 'Consumo bajo-medio (requiere observación)'
+    if (v <= q50 + (max - q50) * 0.5) return 'Consumo medio-alto (dentro del promedio)'
+    return 'Consumo normal o alto (estable y esperado)'
   }
 
   const handleEnter = (pt: MonthlyPoint, e: React.MouseEvent<SVGRectElement>) => {
@@ -2140,24 +2141,24 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
         <div style={{ fontWeight: 700, color: '#0000D0', fontSize: '0.875rem', marginBottom: '0.5rem', fontFamily: "'Lato', sans-serif" }}>📊 Leyenda del mapa de calor</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8125rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#10b981', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Verde:</strong> Consumo bajo (valores normales)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#84cc16', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Verde claro:</strong> Consumo dentro del promedio</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#fbbf24', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Amarillo:</strong> Consumo medio-alto (advertencia)</span>
+            <div style={{ width: 24, height: 24, background: '#ef4444', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#dc2626' }}>Rojo:</strong> Consumo bajo o anómalo (posible irregularidad)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 24, height: 24, background: '#f97316', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Naranja:</strong> Aumento de consumo</span>
+            <span style={{ color: '#334155' }}><strong style={{ color: '#ea580c' }}>Naranja:</strong> Consumo bajo-medio (requiere observación)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#ef4444', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Rojo:</strong> Consumo alto o pico</span>
+            <div style={{ width: 24, height: 24, background: '#fbbf24', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Amarillo:</strong> Consumo medio (en seguimiento)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 24, height: 24, background: '#84cc16', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Verde claro:</strong> Consumo medio-alto (dentro del promedio)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 24, height: 24, background: '#10b981', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#059669' }}>Verde:</strong> Consumo normal o alto (estable y esperado)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 24, height: 24, background: '#ef4444', borderRadius: 6, border: '3px solid #dc2626' }} />
@@ -2204,7 +2205,7 @@ function BarsChart({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomal
           return (
             <g key={pt.key}>
               <rect x={x(i) + 2} width={barW} y={y(pt.consumo)} height={Math.max(1, m.t + innerH - y(pt.consumo))}
-                fill={isAnomaly ? '#dc2626' : '#10b981'} stroke="#ffffff" strokeWidth={1}
+                fill={isAnomaly ? '#dc2626' : '#3b82f6'} stroke="#ffffff" strokeWidth={1}
                 rx={4} ry={4}
                 onMouseEnter={(e) => handleEnter(pt, i, e)} onMouseLeave={handleLeave}
               />
