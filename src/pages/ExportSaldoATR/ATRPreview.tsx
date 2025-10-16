@@ -1797,6 +1797,28 @@ const ATRPreview: React.FC = () => {
               data={monthlySeries}
               anomalyIdx={anomalyMonthIdx}
               onHover={(v) => setHeatmapTooltip(v)}
+              onClick={(year, month) => {
+                console.log('👆 Click en celda del Heatmap:', { year, month })
+                // Actualizar anomalyYearMonth con el mes clickeado
+                setAnomalyYearMonth({ year, month })
+                // Cerrar el panel de análisis
+                setShowAnalisisPanel(false)
+                // Hacer scroll a la fila en la tabla
+                setTimeout(() => {
+                  const table = document.querySelector('table')
+                  if (table) {
+                    const rows = table.querySelectorAll('tbody tr')
+                    rows.forEach((row) => {
+                      const rowStyle = window.getComputedStyle(row)
+                      const hasHighlight = rowStyle.backgroundColor.includes('252, 211, 77') || row.getAttribute('data-highlighted') === 'true'
+                      if (hasHighlight) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        console.log('📍 Scroll a fila resaltada')
+                      }
+                    })
+                  }
+                }, 300)
+              }}
             />
             {heatmapTooltip && (
               <div style={{ position: 'fixed', transform: `translate(${heatmapTooltip.x}px, ${heatmapTooltip.y}px)`, background: '#111827', color: '#fff', padding: '6px 10px', borderRadius: 8, fontSize: 12, pointerEvents: 'none', boxShadow: '0 6px 16px rgba(0,0,0,0.3)' }}>
@@ -2051,7 +2073,12 @@ type MonthlyPoint = { key: string; year: number; month: number; fecha: Date; con
 type Hover = { x: number; y: number; text: string }
 
 // Heatmap: x = Años, y = Meses (1..12). Color por consumo. Borde rojo en primera anomalía.
-function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyIdx: number | null; onHover: (_h: Hover | null) => void }) {
+function Heatmap({ data, anomalyIdx, onHover, onClick }: { 
+  data: MonthlyPoint[]; 
+  anomalyIdx: number | null; 
+  onHover: (_h: Hover | null) => void;
+  onClick?: (year: number, month: number) => void;
+}) {
   // Determinar rango de años presentes
   const years = Array.from(new Set(data.map(d => d.year))).sort((a,b) => a - b)
   const cols = years.length
@@ -2147,6 +2174,12 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
     }
   }
   const handleLeave = () => onHover(null)
+  
+  const handleClick = (pt: MonthlyPoint) => {
+    if (onClick) {
+      onClick(pt.year, pt.month)
+    }
+  }
 
   return (
     <div>
@@ -2198,6 +2231,7 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
                   strokeWidth={isAnomaly ? 3 : 1}
                   onMouseEnter={(e) => pt && handleEnter(pt, e)}
                   onMouseLeave={handleLeave}
+                  onClick={() => pt && handleClick(pt)}
                   style={{ 
                     cursor: pt ? 'pointer' : 'default',
                     filter: isAnomaly ? 'drop-shadow(0 0 8px rgba(220, 38, 38, 0.8))' : 'none'
