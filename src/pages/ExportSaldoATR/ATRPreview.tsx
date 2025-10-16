@@ -94,8 +94,8 @@ const ATRPreview: React.FC = () => {
       setAnuladas(0)
       setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
       setActiveTab('vista')
-      // Deshabilitar análisis hasta que se confirme una anulación
-      setAllowAnalysis(false)
+      // Habilitar análisis si hay datos cargados (no requiere anulación previa)
+      setAllowAnalysis(filteredData.rows.length > 0)
       setShowAnalisisPanel(false)
     }
   }, [filteredData])
