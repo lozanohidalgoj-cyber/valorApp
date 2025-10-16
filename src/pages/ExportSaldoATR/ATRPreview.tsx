@@ -1704,8 +1704,8 @@ const ATRPreview: React.FC = () => {
               </div>
             )}
             <div style={{ fontSize: 12, color: '#334155' }}>
-              • El punto/borde rojo indica el inicio del descenso anómalo detectado en el consumo mensual. <br/>
-              • El mapa de calor muestra la evolución temporal de los consumos para facilitar la identificación de patrones.
+              • El indicador 👉 muestra el inicio del descenso de anomalía en el consumo mensual (celda agrandada). <br/>
+              • El mapa de calor muestra la evolución temporal de los consumos. Al pasar el cursor sobre cualquier mes, verá el detalle completo.
             </div>
           </div>
         </div>
@@ -2009,7 +2009,7 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
 
   // Función para determinar el motivo del color según el consumo y la escala de cuantiles (invertida)
   const getMotivoColor = (v: number, isAnomaly: boolean) => {
-    if (isAnomaly) return 'Descenso anómalo detectado (≥40%)'
+    if (isAnomaly) return '👉 Descenso de anomalía (≥40%)'
     if (v <= min + (q50 - min) * 0.33) return 'Consumo bajo o anómalo (posible irregularidad)'
     if (v <= q50) return 'Consumo bajo-medio (requiere observación)'
     if (v <= q50 + (max - q50) * 0.5) return 'Consumo medio-alto (dentro del promedio)'
@@ -2026,7 +2026,7 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
       onHover({ 
         x: e.clientX + 12, 
         y: e.clientY - 28, 
-        text: `⚠️ INICIO DEL DESCENSO DETECTADO — Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct}` 
+        text: `👉 Descenso de anomalía (≥40%) — Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct}` 
       })
     } else {
       onHover({ 
@@ -2161,8 +2161,18 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
             <span style={{ color: '#334155' }}><strong style={{ color: '#059669' }}>Verde:</strong> Consumo normal o alto (estable y esperado)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#ef4444', borderRadius: 6, border: '3px solid #dc2626' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#dc2626' }}>Borde rojo ⚠️:</strong> Descenso anómalo detectado (≥40%)</span>
+            <div style={{ 
+              width: 32, 
+              height: 32, 
+              background: '#ef4444', 
+              borderRadius: 6, 
+              border: '1px solid rgba(220, 38, 38, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px'
+            }}>👉</div>
+            <span style={{ color: '#334155' }}><strong style={{ color: '#dc2626' }}>Celda agrandada 👉:</strong> Descenso de anomalía (≥40%)</span>
           </div>
         </div>
       </div>
