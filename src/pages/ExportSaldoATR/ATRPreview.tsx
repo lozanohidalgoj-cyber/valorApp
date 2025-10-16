@@ -96,7 +96,7 @@ const ATRPreview: React.FC = () => {
       setActiveTab('vista')
       // Habilitar análisis si hay datos cargados (no requiere anulación previa)
       setAllowAnalysis(filteredData.rows.length > 0)
-      setShowAnalisisPanel(false)
+      // No cerramos el panel aquí para permitir que persista hasta que el usuario lo cierre manualmente
     }
   }, [filteredData])
 
