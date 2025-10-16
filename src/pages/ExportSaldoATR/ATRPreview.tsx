@@ -577,7 +577,29 @@ const ATRPreview: React.FC = () => {
         const v = prev.consumo > 0 ? (p.consumo - prev.consumo) / prev.consumo : null
         return { ...p, variacion: v }
       })
-      // Detectar primera caída >= 40% CON CONFIRMACIÓN DE PERSISTENCIA
+      
+      // NUEVO: Calcular promedios estacionales (por mes del año 1-12)
+      const seasonalAvg = new Map<number, number>() // mes (1-12) → promedio de consumo
+      const seasonalCount = new Map<number, number>() // mes (1-12) → cantidad de ocurrencias
+      
+      for (const p of full) {
+        if (p.consumo > 0) {
+          const prev = seasonalAvg.get(p.month) || 0
+          const count = seasonalCount.get(p.month) || 0
+          seasonalAvg.set(p.month, prev + p.consumo)
+          seasonalCount.set(p.month, count + 1)
+        }
+      }
+      
+      // Calcular promedios finales
+      for (const [month, total] of seasonalAvg.entries()) {
+        const count = seasonalCount.get(month) || 1
+        seasonalAvg.set(month, total / count)
+      }
+      
+      console.log('📅 Promedios estacionales calculados:', Array.from(seasonalAvg.entries()).map(([m, avg]) => `Mes ${m}: ${avg.toFixed(2)} kWh`).join(', '))
+      
+      // Detectar primera caída >= 40% CON CONFIRMACIÓN DE PERSISTENCIA Y AJUSTE ESTACIONAL
       let firstDrop: number | null = null
       let detectedAnomalyYM: { year: number; month: number } | null = null
       console.log('🔎 Analizando', withVar.length, 'meses para detectar anomalías...')
@@ -585,14 +607,24 @@ const ATRPreview: React.FC = () => {
       for (let i = 1; i < withVar.length; i++) {
         const prev = withVar[i - 1].consumo
         const curV = withVar[i].consumo
+        const currentMonth = withVar[i].month
+        const seasonalExpected = seasonalAvg.get(currentMonth) || prev
         
         if (prev > 0) {
           const drop = (prev - curV) / prev
-          console.log(`📉 Mes ${i}: ${withVar[i].year}-${pad2(withVar[i].month)} | Anterior: ${prev.toFixed(2)} | Actual: ${curV.toFixed(2)} | Caída: ${(drop * 100).toFixed(1)}%`)
+          const deviationFromSeasonal = seasonalExpected > 0 ? (seasonalExpected - curV) / seasonalExpected : 0
+          
+          console.log(`📉 Mes ${i}: ${withVar[i].year}-${pad2(withVar[i].month)} | Anterior: ${prev.toFixed(2)} | Actual: ${curV.toFixed(2)} | Caída: ${(drop * 100).toFixed(1)}% | Esperado estacional: ${seasonalExpected.toFixed(2)} | Desviación: ${(deviationFromSeasonal * 100).toFixed(1)}%`)
           
           // Si hay caída >= 40%, verificar si es anomalía real
           if (drop >= 0.4) {
             console.log(`🔍 Posible anomalía detectada en mes ${i} (caída del ${(drop * 100).toFixed(1)}%)`)
+            
+            // Verificar si es variación estacional esperada
+            if (Math.abs(deviationFromSeasonal) <= 0.1) {
+              console.log(`  🍂 Variación estacional normal (±10% del promedio histórico). No es anomalía.`)
+              continue
+            }
             
             // CRITERIO 1: Caída muy pronunciada (≥60%) → Anomalía inmediata
             if (drop >= 0.6) {
@@ -622,10 +654,12 @@ const ATRPreview: React.FC = () => {
               
               for (let j = 1; j <= mesesParaVerificar; j++) {
                 const siguienteMes = withVar[i + j]
-                console.log(`  📊 Verificando mes ${i+j}: ${siguienteMes.year}-${pad2(siguienteMes.month)} | Consumo: ${siguienteMes.consumo.toFixed(2)} | Umbral recuperación: ${umbralRecuperacion.toFixed(2)}`)
+                const seasonalExpectedNext = seasonalAvg.get(siguienteMes.month) || umbralRecuperacion
                 
-                // Si algún mes siguiente supera el 90% del nivel previo, el consumo se recuperó
-                if (siguienteMes.consumo > umbralRecuperacion) {
+                console.log(`  📊 Verificando mes ${i+j}: ${siguienteMes.year}-${pad2(siguienteMes.month)} | Consumo: ${siguienteMes.consumo.toFixed(2)} | Umbral recuperación: ${umbralRecuperacion.toFixed(2)} | Esperado estacional: ${seasonalExpectedNext.toFixed(2)}`)
+                
+                // Si algún mes siguiente supera el 90% del nivel previo O está dentro del rango estacional, el consumo se recuperó
+                if (siguienteMes.consumo > umbralRecuperacion || siguienteMes.consumo >= seasonalExpectedNext * 0.9) {
                   seMantieneAnomalia = false
                   console.log(`  ✅ Consumo se recuperó en mes ${i+j}. No es anomalía sostenida.`)
                   break
@@ -647,6 +681,13 @@ const ATRPreview: React.FC = () => {
             }
           }
         }
+      }
+      
+      // NUEVO: Mostrar mensaje si NO se detectaron anomalías
+      if (!detectedAnomalyYM) {
+        console.log('✅ Análisis completado: No se detectaron descensos significativos en el consumo.')
+        window.alert('✅ No se detectaron descensos significativos en el consumo.\n\nEl comportamiento es estable y dentro de los rangos estacionales esperados.')
+        // Aún así abrir el panel para que el usuario vea el mapa de calor
       }
       
       setMonthlySeries(withVar)
