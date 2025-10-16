@@ -1896,23 +1896,34 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
 
   const monthsES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
+  // Función para determinar el motivo del color según el consumo y la escala de cuantiles
+  const getMotivoColor = (v: number, isAnomaly: boolean) => {
+    if (isAnomaly) return 'Descenso anómalo detectado (≥40%)'
+    if (v <= min + (q50 - min) * 0.33) return 'Consumo bajo'
+    if (v <= q50) return 'Consumo dentro del promedio'
+    if (v <= q50 + (max - q50) * 0.5) return 'Consumo medio-alto'
+    return 'Consumo alto o pico'
+  }
+
   const handleEnter = (pt: MonthlyPoint, e: React.MouseEvent<SVGRectElement>) => {
     const varPct = pt.variacion == null ? '—' : `${(pt.variacion * 100).toFixed(1)}%`
-    onHover({ x: e.clientX + 12, y: e.clientY - 28, text: `Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} — Variación: ${varPct}` })
+    const isAnomaly = pt.key === anomalyKey
+    const motivo = getMotivoColor(pt.consumo, isAnomaly)
+    onHover({ x: e.clientX + 12, y: e.clientY - 28, text: `Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct} — Motivo del color: ${motivo}` })
   }
   const handleLeave = () => onHover(null)
 
   return (
     <div>
-      <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 6 }}>Mapa de calor mensual</div>
+      <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 6, fontFamily: "'Lato', sans-serif" }}>Mapa de calor mensual</div>
       <svg width={width} height={height}>
         {/* Eje Y meses */}
         {monthsES.map((mname, i) => (
-          <text key={i} x={6} y={m.t + i * cell + cell * 0.65} fontSize={12} fill="#334155">{mname}</text>
+          <text key={i} x={6} y={m.t + i * cell + cell * 0.65} fontSize={12} fill="#334155" fontFamily="'Open Sans', sans-serif">{mname}</text>
         ))}
         {/* Eje X años */}
         {years.map((y, i) => (
-          <text key={y} x={m.l + i * cell + cell * 0.5} y={16} fontSize={12} fill="#334155" textAnchor="middle">{y}</text>
+          <text key={y} x={m.l + i * cell + cell * 0.5} y={16} fontSize={12} fill="#334155" textAnchor="middle" fontFamily="'Open Sans', sans-serif">{y}</text>
         ))}
         {/* Celdas */}
         {years.map((y, cx) => (
@@ -1935,6 +1946,44 @@ function Heatmap({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomalyI
           })
         ))}
       </svg>
+      
+      {/* Leyenda explicativa del mapa de calor */}
+      <div style={{
+        marginTop: '1rem',
+        padding: '0.75rem 0.875rem',
+        background: 'linear-gradient(135deg, rgba(0,0,208,0.04) 0%, rgba(41,41,229,0.02) 100%)',
+        border: '1px solid rgba(0,0,208,0.08)',
+        borderRadius: 10,
+        fontFamily: "'Open Sans', sans-serif"
+      }}>
+        <div style={{ fontWeight: 700, color: '#0000D0', fontSize: '0.875rem', marginBottom: '0.5rem', fontFamily: "'Lato', sans-serif" }}>📊 Leyenda del mapa de calor</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8125rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 24, height: 24, background: '#1d4ed8', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Azul:</strong> Consumo bajo</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 24, height: 24, background: '#60a5fa', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Azul claro:</strong> Consumo dentro del promedio</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 24, height: 24, background: '#fbbf24', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Amarillo:</strong> Consumo medio-alto</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 24, height: 24, background: '#f97316', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Naranja:</strong> Aumento de consumo</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 24, height: 24, background: '#ef4444', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Rojo:</strong> Consumo alto o pico</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 24, height: 24, background: '#ef4444', borderRadius: 6, border: '3px solid #dc2626' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#dc2626' }}>Borde rojo ⚠️:</strong> Descenso anómalo detectado (≥40%)</span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
