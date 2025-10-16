@@ -1327,25 +1327,32 @@ const ATRPreview: React.FC = () => {
                   }
                 }
                 
-                const finalBg = isHighlighted ? '#FFF176' : (rowBg || (i % 2 === 0 ? '#ffffff' : 'rgba(0, 0, 208, 0.02)'))
+                // Color de resaltado más visible: degradado naranja-amarillo con borde
+                const highlightBg = 'linear-gradient(90deg, #fbbf24 0%, #fcd34d 100%)'
+                const finalBg = isHighlighted ? highlightBg : (rowBg || (i % 2 === 0 ? '#ffffff' : 'rgba(0, 0, 208, 0.02)'))
                 
                 return (
-                  <tr key={i} style={{ background: finalBg, transition: 'background 0.3s ease' }}>
+                  <tr key={i} style={{ 
+                    background: finalBg, 
+                    transition: 'all 0.3s ease',
+                    boxShadow: isHighlighted ? '0 0 0 2px #f59e0b inset, 0 4px 12px rgba(245, 158, 11, 0.3)' : 'none',
+                    position: 'relative'
+                  }}>
                   <td style={{ 
                     position: 'sticky', 
                     left: 0, 
                     zIndex: 1, 
-                    background: isHighlighted ? '#FFF176' : (rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.02)' : 'rgba(0, 0, 208, 0.04)')), 
+                    background: isHighlighted ? '#fbbf24' : (rowBg || (i % 2 === 0 ? 'rgba(0, 0, 208, 0.02)' : 'rgba(0, 0, 208, 0.04)')), 
                     borderRight: '1px solid rgba(0, 0, 208, 0.08)', 
-                    color: '#64748b', 
+                    color: isHighlighted ? '#78350f' : '#64748b', 
                     padding: '0.5rem 0.75rem', 
                     textAlign: 'right',
-                    fontWeight: 600,
-                    fontSize: '0.75rem',
+                    fontWeight: isHighlighted ? 800 : 600,
+                    fontSize: isHighlighted ? '0.875rem' : '0.75rem',
                     fontFamily: "'Open Sans', sans-serif",
-                    transition: 'background 0.3s ease'
+                    transition: 'all 0.3s ease'
                   }}>
-                    {i + 1}
+                    {isHighlighted && '👉 '}{i + 1}
                   </td>
                   {filteredData.headers.map((h, j) => {
                     const val = String(r[h] ?? '')
