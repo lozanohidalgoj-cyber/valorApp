@@ -96,7 +96,10 @@ const ATRPreview: React.FC = () => {
   const [monthlySeries, setMonthlySeries] = React.useState<Array<{ key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }>>([])
   const [anomalyMonthIdx, setAnomalyMonthIdx] = React.useState<number | null>(null)
   const [heatmapTooltip, setHeatmapTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
-  const [barTooltip, setBarTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
+    Variación = (ConsumoAnterior - ConsumoActual) / ConsumoAnterior
+  
+  Si el resultado es POSITIVO → el consumo BAJÓ
+  Si el resultado es NEGATIVO → el consumo SUBIÓBarTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
   // Estado para resaltar fila con anomalía en la tabla (guardar año/mes en lugar de clave)
   const [anomalyYearMonth, setAnomalyYearMonth] = React.useState<{ year: number; month: number } | null>(null)
   const total = filteredRows.length
@@ -574,21 +577,74 @@ const ATRPreview: React.FC = () => {
         const v = prev.consumo > 0 ? (p.consumo - prev.consumo) / prev.consumo : null
         return { ...p, variacion: v }
       })
-      // Detectar primera caída >= 40%
+      // Detectar primera caída >= 40% CON CONFIRMACIÓN DE PERSISTENCIA
       let firstDrop: number | null = null
       let detectedAnomalyYM: { year: number; month: number } | null = null
       console.log('🔎 Analizando', withVar.length, 'meses para detectar anomalías...')
+      
       for (let i = 1; i < withVar.length; i++) {
         const prev = withVar[i - 1].consumo
         const curV = withVar[i].consumo
+        
         if (prev > 0) {
           const drop = (prev - curV) / prev
           console.log(`📉 Mes ${i}: ${withVar[i].year}-${pad2(withVar[i].month)} | Anterior: ${prev.toFixed(2)} | Actual: ${curV.toFixed(2)} | Caída: ${(drop * 100).toFixed(1)}%`)
-          if (drop >= 0.4) { 
-            firstDrop = i
-            detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
-            console.log('⚠️ ANOMALÍA DETECTADA en mes', firstDrop, ':', detectedAnomalyYM)
-            break 
+          
+          // Si hay caída >= 40%, verificar si es anomalía real
+          if (drop >= 0.4) {
+            console.log(`🔍 Posible anomalía detectada en mes ${i} (caída del ${(drop * 100).toFixed(1)}%)`)
+            
+            // CRITERIO 1: Caída muy pronunciada (≥60%) → Anomalía inmediata
+            if (drop >= 0.6) {
+              firstDrop = i
+              detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
+              console.log('⚠️ ANOMALÍA INMEDIATA (caída ≥60%) en mes', firstDrop, ':', detectedAnomalyYM)
+              break
+            }
+            
+            // CRITERIO 2: Consumo actual < 40% del promedio de 3 meses previos → Anomalía inmediata
+            if (i >= 3) {
+              const avg3Prev = (withVar[i-3].consumo + withVar[i-2].consumo + withVar[i-1].consumo) / 3
+              if (avg3Prev > 0 && curV < avg3Prev * 0.4) {
+                firstDrop = i
+                detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
+                console.log('⚠️ ANOMALÍA INMEDIATA (consumo < 40% del promedio previo) en mes', firstDrop, ':', detectedAnomalyYM)
+                break
+              }
+            }
+            
+            // CRITERIO 3: Verificar persistencia en los siguientes 2-3 meses
+            const mesesParaVerificar = Math.min(3, withVar.length - i - 1) // 2-3 meses siguientes (si existen)
+            const umbralRecuperacion = prev * 0.9 // 90% del consumo previo a la caída
+            
+            if (mesesParaVerificar >= 2) {
+              let seMantieneAnomalia = true
+              
+              for (let j = 1; j <= mesesParaVerificar; j++) {
+                const siguienteMes = withVar[i + j]
+                console.log(`  📊 Verificando mes ${i+j}: ${siguienteMes.year}-${pad2(siguienteMes.month)} | Consumo: ${siguienteMes.consumo.toFixed(2)} | Umbral recuperación: ${umbralRecuperacion.toFixed(2)}`)
+                
+                // Si algún mes siguiente supera el 90% del nivel previo, el consumo se recuperó
+                if (siguienteMes.consumo > umbralRecuperacion) {
+                  seMantieneAnomalia = false
+                  console.log(`  ✅ Consumo se recuperó en mes ${i+j}. No es anomalía sostenida.`)
+                  break
+                }
+              }
+              
+              if (seMantieneAnomalia) {
+                firstDrop = i
+                detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
+                console.log('⚠️ ANOMALÍA CONFIRMADA (se mantiene baja por', mesesParaVerificar, 'meses) en mes', firstDrop, ':', detectedAnomalyYM)
+                break
+              }
+            } else {
+              // Si no hay suficientes meses siguientes para verificar, marcar como anomalía (caso borde)
+              console.log(`  ⚠️ No hay suficientes meses siguientes para confirmar. Marcando como anomalía.`)
+              firstDrop = i
+              detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
+              break
+            }
           }
         }
       }
@@ -597,7 +653,6 @@ const ATRPreview: React.FC = () => {
       setAnomalyMonthIdx(firstDrop)
       setAnomalyYearMonth(detectedAnomalyYM)
       setHeatmapTooltip(null)
-      setBarTooltip(null)
       setShowAnalisisPanel(true)
       console.log('✅ Panel de análisis abierto:', { series: withVar.length, anomalyIdx: firstDrop, anomalyYM: detectedAnomalyYM })
       console.log('🎯 anomalyYearMonth guardado:', detectedAnomalyYM)
@@ -1871,13 +1926,8 @@ const ATRPreview: React.FC = () => {
             <BarsChart
               data={monthlySeries}
               anomalyIdx={anomalyMonthIdx}
-              onHover={(v) => setBarTooltip(v)}
+              onHover={(v) => setHeatmapTooltip(v)}
             />
-            {barTooltip && (
-              <div style={{ position: 'fixed', transform: `translate(${barTooltip.x}px, ${barTooltip.y}px)`, background: '#111827', color: '#fff', padding: '6px 10px', borderRadius: 8, fontSize: 12, pointerEvents: 'none', boxShadow: '0 6px 16px rgba(0,0,0,0.3)' }}>
-                {barTooltip.text}
-              </div>
-            )}
             <div style={{ fontSize: 12, color: '#334155' }}>
               • El indicador 👉 muestra el inicio del descenso de anomalía en el consumo mensual (celda agrandada). <br/>
               • El mapa de calor muestra la evolución temporal de los consumos. Al pasar el cursor sobre cualquier mes, verá el detalle completo.
