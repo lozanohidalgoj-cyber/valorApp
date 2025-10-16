@@ -32,7 +32,10 @@ const ATRPreview: React.FC = () => {
   
   // Filtrar columna "Autofactura" de los encabezados
   const filteredData = React.useMemo(() => {
-    if (!data?.headers || !data?.rows) return null
+    if (!data?.headers || !data?.rows) {
+      console.log('⚪ filteredData: sin datos', { hasData: !!data })
+      return null
+    }
     
     // Filtrar encabezados que no sean "Autofactura"
     const filteredHeaders = data.headers.filter(h => 
@@ -41,6 +44,7 @@ const ATRPreview: React.FC = () => {
     
     // Si no hay cambios en los encabezados, retornar data original
     if (filteredHeaders.length === data.headers.length) {
+      console.log('🟢 filteredData: datos sin filtrar', { rowsCount: data.rows.length })
       return data
     }
     
@@ -55,6 +59,7 @@ const ATRPreview: React.FC = () => {
       return newRow
     })
     
+    console.log('🟡 filteredData: datos filtrados', { rowsCount: filteredRows.length })
     return {
       headers: filteredHeaders,
       rows: filteredRows
