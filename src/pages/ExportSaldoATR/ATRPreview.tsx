@@ -85,6 +85,11 @@ const ATRPreview: React.FC = () => {
   const [anomalyYearMonth, setAnomalyYearMonth] = React.useState<{ year: number; month: number } | null>(null)
   const total = filteredRows.length
   
+  // Debug: log cuando cambie anomalyYearMonth
+  React.useEffect(() => {
+    console.log('🔄 anomalyYearMonth cambió:', anomalyYearMonth)
+  }, [anomalyYearMonth])
+  
   // Actualizar filteredRows cuando cambien los datos
   React.useEffect(() => {
     if (filteredData?.rows) {
@@ -546,6 +551,20 @@ const ATRPreview: React.FC = () => {
       setMonthlySeries(withVar)
       setAnomalyMonthIdx(firstDrop)
       setAnomalyYearMonth(detectedAnomalyYM)
+      
+      // Log de depuración
+      if (detectedAnomalyYM) {
+        console.log('🎯 ANOMALÍA DETECTADA:', detectedAnomalyYM)
+        console.log('📊 Datos para buscar en tabla:', { 
+          year: detectedAnomalyYM.year, 
+          month: detectedAnomalyYM.month,
+          fechaHeader,
+          totalFilas: filteredRows.length 
+        })
+      } else {
+        console.log('ℹ️ No se detectó anomalía (sin caída ≥40%)')
+      }
+      
       setHeatmapTooltip(null)
       setBarTooltip(null)
       setShowAnalisisPanel(true)
@@ -1263,8 +1282,12 @@ const ATRPreview: React.FC = () => {
           </thead>
           <tbody>
             {(() => {
+              console.log('🔍 RENDERIZANDO TABLA - anomalyYearMonth:', anomalyYearMonth)
+              
               // Headers para detectar fecha de la fila
               const fechaHeaderForKey = filteredData.headers.find(h => isFechaDesdeHeader(h)) || filteredData.headers.find(h => isFechaHastaHeader(h)) || filteredData.headers.find(h => isPeriodoHeader(h)) || filteredData.headers.find(h => isFechaFactHeader(h))
+              
+              console.log('📋 Header de fecha encontrado:', fechaHeaderForKey)
               
               return filteredRows.map((r, i) => {
                 const prev = i > 0 ? filteredRows[i - 1] : null
@@ -1274,11 +1297,23 @@ const ATRPreview: React.FC = () => {
                 // Verificar si esta fila corresponde a la anomalía detectada
                 let isHighlighted = false
                 if (anomalyYearMonth && fechaHeaderForKey) {
-                  const d = isPeriodoHeader(fechaHeaderForKey) ? parsePeriodoStart(String(r[fechaHeaderForKey] ?? '')) : parseDateLoose(r[fechaHeaderForKey])
+                  const fechaVal = String(r[fechaHeaderForKey] ?? '')
+                  const d = isPeriodoHeader(fechaHeaderForKey) ? parsePeriodoStart(fechaVal) : parseDateLoose(fechaVal)
                   if (d) {
                     const rowYear = d.getFullYear()
                     const rowMonth = d.getMonth() + 1
                     isHighlighted = (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month)
+                    
+                    // Log solo de primeras 3 filas para ver qué pasa
+                    if (i < 3) {
+                      console.log(`Fila ${i}:`, { 
+                        fechaVal, 
+                        rowYear, 
+                        rowMonth, 
+                        buscando: anomalyYearMonth, 
+                        match: isHighlighted 
+                      })
+                    }
                   }
                 }
                 
