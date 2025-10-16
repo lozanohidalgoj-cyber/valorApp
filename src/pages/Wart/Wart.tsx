@@ -5,6 +5,8 @@ export const Wart: React.FC = () => {
   // Nuevo: cambio de titular (checklist exclusivo) y fecha
   const [cambioTitular, setCambioTitular] = useState<'si' | 'no' | null>(null)
   const [fechaCambio, setFechaCambio] = useState<string>('')
+  // Fecha del acta
+  const [fechaActa, setFechaActa] = useState<string>('')
   // Análisis de anomalías movido a ATR (se retira de WART para evitar duplicidad)
 
   const toggle = (key: 'c1'|'c2') => {
@@ -29,6 +31,11 @@ export const Wart: React.FC = () => {
           setFechaCambio(typeof obj.fecha === 'string' ? obj.fecha : '')
         }
       }
+      const sActa = localStorage.getItem('valorApp.wart.fechaActa')
+      if (sActa) {
+        const objActa = JSON.parse(sActa)
+        setFechaActa(typeof objActa === 'string' ? objActa : '')
+      }
     } catch { /* noop */ }
   }, [])
 
@@ -41,6 +48,13 @@ export const Wart: React.FC = () => {
       }))
     } catch { /* noop */ }
   }, [cambioTitular, fechaCambio])
+
+  // Persistir fecha del acta
+  useEffect(() => {
+    try {
+      localStorage.setItem('valorApp.wart.fechaActa', JSON.stringify(fechaActa))
+    } catch { /* noop */ }
+  }, [fechaActa])
 
   // (Utilidades para análisis ATR eliminadas en WART; ahora se analizan en ATR)
 
@@ -264,6 +278,44 @@ export const Wart: React.FC = () => {
                 />
               </div>
             )}
+          </li>
+          {/* Bloque nuevo: Fecha del acta */}
+          <li style={{ 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            background: 'rgba(0, 0, 208, 0.03)',
+            padding: '1.75rem',
+            borderRadius: '12px',
+            border: '2px solid rgba(0, 0, 208, 0.1)',
+            transition: 'all 0.2s ease',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            {/* Encabezado con numeración */}
+            <span style={{ 
+              fontSize: '1.35rem', 
+              lineHeight: 1.6, 
+              color: '#1a1a1a', 
+              fontWeight: 500,
+              fontFamily: "'Open Sans', sans-serif"
+            }}>
+              <strong style={{ color: '#0000D0', fontWeight: 700 }}>4.</strong> Ingrese la fecha del acta:
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <input
+                type="date"
+                value={fechaActa}
+                onChange={e => setFechaActa(e.target.value)}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 8,
+                  border: '2px solid rgba(0, 0, 208, 0.1)',
+                  fontSize: '1rem',
+                  fontFamily: "'Open Sans', sans-serif"
+                }}
+              />
+            </div>
           </li>
         </ul>
 

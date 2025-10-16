@@ -30,6 +30,16 @@ const ATRPreview: React.FC = () => {
     } catch { return { tuvo: false, fecha: '' } }
   }, [])
   
+  // Leer fecha del acta desde localStorage
+  const fechaActa = React.useMemo(() => {
+    try {
+      const s = localStorage.getItem('valorApp.wart.fechaActa')
+      if (!s) return ''
+      const obj = JSON.parse(s)
+      return typeof obj === 'string' ? obj : ''
+    } catch { return '' }
+  }, [])
+  
   // Filtrar columna "Autofactura" de los encabezados
   const filteredData = React.useMemo(() => {
     if (!data?.headers || !data?.rows) {
@@ -969,6 +979,22 @@ const ATRPreview: React.FC = () => {
               Cambio de titular desde la fecha: <strong style={{ color: '#0000D0' }}>{new Date(cambioTitularInfo.fecha).toLocaleDateString('es-ES')}</strong>
             </div>
           )}
+          {fechaActa && (
+            <div style={{
+              marginTop: '0.5rem',
+              marginLeft: cambioTitularInfo.tuvo ? '0.5rem' : '0',
+              background: 'rgba(255, 49, 132, 0.06)',
+              border: '1px solid rgba(255, 49, 132, 0.15)',
+              color: '#0f172a',
+              padding: '0.4rem 0.6rem',
+              borderRadius: 8,
+              display: 'inline-block',
+              fontSize: '0.875rem',
+              fontWeight: 600
+            }}>
+              Fecha del acta: <strong style={{ color: '#FF3184' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
           {/* Botón Detectar anomalías de consumo (a la izquierda de Anular) */}
@@ -1806,6 +1832,18 @@ const ATRPreview: React.FC = () => {
                     whiteSpace: 'nowrap'
                   }}>
                     Cambio de titular desde la fecha: <strong style={{ color: '#FFFFFF' }}>{new Date(cambioTitularInfo.fecha).toLocaleDateString('es-ES')}</strong>
+                  </span>
+                </div>
+              )}
+              {fechaActa && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ 
+                    fontSize: '0.875rem', 
+                    color: 'rgba(255, 255, 255, 0.95)',
+                    fontFamily: "'Open Sans', sans-serif",
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Fecha del acta: <strong style={{ color: '#FFFFFF' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
                   </span>
                 </div>
               )}
