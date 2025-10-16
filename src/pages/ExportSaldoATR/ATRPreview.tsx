@@ -83,6 +83,8 @@ const ATRPreview: React.FC = () => {
   const [barTooltip, setBarTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
   // Estado para resaltar fila con anomalía en la tabla (guardar año/mes en lugar de clave)
   const [anomalyYearMonth, setAnomalyYearMonth] = React.useState<{ year: number; month: number } | null>(null)
+  // Ref para saber si venimos de una confirmación de anulación (evitar resetear allowAnalysis)
+  const justConfirmedAnulacion = React.useRef<boolean>(false)
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -96,8 +98,13 @@ const ATRPreview: React.FC = () => {
       setAnuladas(0)
       setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
       setActiveTab('vista')
-      // Deshabilitar análisis hasta que se realice anulación
-      setAllowAnalysis(false)
+      // Solo deshabilitar análisis si NO venimos de una confirmación de anulación
+      if (!justConfirmedAnulacion.current) {
+        setAllowAnalysis(false)
+      } else {
+        // Resetear la bandera después de usar
+        justConfirmedAnulacion.current = false
+      }
       // Limpiar resaltado previo al cargar nuevos datos
       setAnomalyYearMonth(null)
       // No cerramos el panel aquí para permitir que persista hasta que el usuario lo cierre manualmente
@@ -1597,6 +1604,8 @@ const ATRPreview: React.FC = () => {
                 setOrdenado(true)
                 setViewMode('restantes')
                 setActiveTab('vista')
+                // Marcar que venimos de una confirmación para que el useEffect no resetee allowAnalysis
+                justConfirmedAnulacion.current = true
                 // Habilitar análisis tras una anulación confirmada
                 setAllowAnalysis(true)
                 // Limpiar el estado del modal de previsualización
