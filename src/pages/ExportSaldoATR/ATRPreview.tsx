@@ -116,8 +116,9 @@ const ATRPreview: React.FC = () => {
       const shouldAllow = filteredData.rows.length > 0
       console.log('🔄 useEffect filteredData ejecutado:', { rowsCount: filteredData.rows.length, allowAnalysis: shouldAllow })
       setAllowAnalysis(shouldAllow)
-      // Limpiar resaltado previo al cargar nuevos datos
-      setAnomalyYearMonth(null)
+      // NO limpiar resaltado automáticamente - solo cuando el usuario cargue datos nuevos manualmente
+      // setAnomalyYearMonth(null) // Comentado para mantener el resaltado
+      console.log('🔍 Estado de anomalyYearMonth mantenido (no se limpió)')
       // No cerramos el panel aquí para permitir que persista hasta que el usuario lo cierre manualmente
     }
   }, [filteredData])
@@ -1060,6 +1061,30 @@ const ATRPreview: React.FC = () => {
                 Anomalía detectada en {new Date(anomalyYearMonth.year, anomalyYearMonth.month - 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).toUpperCase()} 
                 — La fila correspondiente está resaltada en la tabla
               </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setAnomalyYearMonth(null)
+                  setShowAnalisisPanel(false)
+                  console.log('🧹 Resaltado limpiado manualmente')
+                }}
+                style={{
+                  marginLeft: 'auto',
+                  background: '#f59e0b',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '0.375rem 0.75rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#d97706'}
+                onMouseLeave={e => e.currentTarget.style.background = '#f59e0b'}
+              >
+                Limpiar resaltado
+              </button>
             </div>
           )}
         </div>
