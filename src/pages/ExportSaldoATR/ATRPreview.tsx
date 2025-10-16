@@ -1379,7 +1379,6 @@ const ATRPreview: React.FC = () => {
                             fontFamily: "'Open Sans', sans-serif",
                             transition: 'background 0.3s ease'
                           }}>
-                          }}>
                             {contractDurationText.get(contractKey) || ''}
                           </td>
                         )}
