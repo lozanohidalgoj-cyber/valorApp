@@ -595,12 +595,27 @@ const ATRPreview: React.FC = () => {
       
       console.log('📅 Promedios estacionales calculados:', Array.from(seasonalAvg.entries()).map(([m, avg]) => `Mes ${m}: ${avg.toFixed(2)} kWh`).join(', '))
       
+      // Verificar que hay suficientes datos históricos (mínimo 6 meses previos para establecer línea base)
+      if (withVar.length < 6) {
+        console.log('⚠️ Datos insuficientes: Se necesitan al menos 6 meses de histórico para detectar anomalías.')
+        window.alert('⚠️ Datos insuficientes para análisis de anomalías.\n\nSe necesitan al menos 6 meses de histórico para establecer una línea base y detectar descensos anormales.')
+        setMonthlySeries(withVar)
+        setAnomalyMonthIdx(null)
+        setAnomalyYearMonth(null)
+        setHeatmapTooltip(null)
+        setShowAnalisisPanel(true)
+        return
+      }
+      
       // Detectar primera caída >= 40% CON CONFIRMACIÓN DE PERSISTENCIA Y AJUSTE ESTACIONAL
       let firstDrop: number | null = null
       let detectedAnomalyYM: { year: number; month: number } | null = null
       console.log('🔎 Analizando', withVar.length, 'meses para detectar anomalías...')
       
-      for (let i = 1; i < withVar.length; i++) {
+      // IMPORTANTE: Empezar a analizar después de los primeros 3 meses para tener contexto
+      const startAnalysisFrom = Math.max(1, 3)
+      
+      for (let i = startAnalysisFrom; i < withVar.length; i++) {
         const prev = withVar[i - 1].consumo
         const curV = withVar[i].consumo
         const currentMonth = withVar[i].month
@@ -631,7 +646,8 @@ const ATRPreview: React.FC = () => {
             }
             
             // CRITERIO 2: Consumo actual < 40% del promedio de 3 meses previos → Anomalía inmediata
-            if (i >= 3) {
+            // Solo aplicar si hay al menos 3 meses previos Y al menos 6 meses de histórico total
+            if (i >= 6) {
               const avg3Prev = (withVar[i-3].consumo + withVar[i-2].consumo + withVar[i-1].consumo) / 3
               if (avg3Prev > 0 && curV < avg3Prev * 0.4) {
                 firstDrop = i
