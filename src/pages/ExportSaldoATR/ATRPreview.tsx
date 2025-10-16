@@ -17,6 +17,7 @@ const useAtrCsv = (): ParsedCSV | null => {
 
 const ATRPreview: React.FC = () => {
   const data = useAtrCsv()
+  console.log('🔵 ATRPreview renderizado:', { hasData: !!data, rowsCount: data?.rows?.length })
     // Leer cambio de titular desde localStorage
   const cambioTitularInfo = React.useMemo(() => {
     try {
