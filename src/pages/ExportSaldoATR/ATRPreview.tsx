@@ -81,8 +81,8 @@ const ATRPreview: React.FC = () => {
   const [anomalyMonthIdx, setAnomalyMonthIdx] = React.useState<number | null>(null)
   const [heatmapTooltip, setHeatmapTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
   const [barTooltip, setBarTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
-  // Estado para resaltar fila con anomalía en la tabla
-  const [highlightedRowKey, setHighlightedRowKey] = React.useState<string | null>(null)
+  // Estado para resaltar fila con anomalía en la tabla (guardar año/mes en lugar de clave)
+  const [anomalyYearMonth, setAnomalyYearMonth] = React.useState<{ year: number; month: number } | null>(null)
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -481,6 +481,8 @@ const ATRPreview: React.FC = () => {
       const headers = filteredData?.headers || []
       const rows = keptRows && keptRows.length > 0 ? keptRows : (filteredData?.rows || [])
       if (!headers.length || !rows.length) { window.alert('No hay datos para analizar.'); return }
+      
+      // Buscar headers exactamente como en la tabla (mismo orden de prioridad)
       const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isFechaHastaHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
       const consumoHeader = headers.find(h => isConsumoActivaHeader(h))
       if (!fechaHeader || !consumoHeader) { window.alert('No se encontró columna de fecha o consumo.'); return }
@@ -543,9 +545,11 @@ const ATRPreview: React.FC = () => {
       
       // Identificar la primera fila en la tabla que corresponde al mes de la anomalía
       let rowKeyToHighlight: string | null = null
-      if (anomalyYearMonth && fechaHeader) {
-        for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
-          const r = rows[rowIdx]
+      if (anomalyYearMonth && fechaHeader && consumoHeader) {
+        // Buscar en filteredRows (las que se muestran en la tabla actualmente)
+        const searchRows = filteredRows
+        for (let rowIdx = 0; rowIdx < searchRows.length; rowIdx++) {
+          const r = searchRows[rowIdx]
           const d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
           if (d) {
             const rowYear = d.getFullYear()
@@ -553,15 +557,20 @@ const ATRPreview: React.FC = () => {
             if (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month) {
               // Crear clave única para la fila (usando índice + valores clave)
               rowKeyToHighlight = `${rowIdx}-${r[fechaHeader]}-${r[consumoHeader]}`
+              console.log('🎯 Fila de anomalía encontrada:', { rowIdx, year: rowYear, month: rowMonth, key: rowKeyToHighlight })
               break
             }
           }
+        }
+        if (!rowKeyToHighlight) {
+          console.warn('⚠️ No se encontró fila para resaltar con año/mes:', anomalyYearMonth)
         }
       }
       
       setMonthlySeries(withVar)
       setAnomalyMonthIdx(firstDrop)
       setHighlightedRowKey(rowKeyToHighlight)
+      console.log('📍 Estado actualizado - highlightedRowKey:', rowKeyToHighlight)
       setHeatmapTooltip(null)
       setBarTooltip(null)
       setShowAnalisisPanel(true)
@@ -1293,6 +1302,12 @@ const ATRPreview: React.FC = () => {
                   ? `${i}-${r[fechaHeaderForKey]}-${r[consumoHeaderForKey]}`
                   : null
                 const isHighlighted = rowKey === highlightedRowKey
+                
+                // Log temporal para debugging
+                if (highlightedRowKey && i < 5) {
+                  console.log(`Fila ${i}:`, { rowKey, highlightedRowKey, match: isHighlighted })
+                }
+                
                 const finalBg = isHighlighted ? '#FFF176' : (rowBg || (i % 2 === 0 ? '#ffffff' : 'rgba(0, 0, 208, 0.02)'))
                 
                 return (
