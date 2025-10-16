@@ -99,7 +99,7 @@ const ATRPreview: React.FC = () => {
       // Habilitar análisis si hay datos cargados (no requiere anulación previa)
       setAllowAnalysis(filteredData.rows.length > 0)
       // Limpiar resaltado previo al cargar nuevos datos
-      setHighlightedRowKey(null)
+      setAnomalyYearMonth(null)
       // No cerramos el panel aquí para permitir que persista hasta que el usuario lo cierre manualmente
     }
   }, [filteredData])
@@ -529,7 +529,7 @@ const ATRPreview: React.FC = () => {
       })
       // Detectar primera caída >= 40%
       let firstDrop: number | null = null
-      let anomalyYearMonth: { year: number; month: number } | null = null
+      let detectedAnomalyYM: { year: number; month: number } | null = null
       for (let i = 1; i < withVar.length; i++) {
         const prev = withVar[i - 1].consumo
         const curV = withVar[i].consumo
@@ -537,40 +537,15 @@ const ATRPreview: React.FC = () => {
           const drop = (prev - curV) / prev
           if (drop >= 0.4) { 
             firstDrop = i
-            anomalyYearMonth = { year: withVar[i].year, month: withVar[i].month }
+            detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
             break 
           }
         }
       }
       
-      // Identificar la primera fila en la tabla que corresponde al mes de la anomalía
-      let rowKeyToHighlight: string | null = null
-      if (anomalyYearMonth && fechaHeader && consumoHeader) {
-        // Buscar en filteredRows (las que se muestran en la tabla actualmente)
-        const searchRows = filteredRows
-        for (let rowIdx = 0; rowIdx < searchRows.length; rowIdx++) {
-          const r = searchRows[rowIdx]
-          const d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
-          if (d) {
-            const rowYear = d.getFullYear()
-            const rowMonth = d.getMonth() + 1
-            if (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month) {
-              // Crear clave única para la fila (usando índice + valores clave)
-              rowKeyToHighlight = `${rowIdx}-${r[fechaHeader]}-${r[consumoHeader]}`
-              console.log('🎯 Fila de anomalía encontrada:', { rowIdx, year: rowYear, month: rowMonth, key: rowKeyToHighlight })
-              break
-            }
-          }
-        }
-        if (!rowKeyToHighlight) {
-          console.warn('⚠️ No se encontró fila para resaltar con año/mes:', anomalyYearMonth)
-        }
-      }
-      
       setMonthlySeries(withVar)
       setAnomalyMonthIdx(firstDrop)
-      setHighlightedRowKey(rowKeyToHighlight)
-      console.log('📍 Estado actualizado - highlightedRowKey:', rowKeyToHighlight)
+      setAnomalyYearMonth(detectedAnomalyYM)
       setHeatmapTooltip(null)
       setBarTooltip(null)
       setShowAnalisisPanel(true)
@@ -1288,24 +1263,23 @@ const ATRPreview: React.FC = () => {
           </thead>
           <tbody>
             {(() => {
-              // Headers para crear clave de resaltado
+              // Headers para detectar fecha de la fila
               const fechaHeaderForKey = filteredData.headers.find(h => isFechaDesdeHeader(h)) || filteredData.headers.find(h => isFechaHastaHeader(h)) || filteredData.headers.find(h => isPeriodoHeader(h)) || filteredData.headers.find(h => isFechaFactHeader(h))
-              const consumoHeaderForKey = filteredData.headers.find(h => isConsumoActivaHeader(h))
               
               return filteredRows.map((r, i) => {
                 const prev = i > 0 ? filteredRows[i - 1] : null
                 const contractKey = contractHeader ? String(r[contractHeader] ?? '').trim() : ''
                 const rowBg = contractColorMap.get(contractKey)
                 
-                // Crear clave única para esta fila y verificar si debe resaltarse
-                const rowKey = fechaHeaderForKey && consumoHeaderForKey 
-                  ? `${i}-${r[fechaHeaderForKey]}-${r[consumoHeaderForKey]}`
-                  : null
-                const isHighlighted = rowKey === highlightedRowKey
-                
-                // Log temporal para debugging
-                if (highlightedRowKey && i < 5) {
-                  console.log(`Fila ${i}:`, { rowKey, highlightedRowKey, match: isHighlighted })
+                // Verificar si esta fila corresponde a la anomalía detectada
+                let isHighlighted = false
+                if (anomalyYearMonth && fechaHeaderForKey) {
+                  const d = isPeriodoHeader(fechaHeaderForKey) ? parsePeriodoStart(String(r[fechaHeaderForKey] ?? '')) : parseDateLoose(r[fechaHeaderForKey])
+                  if (d) {
+                    const rowYear = d.getFullYear()
+                    const rowMonth = d.getMonth() + 1
+                    isHighlighted = (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month)
+                  }
                 }
                 
                 const finalBg = isHighlighted ? '#FFF176' : (rowBg || (i % 2 === 0 ? '#ffffff' : 'rgba(0, 0, 208, 0.02)'))
