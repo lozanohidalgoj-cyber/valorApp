@@ -83,22 +83,10 @@ const ATRPreview: React.FC = () => {
   const [barTooltip, setBarTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
   // Estado para resaltar fila con anomalía en la tabla (guardar año/mes en lugar de clave)
   const [anomalyYearMonth, setAnomalyYearMonth] = React.useState<{ year: number; month: number } | null>(null)
-  // Ref para saber si venimos de una confirmación de anulación (evitar resetear allowAnalysis)
-  const justConfirmedAnulacion = React.useRef<boolean>(false)
   const total = filteredRows.length
-  
-  // Debug: log estado de allowAnalysis
-  React.useEffect(() => {
-    console.log('🔘 allowAnalysis cambió a:', allowAnalysis)
-  }, [allowAnalysis])
   
   // Actualizar filteredRows cuando cambien los datos
   React.useEffect(() => {
-    console.log('🔄 useEffect filteredData ejecutado', { 
-      hasRows: !!filteredData?.rows, 
-      justConfirmed: justConfirmedAnulacion.current 
-    })
-    
     if (filteredData?.rows) {
       setFilteredRows(filteredData.rows)
       setKeptRows(filteredData.rows)
@@ -108,15 +96,8 @@ const ATRPreview: React.FC = () => {
       setAnuladas(0)
       setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
       setActiveTab('vista')
-      // Solo deshabilitar análisis si NO venimos de una confirmación de anulación
-      if (!justConfirmedAnulacion.current) {
-        console.log('⚠️ Deshabilitando allowAnalysis')
-        setAllowAnalysis(false)
-      } else {
-        console.log('✅ Manteniendo allowAnalysis (viene de confirmación)')
-        // Resetear la bandera después de usar
-        justConfirmedAnulacion.current = false
-      }
+      // Habilitar análisis siempre que haya datos cargados
+      setAllowAnalysis(filteredData.rows.length > 0)
       // Limpiar resaltado previo al cargar nuevos datos
       setAnomalyYearMonth(null)
       // No cerramos el panel aquí para permitir que persista hasta que el usuario lo cierre manualmente
@@ -1616,11 +1597,6 @@ const ATRPreview: React.FC = () => {
                 setOrdenado(true)
                 setViewMode('restantes')
                 setActiveTab('vista')
-                // Marcar que venimos de una confirmación para que el useEffect no resetee allowAnalysis
-                justConfirmedAnulacion.current = true
-                console.log('🎯 Confirmación de anulación - marcando bandera y habilitando análisis')
-                // Habilitar análisis tras una anulación confirmada
-                setAllowAnalysis(true)
                 // Limpiar el estado del modal de previsualización
                 setShowAnularPreview(false)
                 setAnularPreviewRows([])
