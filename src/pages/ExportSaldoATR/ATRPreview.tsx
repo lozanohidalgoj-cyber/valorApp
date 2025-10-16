@@ -601,6 +601,12 @@ const ATRPreview: React.FC = () => {
       setBarTooltip(null)
       setShowAnalisisPanel(true)
       console.log('✅ Panel de análisis abierto:', { series: withVar.length, anomalyIdx: firstDrop, anomalyYM: detectedAnomalyYM })
+      console.log('🎯 anomalyYearMonth guardado:', detectedAnomalyYM)
+      
+      // Verificar que el estado se actualizó
+      setTimeout(() => {
+        console.log('🔄 Verificación post-actualización de anomalyYearMonth (debería aparecer en la tabla)')
+      }, 100)
     } catch (err) {
       console.error('❌ Error en análisis:', err)
       window.alert('Error al analizar anomalías.')
@@ -1373,6 +1379,13 @@ const ATRPreview: React.FC = () => {
               // Headers para detectar fecha de la fila
               const fechaHeaderForKey = filteredData.headers.find(h => isFechaDesdeHeader(h)) || filteredData.headers.find(h => isFechaHastaHeader(h)) || filteredData.headers.find(h => isPeriodoHeader(h)) || filteredData.headers.find(h => isFechaFactHeader(h))
               
+              console.log('📑 Renderizando tabla:', { 
+                totalRows: filteredRows.length, 
+                anomalyYearMonth, 
+                fechaHeaderForKey,
+                hasAnomaly: !!anomalyYearMonth 
+              })
+              
               return filteredRows.map((r, i) => {
                 const prev = i > 0 ? filteredRows[i - 1] : null
                 const contractKey = contractHeader ? String(r[contractHeader] ?? '').trim() : ''
@@ -1387,8 +1400,25 @@ const ATRPreview: React.FC = () => {
                     const rowYear = d.getFullYear()
                     const rowMonth = d.getMonth() + 1
                     isHighlighted = (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month)
+                    
+                    // Log de cada fila para debugging
+                    if (i < 3 || isHighlighted) {
+                      console.log(`🔍 Fila ${i + 1}:`, { 
+                        fechaVal, 
+                        rowYear, 
+                        rowMonth, 
+                        anomalyYear: anomalyYearMonth.year, 
+                        anomalyMonth: anomalyYearMonth.month,
+                        isHighlighted 
+                      })
+                    }
+                    
                     if (isHighlighted) {
-                      console.log('🎯 Fila resaltada encontrada:', { rowIndex: i + 1, rowYear, rowMonth, anomalyYearMonth })
+                      console.log('🎯 ✅ FILA RESALTADA ENCONTRADA:', { rowIndex: i + 1, rowYear, rowMonth, anomalyYearMonth })
+                    }
+                  } else {
+                    if (i < 3) {
+                      console.log(`⚠️ Fila ${i + 1}: No se pudo parsear fecha`, fechaVal)
                     }
                   }
                 }
