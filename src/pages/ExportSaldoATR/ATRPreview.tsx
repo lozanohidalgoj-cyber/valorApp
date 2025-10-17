@@ -1305,7 +1305,7 @@ const ATRPreview: React.FC = () => {
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
-          {/* Botón Detectar anomalías de consumo (a la izquierda de Anular) */}
+          {/* Botón Detectar anomalías de consumo */}
           <button
             type="button"
             onClick={handleDetectarAnomalias}
@@ -1339,6 +1339,39 @@ const ATRPreview: React.FC = () => {
               }
             }}
           >Detectar anomalías de consumo</button>
+          
+          {/* Botón PA */}
+          <button
+            type="button"
+            onClick={() => {
+              console.log('🔍 Botón PA clickeado')
+              window.alert('🔄 Funcionalidad PA en desarrollo\n\nEsta función estará disponible próximamente.')
+            }}
+            style={{
+              borderRadius: 10,
+              padding: '0.625rem 1rem',
+              background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '0.8125rem',
+              fontWeight: 800,
+              letterSpacing: '0.03em',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px -2px rgba(5, 150, 105, 0.35)',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              fontFamily: "'Open Sans', sans-serif"
+            }}
+            title="Procesamiento Avanzado (PA)"
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px -2px rgba(5, 150, 105, 0.45)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px -2px rgba(5, 150, 105, 0.35)';
+            }}
+          >PA</button>
           {/* Botón 'Filtrar' eliminado por solicitud */}
           {/* Pestañas: Vista previa | Eliminadas */}
           {ordenado && (
