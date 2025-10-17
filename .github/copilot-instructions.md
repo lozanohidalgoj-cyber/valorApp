@@ -1,7 +1,9 @@
 # ValorApp – Guía para agentes (Copilot)
 
 ## Visión general
-Aplicación corporativa para valoración de consumo energético basada en registros ATR (información de contadores de clientes). Permite crear/gestionar registros, distinguir gestión por avería/fraude y marcar valores estimados o reales. 
+**Aplicación enfocada al análisis de consumo energético y la detección de anomalías**
+
+Aplicación corporativa especializada en el análisis inteligente de consumo energético basada en registros ATR (información de contadores de clientes). Su objetivo principal es detectar anomalías en el consumo que puedan indicar fraudes, averías o comportamientos atípicos. Permite crear/gestionar registros, distinguir gestión por avería/fraude y marcar valores estimados o reales, con algoritmos avanzados de detección de patrones anómalos. 
 
 **IMPORTANTE**: La aplicación NO maneja autenticación ni usuarios. Es una aplicación de acceso libre sin control de acceso.
 

@@ -1,13 +1,30 @@
 # ValorApp
 
-Aplicación web para valoración de consumo energético basada en registros ATR.
+**Aplicación enfocada al análisis de consumo energético y la detección de anomalías**
 
-## 🚀 Características
+Aplicación web especializada para el análisis inteligente de consumo energético basada en registros ATR (información de contadores eléctricos). Su objetivo principal es detectar anomalías en el consumo que puedan indicar fraudes, averías o comportamientos atípicos en el sistema eléctrico.
 
+## 🚀 Características principales
+
+### 🔍 **Detección de Anomalías**
+- **Algoritmo de 3 criterios** para detectar consumos anómalos
+- **Detección de fraudes** energéticos (manipulación de contadores)
+- **Identificación de averías** (consumos atípicamente bajos)
+- **Persistencia temporal** (anomalías sostenidas vs. temporales)
+- **Ajuste estacional** (considera patrones históricos por mes)
+
+### � **Análisis de Consumo**
+- **Visualización con mapa de calor** (rojo=bajo/anómalo, verde=normal)
+- **Agregación mensual** de consumos kWh
+- **Análisis de variación porcentual** entre períodos
+- **Cálculo de promedios estacionales**
+- **Highlighting interactivo** de filas y celdas anómalas
+
+### 🛠️ **Funcionalidades adicionales**
 - **Sin autenticación**: Acceso libre sin gestión de usuarios
 - **Gestión de registros ATR**: Crear, editar y eliminar registros de consumo
-- **Análisis de expedientes**: Importación y análisis de archivos Excel
-- **WART**: Funcionalidad especializada
+- **Análisis de expedientes**: Importación y análisis de archivos Excel/CSV
+- **WART**: Funcionalidad especializada con checklist de validación
 - **Exportación**: Generación de saldo ATR y exportación de datos
 - **Interfaz moderna**: React + TypeScript + Vite
 
