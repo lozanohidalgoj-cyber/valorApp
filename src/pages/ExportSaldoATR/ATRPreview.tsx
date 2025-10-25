@@ -652,10 +652,49 @@ const ATRPreview: React.FC = () => {
       
       console.log('🔎 Analizando', withVar.length, 'meses con detección avanzada de anomalías...')
       
-      // IMPORTANTE: Empezar a analizar después de los primeros 3 meses para tener contexto
-      const startAnalysisFrom = Math.max(1, 3)
+      // NUEVO CRITERIO 0: Detectar consumos nulos sostenidos (ANTES del análisis principal)
+      // Este criterio captura anomalías por falta total de consumo (fraude/avería severa)
+      let consecutiveZeroStart = -1
+      let consecutiveZeroCount = 0
+      for (let i = 0; i < withVar.length; i++) {
+        if (withVar[i].consumo <= 1) {  // Consumo casi nulo (<=1 kWh)
+          if (consecutiveZeroCount === 0) {
+            consecutiveZeroStart = i
+          }
+          consecutiveZeroCount++
+        } else {
+          // Si acumulamos 2+ meses seguidos de nulos, es anomalía
+          if (consecutiveZeroCount >= 2 && firstDrop === null) {
+            firstDrop = consecutiveZeroStart
+            detectedAnomalyYM = { year: withVar[consecutiveZeroStart].year, month: withVar[consecutiveZeroStart].month }
+            const promedioPrevio = consecutiveZeroStart > 0 
+              ? withVar.slice(Math.max(0, consecutiveZeroStart - 6), consecutiveZeroStart)
+                  .filter(v => v.consumo > 1)
+                  .reduce((s, v) => s + v.consumo, 0) / Math.max(1, Math.min(6, consecutiveZeroStart))
+              : 0
+            
+            anomalyMetadata = {
+              criterio: `Consumo nulo sostenido (${consecutiveZeroCount} meses consecutivos)`,
+              confianza: 0.95,  // Muy alta confianza
+              baseline: promedioPrevio > 0 ? promedioPrevio : (withVar.reduce((s, v) => s + v.consumo, 0) / withVar.length),
+              actual: 0,
+              caida: 1.0,  // 100% de caída
+              persistencia: consecutiveZeroCount,
+              desvEstandar: 999  // Extremo
+            }
+            console.log('⚠️ ANOMALÍA CRÍTICA DETECTADA: Consumo nulo por', consecutiveZeroCount, 'meses desde mes', consecutiveZeroStart)
+            break
+          }
+          consecutiveZeroCount = 0
+        }
+      }
       
-      for (let i = startAnalysisFrom; i < withVar.length; i++) {
+      // Si ya se detectó anomalía nula, no continuar con el análisis normal
+      if (firstDrop === null) {
+        // IMPORTANTE: Empezar a analizar después de los primeros 3 meses para tener contexto
+        const startAnalysisFrom = Math.max(1, 3)
+        
+        for (let i = startAnalysisFrom; i < withVar.length; i++) {
         const prev = withVar[i - 1].consumo
         const curV = withVar[i].consumo
         const currentMonth = withVar[i].month
@@ -850,6 +889,7 @@ dentro de los rangos normales esperados.
       setTimeout(() => {
         console.log('🔄 Verificación post-actualización de anomalyYearMonth (debería aparecer en la tabla)')
       }, 100)
+      } // Cierre del if (firstDrop === null)
     } catch (err) {
       console.error('❌ Error en análisis:', err)
       window.alert('Error al analizar anomalías.')
