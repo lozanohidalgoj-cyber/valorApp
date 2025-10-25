@@ -1,0 +1,1 @@
+export { ActaFacturaAlertModal } from './ActaFacturaAlertModal'

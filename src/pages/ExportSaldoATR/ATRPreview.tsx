@@ -1,4 +1,6 @@
 import React from 'react'
+import { useActaFacturaValidation } from '../../hooks/business/useActaFacturaValidation'
+import { ActaFacturaAlertModal } from '../../components/ui/ActaFacturaAlertModal'
 
 interface ParsedCSV {
   headers: string[]
@@ -98,6 +100,11 @@ const ATRPreview: React.FC = () => {
   const [heatmapTooltip, setHeatmapTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
   // Estado para resaltar fila con anomalía en la tabla (guardar año/mes en lugar de clave)
   const [anomalyYearMonth, setAnomalyYearMonth] = React.useState<{ year: number; month: number } | null>(null)
+  // Estado para el modal de alerta de facturación ATR
+  const [showActaAlert, setShowActaAlert] = React.useState<boolean>(false)
+  const [actaAlertMessage, setActaAlertMessage] = React.useState<string>('')
+  const [actaAlertType, setActaAlertType] = React.useState<'warning' | 'error' | 'info'>('info')
+  
   const total = filteredRows.length
   
   // Actualizar filteredRows cuando cambien los datos
@@ -144,6 +151,32 @@ const ATRPreview: React.FC = () => {
       }, 300) // Delay para asegurar que la tabla está renderizada
     }
   }, [anomalyYearMonth]) // Solo depende de anomalyYearMonth, no del panel
+
+  // Construir array de datos mensuales para validación (antes de llamar el hook)
+  const monthlyDataForValidation = React.useMemo(() => {
+    if (!monthlySeries || monthlySeries.length === 0) return []
+    return monthlySeries.map(item => ({
+      fecha: item.fecha,
+      consumo: item.consumo,
+      year: item.year,
+      month: item.month
+    }))
+  }, [monthlySeries])
+
+  // Llamar hook de validación de Acta/Factura (nivel superior del componente)
+  const actaValidation = useActaFacturaValidation(fechaActa, monthlyDataForValidation)
+
+  // useEffect para actualizar el estado del modal basado en validación
+  React.useEffect(() => {
+    if (actaValidation.show) {
+      setShowActaAlert(true)
+      setActaAlertMessage(actaValidation.message)
+      setActaAlertType(actaValidation.type)
+      console.log('⚠️ Acta/Factura validation alert:', { type: actaValidation.type, message: actaValidation.message })
+    } else {
+      setShowActaAlert(false)
+    }
+  }, [actaValidation])
 
   const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
   // Detección robusta de columna de potencia: acepta variantes como "Pot(kW)", "Potencia(kW)", "Potencia kW", etc.
@@ -1055,6 +1088,14 @@ dentro de los rangos normales esperados.
           }
         }
       `}</style>
+      
+      {/* Modal de validación Acta/Factura */}
+      <ActaFacturaAlertModal
+        show={showActaAlert}
+        message={actaAlertMessage}
+        type={actaAlertType}
+        onClose={() => setShowActaAlert(false)}
+      />
       
       {/* Panel lateral izquierdo: Resumen por año (contenido visible cuando showYearPanel = true) */}
       {showYearPanel && (
