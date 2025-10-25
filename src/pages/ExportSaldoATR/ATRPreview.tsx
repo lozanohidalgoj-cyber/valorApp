@@ -794,10 +794,34 @@ const ATRPreview: React.FC = () => {
       // REPORTE FINAL: Mostrar información detallada del análisis
       if (!detectedAnomalyYM) {
         console.log('✅ Análisis completado: No se detectaron descensos significativos en el consumo.')
-        window.alert('✅ Análisis completado sin anomalías detectadas\n\n' +
-                    `📊 Se analizaron ${withVar.length} meses de datos\n` +
-                    `🔍 Validación cruzada: estadística + estacional + tendencias\n` +
-                    `📈 El comportamiento es estable y dentro de rangos esperados`)
+        const mensajeNoAnomalia = `✅ ANÁLISIS COMPLETADO - SIN ANOMALÍAS DETECTADAS
+
+📊 RESUMEN DEL ANÁLISIS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Período analizado: ${withVar.length} meses
+• Rango: ${withVar[0]?.year}-${pad2(withVar[0]?.month)} → ${withVar[withVar.length-1]?.year}-${pad2(withVar[withVar.length-1]?.month)}
+• Meses analizados: ${withVar.length}
+• Promedio histórico: ${(withVar.reduce((s, v) => s + v.consumo, 0) / withVar.length).toFixed(0)} kWh
+
+🔍 VALIDACIONES REALIZADAS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Análisis estadístico (Z-Score)
+✓ Detección de outliers
+✓ Validación estacional
+✓ Análisis de tendencias
+✓ Detección de persistencia
+
+📈 CONCLUSIÓN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+El comportamiento del consumo es ESTABLE y está
+dentro de los rangos normales esperados.
+
+✅ No se detectaron descensos ni incrementos
+   anómalos superiores al 40%
+
+💡 TIP: Si sospechas de anomalías no detectadas,
+   verifica los datos en la tabla de variaciones.`
+        window.alert(mensajeNoAnomalia)
       } else if (anomalyMetadata) {
         console.log('⚠️ ANOMALÍA DETECTADA CON ALTA PRECISIÓN:', anomalyMetadata)
         window.alert('⚠️ Anomalía detectada con alta precisión\n\n' +
@@ -808,6 +832,10 @@ const ATRPreview: React.FC = () => {
                     `📈 Baseline: ${anomalyMetadata.baseline.toFixed(0)} kWh → Actual: ${anomalyMetadata.actual.toFixed(0)} kWh\n` +
                     `🔢 Desviaciones estándar: ${anomalyMetadata.desvEstandar.toFixed(1)}\n` +
                     (anomalyMetadata.persistencia > 0 ? `⏱️ Persistencia: ${anomalyMetadata.persistencia} meses` : ''))
+      } else {
+        // Caso improbable pero contemplado: sin metadata pero con periodo detectado
+        console.warn('⚠️ Período detectado sin metadata')
+        window.alert('⚠️ Se detectó un cambio significativo, pero sin información de contexto.\n\nIntenta de nuevo o verifica los datos.')
       }
       
       setMonthlySeries(withVar)
