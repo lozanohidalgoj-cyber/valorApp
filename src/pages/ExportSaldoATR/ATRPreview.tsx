@@ -251,7 +251,7 @@ const ATRPreview: React.FC = () => {
         }
         if (maxHasta) {
           const ms30d = 30 * 24 * 60 * 60 * 1000
-          if (dActa.getTime() > (maxHasta.getTime() + ms30d)) return true
+          if (dActa.getTime() >= (maxHasta.getTime() + ms30d)) return true
           // También considerar que si el acta es anterior a min(Fecha desde) - 30 días, no aplica, pero el caso más habitual es acta posterior.
         }
       }
@@ -263,6 +263,36 @@ const ATRPreview: React.FC = () => {
       return false
     }
   }, [fechaActa, filteredRows, filteredData])
+
+  // Si la validación estricta detecta problema pero el hook no muestra modal, levantamos el modal con mensaje estándar
+  React.useEffect(() => {
+    try {
+      if (!fechaActa) return
+      if (actaValidation.show) return // ya hay modal
+      if (!actaNeedsAttentionStrict) return
+
+      // Intentar obtener última Fecha hasta para detalle
+      const hastaH = filteredData?.headers.find(h => isFechaHastaHeader(h)) || null
+      let maxHasta: Date | null = null
+      if (hastaH) {
+        for (const r of filteredRows) {
+          const dHasta = parseDateLoose(String(r[hastaH] ?? ''))
+          if (dHasta && (!maxHasta || dHasta > maxHasta)) maxHasta = dHasta
+        }
+      }
+      const actaDate = parseDateLoose(fechaActa)
+      const diffDays = (maxHasta && actaDate) ? Math.ceil(Math.abs(actaDate.getTime() - maxHasta.getTime()) / (1000*60*60*24)) : null
+      const fmt = (d: Date) => new Intl.DateTimeFormat('es-ES', { year:'numeric', month:'2-digit', day:'2-digit' }).format(d)
+
+      const message = `⚠️ FALTAN FACTURAS PARA VALORAR\n\nFecha del acta: ${actaDate ? fmt(actaDate) : String(fechaActa)}\nÚltima factura registrada: ${maxHasta ? fmt(maxHasta) : '—'}${diffDays !== null ? `\nDías de diferencia: ${diffDays} días` : ''}\n\nNo hay registros de consumo para el mes/período del acta o la última factura supera los 30 días.`
+      setActaAlertMessage(message)
+      setActaAlertType('error')
+      setShowActaAlert(true)
+      console.log('🚨 Modal por validación estricta mostrado (faltan facturas)')
+    } catch (e) {
+      console.warn('No se pudo mostrar modal de validación estricta:', e)
+    }
+  }, [actaNeedsAttentionStrict, actaValidation.show, fechaActa, filteredRows, filteredData])
 
   // useEffect para actualizar el estado del modal basado en validación
   React.useEffect(() => {
