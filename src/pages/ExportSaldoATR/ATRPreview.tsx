@@ -304,11 +304,13 @@ const ATRPreview: React.FC = () => {
   }
   const isFechaDesdeHeader = (h: string) => {
     const t = normalizeHeader(h)
-    return t === 'fecha desde' || (t.includes('fecha') && t.includes('desde'))
+    // Acepta variantes: "Fecha desde", "Desde", "Inicio", etc.
+    return t === 'fecha desde' || t === 'desde' || t.includes('desde') || (t.includes('fecha') && t.includes('inicio'))
   }
   const isFechaHastaHeader = (h: string) => {
     const t = normalizeHeader(h)
-    return t === 'fecha hasta' || (t.includes('fecha') && t.includes('hasta'))
+    // Acepta variantes: "Fecha hasta", "Hasta", "Fin", etc.
+    return t === 'fecha hasta' || t === 'hasta' || t.includes('hasta') || (t.includes('fecha') && (t.includes('fin') || t.includes('corte')))
   }
   // Extras para análisis de consumo
   const isPeriodoHeader = (h: string) => normalizeLabel(h).includes('periodo')
