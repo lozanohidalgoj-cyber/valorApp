@@ -316,6 +316,25 @@ const ATRPreview: React.FC = () => {
     return actaValidation.show && (actaValidation.type === 'error' || (diff !== null && diff > 30))
   }, [fechaActa, actaNeedsAttentionStrict, actaValidation])
 
+  // Detectar si hay facturas con Estado de medida "pendiente a facturar"
+  const hasPendienteAFacturar = React.useMemo(() => {
+    try {
+      if (!filteredData) return false
+      const estadoHeader = filteredData.headers.find(h => isEstadoMedidaHeader(h)) || null
+      if (!estadoHeader) return false
+      for (const r of filteredRows) {
+        const t = normalizeLabel(String(r[estadoHeader] ?? ''))
+        if (t.includes('pendien') && t.includes('factur')) return true
+      }
+      return false
+    } catch {
+      return false
+    }
+  }, [filteredData, filteredRows])
+
+  // Señal unificada para mostrar aviso visual "Faltan facturas para valorar"
+  const faltanFacturasUI = React.useMemo(() => actaNeedsAttention || hasPendienteAFacturar, [actaNeedsAttention, hasPendienteAFacturar])
+
   // Si la validación estricta detecta problema pero el hook no muestra modal, levantamos el modal con mensaje estándar
   React.useEffect(() => {
     try {
@@ -1656,7 +1675,7 @@ dentro de los rangos normales esperados.
           {fechaActa && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {(() => {
-                const badgeStyle: React.CSSProperties = actaNeedsAttention ? {
+                const badgeStyle: React.CSSProperties = faltanFacturasUI ? {
                   background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
                   border: '2px solid #EF4444',
                   color: '#7F1D1D',
@@ -1682,9 +1701,9 @@ dentro de los rangos normales esperados.
                       letterSpacing: '0.02em',
                       ...badgeStyle
                     }}>
-                      Fecha del acta: <strong style={{ color: actaNeedsAttention ? '#7F1D1D' : '#FF3184' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
+                      Fecha del acta: <strong style={{ color: faltanFacturasUI ? '#7F1D1D' : '#FF3184' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
                     </div>
-                    {actaNeedsAttention && (
+                    {faltanFacturasUI && (
                       <span style={{
                         marginTop: '0.5rem',
                         background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
@@ -2747,15 +2766,15 @@ dentro de los rangos normales esperados.
                   {fechaActa && (
                   <span style={{ 
                     fontSize: '0.875rem', 
-                    color: actaNeedsAttention ? '#FCA5A5' : 'rgba(255, 255, 255, 0.95)',
+                    color: faltanFacturasUI ? '#FCA5A5' : 'rgba(255, 255, 255, 0.95)',
                     fontFamily: "'Open Sans', sans-serif",
                     whiteSpace: 'nowrap',
                     fontWeight: 700
                   }}>
-                    Fecha del acta: <strong style={{ color: actaNeedsAttention ? '#FEE2E2' : '#FFFFFF' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
+                    Fecha del acta: <strong style={{ color: faltanFacturasUI ? '#FEE2E2' : '#FFFFFF' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
                   </span>
                   )}
-                  {fechaActa && actaNeedsAttention && (
+                  {fechaActa && faltanFacturasUI && (
                     <span style={{
                       background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
                       border: '2px solid #EF4444',
