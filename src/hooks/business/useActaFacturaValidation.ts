@@ -73,6 +73,12 @@ export const useActaFacturaValidation = (
       mostrarAlerta = true
       tipoAlerta = 'error'
       mensaje = `⚠️ SIN FACTURAS EN EL PERÍODO\n\nFecha del acta: ${formatDate(actaDate)}\nÚltima factura registrada: ${formatDate(fechaUltimaFactura)}\nDías de diferencia: ${Math.abs(diasDiferencia)} días\n\nNo hay registros de consumo para el mes/período del acta.`
+    } else if (fechaUltimaFactura && actaDate > fechaUltimaFactura) {
+      // Caso 4: La fecha del acta es posterior a la última factura registrada
+      diasDiferencia = calcularDiasDiferencia(fechaUltimaFactura, actaDate)
+      mostrarAlerta = true
+      tipoAlerta = 'error'
+      mensaje = `⚠️ ACTA POSTERIOR A LA ÚLTIMA FACTURA\n\nFecha del acta: ${formatDate(actaDate)}\nÚltima factura registrada: ${formatDate(fechaUltimaFactura)}\nDías de diferencia: ${diasDiferencia} días\n\nLa fecha del acta es posterior a la última factura registrada.`
     } else if (fechaUltimaFactura) {
       // Caso 3: Verificar si la última factura es anterior en más de 30 días
       diasDiferencia = calcularDiasDiferencia(fechaUltimaFactura, actaDate)
