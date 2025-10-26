@@ -152,16 +152,53 @@ const ATRPreview: React.FC = () => {
     }
   }, [anomalyYearMonth]) // Solo depende de anomalyYearMonth, no del panel
 
-  // Construir array de datos mensuales para validación (antes de llamar el hook)
+  // Construir array de datos mensuales para validación desde los datos del CSV (sin depender del análisis)
   const monthlyDataForValidation = React.useMemo(() => {
-    if (!monthlySeries || monthlySeries.length === 0) return []
-    return monthlySeries.map(item => ({
-      fecha: item.fecha,
-      consumo: item.consumo,
-      year: item.year,
-      month: item.month
-    }))
-  }, [monthlySeries])
+    try {
+      if (!filteredData?.headers || !filteredRows || filteredRows.length === 0) return []
+
+      // Priorizamos "Fecha hasta" para identificar el período facturado más reciente
+      const fechaHastaH = filteredData.headers.find(h => isFechaHastaHeader(h)) || null
+      const fechaDesdeH = filteredData.headers.find(h => isFechaDesdeHeader(h)) || null
+      const periodoH = filteredData.headers.find(h => isPeriodoHeader(h)) || null
+      const fechaFactH = filteredData.headers.find(h => isFechaFactHeader(h)) || null
+      const chosenDateHeader = fechaHastaH || fechaDesdeH || periodoH || fechaFactH
+      if (!chosenDateHeader) return []
+
+      const consumoH = filteredData.headers.find(h => isConsumoActivaHeader(h)) || null
+
+      // Agregar por (año, mes)
+      const agg = new Map<string, { year: number; month: number; fecha: Date; consumo: number }>()
+      for (const r of filteredRows) {
+        const raw = String(r[chosenDateHeader] ?? '')
+        let d = periodoH && chosenDateHeader === periodoH ? parsePeriodoStart(raw) : parseDateLoose(raw)
+        if (!d) continue
+        // Si estamos usando Fecha desde, el consumo corresponde al mes anterior
+        if (fechaDesdeH && chosenDateHeader === fechaDesdeH) {
+          const tmp = new Date(d)
+          tmp.setMonth(tmp.getMonth() - 1)
+          d = tmp
+        }
+        const year = d.getFullYear()
+        const month = d.getMonth() + 1
+        const key = `${year}-${pad2(month)}`
+        const firstDay = new Date(year, month - 1, 1)
+        let consumo = 0
+        if (consumoH) {
+          const n = normalizeNumber(String(r[consumoH] ?? '0'))
+          consumo = Number.isFinite(n) ? n : 0
+        }
+        const prev = agg.get(key)
+        if (prev) prev.consumo += consumo
+        else agg.set(key, { year, month, fecha: firstDay, consumo })
+      }
+
+      return Array.from(agg.values()).sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
+    } catch (e) {
+      console.error('Error construyendo monthlyDataForValidation:', e)
+      return []
+    }
+  }, [filteredData, filteredRows])
 
   // Llamar hook de validación de Acta/Factura (nivel superior del componente)
   const actaValidation = useActaFacturaValidation(fechaActa, monthlyDataForValidation)
