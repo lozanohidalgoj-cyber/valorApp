@@ -673,9 +673,15 @@ const ATRPreview: React.FC = () => {
       // Paso 1: recolectar pares fecha(consolidada a mes) y consumo
       const points: Array<{ ymKey: string; year: number; month: number; fecha: Date; consumo: number }> = []
       for (const r of rows) {
-        const d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
+        let d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
         const n = normalizeNumber(String(r[consumoHeader] ?? ''))
         if (!d || !Number.isFinite(n)) continue
+        // Importante: si la cabecera de fecha es "Fecha desde", el consumo corresponde al MES ANTERIOR
+        if (isFechaDesdeHeader(fechaHeader)) {
+          const adj = new Date(d)
+          adj.setMonth(adj.getMonth() - 1)
+          d = adj
+        }
         const year = d.getFullYear(); const month = d.getMonth() + 1
         const key = `${year}-${pad2(month)}`
         const firstDay = new Date(year, month - 1, 1)
