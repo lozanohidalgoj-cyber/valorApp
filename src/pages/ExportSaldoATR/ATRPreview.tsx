@@ -335,35 +335,8 @@ const ATRPreview: React.FC = () => {
   // Señal unificada para mostrar aviso visual "Faltan facturas para valorar"
   const faltanFacturasUI = React.useMemo(() => actaNeedsAttention || hasPendienteAFacturar, [actaNeedsAttention, hasPendienteAFacturar])
 
-  // Si la validación estricta detecta problema pero el hook no muestra modal, levantamos el modal con mensaje estándar
-  React.useEffect(() => {
-    try {
-      if (!fechaActa) return
-      if (actaValidation.show) return // ya hay modal
-      if (!actaNeedsAttentionStrict) return
-
-      // Intentar obtener última Fecha hasta para detalle
-      const hastaH = filteredData?.headers.find(h => isFechaHastaHeader(h)) || null
-      let maxHasta: Date | null = null
-      if (hastaH) {
-        for (const r of filteredRows) {
-          const dHasta = parseDateLoose(String(r[hastaH] ?? ''))
-          if (dHasta && (!maxHasta || dHasta > maxHasta)) maxHasta = dHasta
-        }
-      }
-      const actaDate = parseDateLoose(fechaActa)
-      const diffDays = (maxHasta && actaDate) ? Math.ceil(Math.abs(actaDate.getTime() - maxHasta.getTime()) / (1000*60*60*24)) : null
-      const fmt = (d: Date) => new Intl.DateTimeFormat('es-ES', { year:'numeric', month:'2-digit', day:'2-digit' }).format(d)
-
-      const message = `⚠️ FALTAN FACTURAS PARA VALORAR\n\nFecha del acta: ${actaDate ? fmt(actaDate) : String(fechaActa)}\nÚltima factura registrada: ${maxHasta ? fmt(maxHasta) : '—'}${diffDays !== null ? `\nDías de diferencia: ${diffDays} días` : ''}\n\nNo hay registros de consumo para el mes/período del acta o la última factura supera los 30 días.`
-      setActaAlertMessage(message)
-      setActaAlertType('error')
-      setShowActaAlert(true)
-      console.log('🚨 Modal por validación estricta mostrado (faltan facturas)')
-    } catch (e) {
-      console.warn('No se pudo mostrar modal de validación estricta:', e)
-    }
-  }, [actaNeedsAttentionStrict, actaValidation.show, fechaActa, filteredRows, filteredData])
+  // Nota: Se elimina el fallback de modal por validación estricta.
+  // Ahora el modal solo se abre cuando el hook actaValidation lo indica explícitamente.
 
   // useEffect para actualizar el estado del modal basado en validación
   React.useEffect(() => {
