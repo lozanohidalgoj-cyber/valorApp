@@ -218,6 +218,52 @@ const ATRPreview: React.FC = () => {
     message: actaValidation.message?.slice(0, 80)
   })
 
+  // Validación directa por intervalos Fecha desde / Fecha hasta con tolerancia de 30 días
+  const actaNeedsAttentionStrict = React.useMemo(() => {
+    try {
+      if (!fechaActa) return false
+      const dActa = parseDateLoose(fechaActa)
+      if (!dActa) return false
+      if (!filteredRows || filteredRows.length === 0) return false
+
+      // Buscar cabeceras reales en los datos cargados
+      const desdeH = filteredData?.headers.find(h => isFechaDesdeHeader(h)) || null
+      const hastaH = filteredData?.headers.find(h => isFechaHastaHeader(h)) || null
+      if (!desdeH && !hastaH) return false
+
+      // 1) Verificar si existe un intervalo que cubra la fecha del acta (±0 días)
+      let covered = false
+      for (const r of filteredRows) {
+        const dDesde = desdeH ? parseDateLoose(String(r[desdeH] ?? '')) : null
+        const dHasta = hastaH ? parseDateLoose(String(r[hastaH] ?? '')) : null
+        if (dDesde && dHasta && !isNaN(dDesde.getTime()) && !isNaN(dHasta.getTime())) {
+          if (dActa >= dDesde && dActa <= dHasta) { covered = true; break }
+        }
+      }
+      if (covered) return false
+
+      // 2) Si no está cubierto por ningún intervalo, aplicar tolerancia de 30 días contra última Fecha hasta
+      if (hastaH) {
+        let maxHasta: Date | null = null
+        for (const r of filteredRows) {
+          const dHasta = parseDateLoose(String(r[hastaH] ?? ''))
+          if (dHasta && (!maxHasta || dHasta > maxHasta)) maxHasta = dHasta
+        }
+        if (maxHasta) {
+          const ms30d = 30 * 24 * 60 * 60 * 1000
+          if (dActa.getTime() > (maxHasta.getTime() + ms30d)) return true
+          // También considerar que si el acta es anterior a min(Fecha desde) - 30 días, no aplica, pero el caso más habitual es acta posterior.
+        }
+      }
+
+      // Si llegó aquí y no está cubierto, considerar que faltan facturas
+      return true
+    } catch (e) {
+      console.warn('Validación estricta de acta falló:', e)
+      return false
+    }
+  }, [fechaActa, filteredRows, filteredData])
+
   // useEffect para actualizar el estado del modal basado en validación
   React.useEffect(() => {
     if (actaValidation.show) {
@@ -665,7 +711,74 @@ const ATRPreview: React.FC = () => {
         return { ...p, variacion: v }
       })
       
-      // NUEVO: Calcular métricas avanzadas para detección precisa de anomalías
+      // Variables para consolidar resultado de detección (inicio de anomalía)
+      let firstDrop: number | null = null
+      let detectedAnomalyYM: { year: number; month: number } | null = null
+      let anomalyMetadata: {
+        criterio: string;
+        confianza: number;
+        baseline: number;
+        actual: number;
+        caida: number;
+        persistencia: number;
+        desvEstandar: number;
+      } | null = null
+
+      // Detección prioridad 0: cambio a lectura ESTIMADA (inicio probable de anomalía operativa)
+      try {
+        const estadoHeader = headers.find(h => isEstadoMedidaHeader(h)) || headers.find(h => isTipoFacturaHeader(h)) || null
+        if (estadoHeader) {
+          // Construir entradas cronológicas por fila para detectar el primer "estimada" tras tener algún "real"
+          type RowEntry = { d: Date; year: number; month: number; estado: string }
+          const entries: RowEntry[] = []
+          for (const r of rows) {
+            const d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(String(r[fechaHeader] ?? ''))
+            if (!d) continue
+            let year = d.getFullYear(); let month = d.getMonth() + 1
+            if (isFechaDesdeHeader(fechaHeader)) {
+              const tmp = new Date(d); tmp.setMonth(tmp.getMonth() - 1)
+              year = tmp.getFullYear(); month = tmp.getMonth() + 1
+            }
+            const estado = normalizeLabel(String(r[estadoHeader] ?? ''))
+            entries.push({ d, year, month, estado })
+          }
+          // Orden cronológico por fecha de referencia
+          entries.sort((a, b) => a.d.getTime() - b.d.getTime())
+          let sawReal = false
+          let firstEstimadoIndex: number | null = null
+          for (let i = 0; i < entries.length; i++) {
+            const e = entries[i]
+            const isReal = e.estado.includes('real')
+            const isEstimada = e.estado.includes('estimad')
+            if (isReal) sawReal = true
+            if (sawReal && isEstimada) { firstEstimadoIndex = i; break }
+          }
+          if (firstEstimadoIndex !== null) {
+            const e = entries[firstEstimadoIndex]
+            const candidateYM = { year: e.year, month: e.month }
+            // Buscar índice en la serie mensual agregada
+            const idxInWithVar = withVar.findIndex(p => p.year === candidateYM.year && p.month === candidateYM.month)
+            if (idxInWithVar >= 0) {
+              firstDrop = firstDrop ?? idxInWithVar
+              detectedAnomalyYM = detectedAnomalyYM ?? candidateYM
+              anomalyMetadata = anomalyMetadata ?? {
+                criterio: 'Primer período con lectura ESTIMADA tras períodos REALES',
+                confianza: 0.7,
+                baseline: 0,
+                actual: withVar[idxInWithVar].consumo,
+                caida: 0,
+                persistencia: 0,
+                desvEstandar: 0
+              }
+              console.log('⚠️ Anomalía por ESTIMADA detectada primero en', candidateYM)
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('No fue posible evaluar cambio a ESTIMADA:', e)
+      }
+
+  // NUEVO: Calcular métricas avanzadas para detección precisa de anomalías
       const seasonalAvg = new Map<number, number>() // mes (1-12) → promedio de consumo
       const seasonalCount = new Map<number, number>() // mes (1-12) → cantidad de ocurrencias
       const seasonalStdDev = new Map<number, number>() // mes (1-12) → desviación estándar
@@ -729,17 +842,6 @@ const ATRPreview: React.FC = () => {
       }
       
       // DETECCIÓN AVANZADA: Múltiples validaciones cruzadas para identificación precisa
-      let firstDrop: number | null = null
-      let detectedAnomalyYM: { year: number; month: number } | null = null
-      let anomalyMetadata: {
-        criterio: string;
-        confianza: number;
-        baseline: number;
-        actual: number;
-        caida: number;
-        persistencia: number;
-        desvEstandar: number;
-      } | null = null
       
       console.log('🔎 Analizando', withVar.length, 'meses con detección avanzada de anomalías...')
       
@@ -1409,9 +1511,9 @@ dentro de los rangos normales esperados.
           {fechaActa && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {(() => {
-                const actaNeedsAttention = actaValidation?.show && (
+                const actaNeedsAttention = actaNeedsAttentionStrict || (actaValidation?.show && (
                   actaValidation.type === 'error' || (typeof actaValidation.diasDiferencia === 'number' && actaValidation.diasDiferencia > 30)
-                )
+                ))
                 // Estilo del recuadro Fecha del acta: rojo cuando falta valoración; corporativo cuando OK
                 const badgeStyle: React.CSSProperties = actaNeedsAttention ? {
                   background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
