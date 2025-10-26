@@ -2024,6 +2024,7 @@ dentro de los rangos normales esperados.
                 console.log('🎯 Buscando fila con anomalía:', anomalyYearMonth)
               }
               
+              const anomalyMidDate = anomalyYearMonth ? new Date(anomalyYearMonth.year, anomalyYearMonth.month - 1, 15) : null
               return filteredRows.map((r, i) => {
                 const prev = i > 0 ? filteredRows[i - 1] : null
                 const contractKey = contractHeader ? String(r[contractHeader] ?? '').trim() : ''
@@ -2031,52 +2032,33 @@ dentro de los rangos normales esperados.
                 
                 // Verificar si esta fila corresponde a la anomalía detectada
                 let isHighlighted = false
-                if (anomalyYearMonth && fechaHeaderForKey) {
-                  const fechaVal = String(r[fechaHeaderForKey] ?? '')
-                  const d = isPeriodoHeader(fechaHeaderForKey) ? parsePeriodoStart(fechaVal) : parseDateLoose(fechaVal)
-                  if (d) {
-                    // Si es "Fecha desde", el consumo corresponde al mes ANTERIOR
-                    // Por ejemplo: Fecha desde 02/12/2022 contiene el consumo de noviembre 2022
-                    let rowYear = d.getFullYear()
-                    let rowMonth = d.getMonth() + 1
-                    
-                    if (isFechaDesdeHeader(fechaHeaderForKey)) {
-                      // Restar un mes para obtener el mes del consumo
-                      const consumptionDate = new Date(d)
-                      consumptionDate.setMonth(consumptionDate.getMonth() - 1)
-                      rowYear = consumptionDate.getFullYear()
-                      rowMonth = consumptionDate.getMonth() + 1
+                if (anomalyYearMonth) {
+                  // 1) Intento de coincidencia simple por (año, mes) usando el header de fecha elegido
+                  if (fechaHeaderForKey) {
+                    const fechaVal = String(r[fechaHeaderForKey] ?? '')
+                    const d = isPeriodoHeader(fechaHeaderForKey) ? parsePeriodoStart(fechaVal) : parseDateLoose(fechaVal)
+                    if (d) {
+                      let rowYear = d.getFullYear()
+                      let rowMonth = d.getMonth() + 1
+                      if (isFechaDesdeHeader(fechaHeaderForKey)) {
+                        const consumptionDate = new Date(d)
+                        consumptionDate.setMonth(consumptionDate.getMonth() - 1)
+                        rowYear = consumptionDate.getFullYear()
+                        rowMonth = consumptionDate.getMonth() + 1
+                      }
+                      isHighlighted = (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month)
                     }
-                    
-                    isHighlighted = (rowYear === anomalyYearMonth.year && rowMonth === anomalyYearMonth.month)
-                    
-                    // Log TODAS las filas para debugging
-                    console.log(`🔍 Fila ${i + 1}:`, { 
-                      fechaHeader: fechaHeaderForKey,
-                      fechaVal, 
-                      parsedDate: d.toISOString(),
-                      rowYear, 
-                      rowMonth, 
-                      anomalyYear: anomalyYearMonth.year, 
-                      anomalyMonth: anomalyYearMonth.month,
-                      match: isHighlighted 
-                    })
-                    
-                    if (isHighlighted) {
-                      console.log('🎯 ✅ ✅ ✅ FILA RESALTADA ENCONTRADA:', { 
-                        rowIndex: i + 1, 
-                        rowYear, 
-                        rowMonth, 
-                        anomalyYearMonth,
-                        fechaVal 
-                      })
-                    }
-                  } else {
-                    console.log(`⚠️ Fila ${i + 1}: No se pudo parsear fecha`, { fechaHeader: fechaHeaderForKey, fechaVal })
                   }
-                } else {
-                  if (i === 0) {
-                    console.log('❌ No hay anomalyYearMonth o fechaHeaderForKey:', { anomalyYearMonth, fechaHeaderForKey })
+                  // 2) Si no hay coincidencia por (año, mes), probar cobertura por intervalo [Fecha desde, Fecha hasta]
+                  if (!isHighlighted && anomalyMidDate) {
+                    const dDesde = fechaDesdeHeader ? parseDateLoose(r[fechaDesdeHeader]) : null
+                    const dHasta = fechaHastaHeader ? parseDateLoose(r[fechaHastaHeader]) : null
+                    if (dDesde && dHasta && !isNaN(dDesde.getTime()) && !isNaN(dHasta.getTime())) {
+                      // Anomalía pertenece al intervalo de esta fila
+                      if (anomalyMidDate.getTime() >= dDesde.getTime() && anomalyMidDate.getTime() <= dHasta.getTime()) {
+                        isHighlighted = true
+                      }
+                    }
                   }
                 }
                 
