@@ -26,8 +26,21 @@ export const useActaFacturaValidation = (
       }
     }
 
-    // Convertir fechaActa a Date
-    const actaDate = new Date(fechaActa)
+    // Convertir fechaActa a Date (soporta ISO YYYY-MM-DD y DD/MM/YYYY)
+    let actaDate: Date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaActa)) {
+      actaDate = new Date(`${fechaActa}T00:00:00`)
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(fechaActa)) {
+      const m = fechaActa.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/)
+      if (m) {
+        const dd = Number(m[1]); const mm = Number(m[2]) - 1; const yyyy = Number(m[3].length === 2 ? `20${m[3]}` : m[3])
+        actaDate = new Date(yyyy, mm, dd)
+      } else {
+        actaDate = new Date(fechaActa)
+      }
+    } else {
+      actaDate = new Date(fechaActa)
+    }
     if (isNaN(actaDate.getTime())) {
       return {
         show: false,
@@ -72,7 +85,7 @@ export const useActaFacturaValidation = (
       diasDiferencia = calcularDiasDiferencia(fechaUltimaFactura, actaDate)
       mostrarAlerta = true
       tipoAlerta = 'error'
-      mensaje = `⚠️ SIN FACTURAS EN EL PERÍODO\n\nFecha del acta: ${formatDate(actaDate)}\nÚltima factura registrada: ${formatDate(fechaUltimaFactura)}\nDías de diferencia: ${Math.abs(diasDiferencia)} días\n\nNo hay registros de consumo para el mes/período del acta.`
+  mensaje = `⚠️ FALTAN FACTURAS PARA VALORAR\n\nFecha del acta: ${formatDate(actaDate)}\nÚltima factura registrada: ${formatDate(fechaUltimaFactura)}\nDías de diferencia: ${Math.abs(diasDiferencia)} días\n\nNo hay registros de consumo para el mes/período del acta.`
     } else if (fechaUltimaFactura && actaDate > fechaUltimaFactura) {
       // Caso 4: La fecha del acta es posterior a la última factura registrada
       diasDiferencia = calcularDiasDiferencia(fechaUltimaFactura, actaDate)

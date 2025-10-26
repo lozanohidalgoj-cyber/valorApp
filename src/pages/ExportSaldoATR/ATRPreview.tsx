@@ -193,7 +193,15 @@ const ATRPreview: React.FC = () => {
         else agg.set(key, { year, month, fecha: firstDay, consumo })
       }
 
-      return Array.from(agg.values()).sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
+      const result = Array.from(agg.values()).sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
+      console.log('🧮 monthlyDataForValidation:', {
+        chosenDateHeader,
+        hasConsumo: !!consumoH,
+        count: result.length,
+        first: result[0]?.fecha?.toISOString(),
+        last: result[result.length - 1]?.fecha?.toISOString()
+      })
+      return result
     } catch (e) {
       console.error('Error construyendo monthlyDataForValidation:', e)
       return []
@@ -202,6 +210,13 @@ const ATRPreview: React.FC = () => {
 
   // Llamar hook de validación de Acta/Factura (nivel superior del componente)
   const actaValidation = useActaFacturaValidation(fechaActa, monthlyDataForValidation)
+  console.log('🧪 Acta validation state:', {
+    fechaActa,
+    dataCount: monthlyDataForValidation.length,
+    show: actaValidation.show,
+    type: actaValidation.type,
+    message: actaValidation.message?.slice(0, 80)
+  })
 
   // useEffect para actualizar el estado del modal basado en validación
   React.useEffect(() => {
@@ -216,6 +231,12 @@ const ATRPreview: React.FC = () => {
   }, [actaValidation])
 
   const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
+  // Normalizador básico para headers: elimina acentos y espacios no separables
+  const normalizeHeader = (s: string) => {
+    const raw = String(s ?? '')
+    const withSpaces = raw.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+    return stripAccents(withSpaces).toLowerCase().trim()
+  }
   // Detección robusta de columna de potencia: acepta variantes como "Pot(kW)", "Potencia(kW)", "Potencia kW", etc.
   const isPotenciaHeader = (h: string) => {
     const raw = (h || '')
@@ -232,15 +253,15 @@ const ATRPreview: React.FC = () => {
   }
   const stripAccents = (s: string) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '')
   const isFechaEnvioHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
+    const t = normalizeHeader(h)
     return t === 'fecha de envio a facturar' || (t.includes('fecha') && t.includes('envio') && (t.includes('factur') || t.includes('facturar')))
   }
   const isFechaDesdeHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
+    const t = normalizeHeader(h)
     return t === 'fecha desde' || (t.includes('fecha') && t.includes('desde'))
   }
   const isFechaHastaHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
+    const t = normalizeHeader(h)
     return t === 'fecha hasta' || (t.includes('fecha') && t.includes('hasta'))
   }
   // Extras para análisis de consumo
