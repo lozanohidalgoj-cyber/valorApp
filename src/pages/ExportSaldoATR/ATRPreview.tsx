@@ -1407,19 +1407,57 @@ dentro de los rangos normales esperados.
             </div>
           )}
           {fechaActa && (
-            <div style={{
-              marginTop: '0.5rem',
-              marginLeft: cambioTitularInfo.tuvo ? '0.5rem' : '0',
-              background: 'rgba(255, 49, 132, 0.06)',
-              border: '1px solid rgba(255, 49, 132, 0.15)',
-              color: '#0f172a',
-              padding: '0.4rem 0.6rem',
-              borderRadius: 8,
-              display: 'inline-block',
-              fontSize: '0.875rem',
-              fontWeight: 600
-            }}>
-              Fecha del acta: <strong style={{ color: '#FF3184' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {(() => {
+                const actaNeedsAttention = actaValidation?.show && (
+                  actaValidation.type === 'error' || (typeof actaValidation.diasDiferencia === 'number' && actaValidation.diasDiferencia > 30)
+                )
+                const badgeStyle: React.CSSProperties = actaNeedsAttention ? {
+                  background: '#FAFF00', // amarillo fosforescente
+                  border: '2px solid #EAB308', // dorado intenso
+                  color: '#1a1a1a',
+                  boxShadow: '0 0 0 3px rgba(250,255,0,0.5), 0 8px 22px rgba(234,179,8,0.35)'
+                } : {
+                  background: 'rgba(255, 49, 132, 0.06)',
+                  border: '1px solid rgba(255, 49, 132, 0.15)',
+                  color: '#0f172a'
+                }
+                return (
+                  <>
+                    <div style={{
+                      marginTop: '0.5rem',
+                      marginLeft: cambioTitularInfo.tuvo ? '0.5rem' : '0',
+                      padding: '0.4rem 0.6rem',
+                      borderRadius: 8,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      fontSize: '0.875rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.02em',
+                      ...badgeStyle
+                    }}>
+                      Fecha del acta: <strong style={{ color: actaNeedsAttention ? '#1a1a1a' : '#FF3184' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
+                    </div>
+                    {actaNeedsAttention && (
+                      <span style={{
+                        marginTop: '0.5rem',
+                        background: 'linear-gradient(135deg, #fde047 0%, #facc15 100%)',
+                        border: '2px solid #f59e0b',
+                        color: '#78350f',
+                        padding: '0.45rem 0.6rem',
+                        borderRadius: 8,
+                        fontSize: '0.85rem',
+                        fontWeight: 900,
+                        boxShadow: '0 6px 16px rgba(245, 158, 11, 0.35)'
+                      }}>
+                        FALTAN FACTURAS PARA VALORAR
+                      </span>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           )}
           {/* Mensaje informativo cuando hay anomalía detectada */}
