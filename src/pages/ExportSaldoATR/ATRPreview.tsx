@@ -264,6 +264,14 @@ const ATRPreview: React.FC = () => {
     }
   }, [fechaActa, filteredRows, filteredData])
 
+  const actaNeedsAttention = React.useMemo(() => {
+    if (!fechaActa) return false
+    if (actaNeedsAttentionStrict) return true
+    if (!actaValidation) return false
+    const diff = typeof actaValidation.diasDiferencia === 'number' ? actaValidation.diasDiferencia : null
+    return actaValidation.show && (actaValidation.type === 'error' || (diff !== null && diff > 30))
+  }, [fechaActa, actaNeedsAttentionStrict, actaValidation])
+
   // Si la validación estricta detecta problema pero el hook no muestra modal, levantamos el modal con mensaje estándar
   React.useEffect(() => {
     try {
@@ -301,10 +309,10 @@ const ATRPreview: React.FC = () => {
       setActaAlertMessage(actaValidation.message)
       setActaAlertType(actaValidation.type)
       console.log('⚠️ Acta/Factura validation alert:', { type: actaValidation.type, message: actaValidation.message })
-    } else {
+    } else if (!actaNeedsAttentionStrict) {
       setShowActaAlert(false)
     }
-  }, [actaValidation])
+  }, [actaValidation, actaNeedsAttentionStrict])
 
   const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
   // Normalizador básico para headers: elimina acentos y espacios no separables
@@ -1549,10 +1557,6 @@ dentro de los rangos normales esperados.
           {fechaActa && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               {(() => {
-                const actaNeedsAttention = actaNeedsAttentionStrict || (actaValidation?.show && (
-                  actaValidation.type === 'error' || (typeof actaValidation.diasDiferencia === 'number' && actaValidation.diasDiferencia > 30)
-                ))
-                // Estilo del recuadro Fecha del acta: rojo cuando falta valoración; corporativo cuando OK
                 const badgeStyle: React.CSSProperties = actaNeedsAttention ? {
                   background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
                   border: '2px solid #EF4444',
@@ -2646,15 +2650,32 @@ dentro de los rangos normales esperados.
                 </div>
               )}
               {fechaActa && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <span style={{ 
                     fontSize: '0.875rem', 
-                    color: 'rgba(255, 255, 255, 0.95)',
+                    color: actaNeedsAttention ? '#FCA5A5' : 'rgba(255, 255, 255, 0.95)',
                     fontFamily: "'Open Sans', sans-serif",
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    fontWeight: 700
                   }}>
-                    Fecha del acta: <strong style={{ color: '#FFFFFF' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
+                    Fecha del acta: <strong style={{ color: actaNeedsAttention ? '#FEE2E2' : '#FFFFFF' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
                   </span>
+                  {actaNeedsAttention && (
+                    <span style={{
+                      background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
+                      border: '2px solid #EF4444',
+                      color: '#7F1D1D',
+                      padding: '0.35rem 0.55rem',
+                      borderRadius: 8,
+                      fontSize: '0.8rem',
+                      fontWeight: 900,
+                      letterSpacing: '0.04em',
+                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      Faltan facturas para valorar
+                    </span>
+                  )}
                 </div>
               )}
               </div>
