@@ -510,6 +510,16 @@ const ATRPreview: React.FC = () => {
   const fechaEnvioHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaEnvioHeader(h)) || null), [filteredData])
   const fechaDesdeHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaDesdeHeader(h)) || null), [filteredData])
   const fechaHastaHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaHastaHeader(h)) || null), [filteredData])
+  // Fecha de última factura (máximo de "Fecha hasta" en las filas visibles del expediente actual)
+  const lastFacturaHasta = React.useMemo(() => {
+    if (!fechaHastaHeader) return null
+    let maxHasta: Date | null = null
+    for (const r of filteredRows) {
+      const d = parseDateLoose(String(r[fechaHastaHeader] ?? ''))
+      if (d && (!maxHasta || d > maxHasta)) maxHasta = d
+    }
+    return maxHasta
+  }, [filteredRows, fechaHastaHeader])
   const contractColorMap = React.useMemo(() => {
     const map = new Map<string, string>()
     if (!filteredData || !contractHeader) return map
@@ -2720,8 +2730,21 @@ dentro de los rangos normales esperados.
                   </span>
                 </div>
               )}
-              {fechaActa && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {/* Mostrar Fecha de U. Factura (automática) y, si existe, la Fecha del acta */}
+              {(lastFacturaHasta || fechaActa) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {lastFacturaHasta && (
+                    <span style={{ 
+                      fontSize: '0.875rem', 
+                      color: 'rgba(255, 255, 255, 0.95)',
+                      fontFamily: "'Open Sans', sans-serif",
+                      whiteSpace: 'nowrap',
+                      fontWeight: 700
+                    }}>
+                      Fecha U. Factura: <strong style={{ color: '#FFFFFF' }}>{lastFacturaHasta.toLocaleDateString('es-ES')}</strong>
+                    </span>
+                  )}
+                  {fechaActa && (
                   <span style={{ 
                     fontSize: '0.875rem', 
                     color: actaNeedsAttention ? '#FCA5A5' : 'rgba(255, 255, 255, 0.95)',
@@ -2731,7 +2754,8 @@ dentro de los rangos normales esperados.
                   }}>
                     Fecha del acta: <strong style={{ color: actaNeedsAttention ? '#FEE2E2' : '#FFFFFF' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
                   </span>
-                  {actaNeedsAttention && (
+                  )}
+                  {fechaActa && actaNeedsAttention && (
                     <span style={{
                       background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
                       border: '2px solid #EF4444',
