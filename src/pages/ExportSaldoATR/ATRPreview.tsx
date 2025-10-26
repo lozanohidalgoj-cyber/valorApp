@@ -2897,24 +2897,18 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
   }
 
   const handleEnter = (pt: MonthlyPoint, e: React.MouseEvent<SVGRectElement>) => {
-    const varPct = pt.variacion == null ? '—' : `${(pt.variacion * 100).toFixed(1)}%`
     const isAnomaly = pt.key === anomalyKey
-    const motivo = getMotivoColor(pt.consumo, isAnomaly)
-    
-    // Tooltip mejorado para anomalías
-    if (isAnomaly) {
-      onHover({ 
-        x: e.clientX + 12, 
-        y: e.clientY - 28, 
-        text: `👉 Descenso de anomalía (≥40%) — Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct}` 
-      })
-    } else {
-      onHover({ 
-        x: e.clientX + 12, 
-        y: e.clientY - 28, 
-        text: `Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct} — Motivo del color: ${motivo}` 
-      })
+    if (!isAnomaly) {
+      onHover(null)
+      return
     }
+
+    const varPct = pt.variacion == null ? '—' : `${(pt.variacion * 100).toFixed(1)}%`
+    onHover({ 
+      x: e.clientX + 12, 
+      y: e.clientY - 28, 
+      text: `👉 Descenso de anomalía (≥40%) — Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct}` 
+    })
   }
   const handleLeave = () => onHover(null)
   
@@ -2974,9 +2968,9 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
                   strokeWidth={isAnomaly ? 3 : 1}
                   onMouseEnter={(e) => pt && handleEnter(pt, e)}
                   onMouseLeave={handleLeave}
-                  onClick={() => pt && handleClick(pt)}
+                  onClick={() => pt && pt.key === anomalyKey && handleClick(pt)}
                   style={{ 
-                    cursor: pt ? 'pointer' : 'default',
+                    cursor: pt && pt.key === anomalyKey ? 'pointer' : 'default',
                     filter: isAnomaly ? 'drop-shadow(0 0 8px rgba(220, 38, 38, 0.8))' : 'none'
                   }}
                 />
@@ -3104,7 +3098,13 @@ function BarsChart({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomal
               <rect x={x(i) + 2} width={barW} y={y(pt.consumo)} height={Math.max(1, m.t + innerH - y(pt.consumo))}
                 fill={isAnomaly ? '#dc2626' : '#3b82f6'} stroke="#ffffff" strokeWidth={1}
                 rx={4} ry={4}
-                onMouseEnter={(e) => handleEnter(pt, i, e)} onMouseLeave={handleLeave}
+                onMouseEnter={(e) => {
+                  if (isAnomaly) handleEnter(pt, i, e)
+                  else onHover(null)
+                }}
+                onMouseLeave={() => {
+                  if (isAnomaly) handleLeave()
+                }}
               />
               {/* Etiquetas X espaciadas */}
               {i % Math.ceil(ordered.length / 10 || 1) === 0 && (
