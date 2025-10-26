@@ -1412,11 +1412,12 @@ dentro de los rangos normales esperados.
                 const actaNeedsAttention = actaValidation?.show && (
                   actaValidation.type === 'error' || (typeof actaValidation.diasDiferencia === 'number' && actaValidation.diasDiferencia > 30)
                 )
+                // Estilo del recuadro Fecha del acta: rojo cuando falta valoración; corporativo cuando OK
                 const badgeStyle: React.CSSProperties = actaNeedsAttention ? {
-                  background: '#FAFF00', // amarillo fosforescente
-                  border: '2px solid #EAB308', // dorado intenso
-                  color: '#1a1a1a',
-                  boxShadow: '0 0 0 3px rgba(250,255,0,0.5), 0 8px 22px rgba(234,179,8,0.35)'
+                  background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
+                  border: '2px solid #EF4444',
+                  color: '#7F1D1D',
+                  boxShadow: '0 6px 18px rgba(239, 68, 68, 0.35)'
                 } : {
                   background: 'rgba(255, 49, 132, 0.06)',
                   border: '1px solid rgba(255, 49, 132, 0.15)',
@@ -1438,21 +1439,21 @@ dentro de los rangos normales esperados.
                       letterSpacing: '0.02em',
                       ...badgeStyle
                     }}>
-                      Fecha del acta: <strong style={{ color: actaNeedsAttention ? '#1a1a1a' : '#FF3184' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
+                      Fecha del acta: <strong style={{ color: actaNeedsAttention ? '#7F1D1D' : '#FF3184' }}>{new Date(fechaActa).toLocaleDateString('es-ES')}</strong>
                     </div>
                     {actaNeedsAttention && (
                       <span style={{
                         marginTop: '0.5rem',
-                        background: 'linear-gradient(135deg, #fde047 0%, #facc15 100%)',
-                        border: '2px solid #f59e0b',
-                        color: '#78350f',
+                        background: 'linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%)',
+                        border: '2px solid #EF4444',
+                        color: '#7F1D1D',
                         padding: '0.45rem 0.6rem',
                         borderRadius: 8,
                         fontSize: '0.85rem',
                         fontWeight: 900,
-                        boxShadow: '0 6px 16px rgba(245, 158, 11, 0.35)'
+                        boxShadow: '0 6px 16px rgba(239, 68, 68, 0.35)'
                       }}>
-                        FALTAN FACTURAS PARA VALORAR
+                        Faltan facturas para valorar
                       </span>
                     )}
                   </>
