@@ -221,43 +221,87 @@ const ATRPreview: React.FC = () => {
   // Validación directa por intervalos Fecha desde / Fecha hasta con tolerancia de 30 días
   const actaNeedsAttentionStrict = React.useMemo(() => {
     try {
-      if (!fechaActa) return false
-      const dActa = parseDateLoose(fechaActa)
-      if (!dActa) return false
-      if (!filteredRows || filteredRows.length === 0) return false
+      if (!fechaActa) {
+        console.log('🟦 Validación estricta: sin fecha de acta configurada')
+        return false
+      }
 
-      // Buscar cabeceras reales en los datos cargados
+      const dActa = parseDateLoose(fechaActa)
+      if (!dActa) {
+        console.log('🟦 Validación estricta: no se pudo interpretar la fecha del acta', fechaActa)
+        return false
+      }
+
+      const sourceRows = filteredData?.rows || filteredRows || []
+      if (!sourceRows.length) {
+        console.log('🟦 Validación estricta: no hay filas para analizar')
+        return false
+      }
+
       const desdeH = filteredData?.headers.find(h => isFechaDesdeHeader(h)) || null
       const hastaH = filteredData?.headers.find(h => isFechaHastaHeader(h)) || null
-      if (!desdeH && !hastaH) return false
+      if (!desdeH && !hastaH) {
+        console.log('🟥 Validación estricta: no se encontraron cabeceras Fecha desde/Fecha hasta')
+        return false
+      }
 
-      // 1) Verificar si existe un intervalo que cubra la fecha del acta (±0 días)
       let covered = false
-      for (const r of filteredRows) {
-        const dDesde = desdeH ? parseDateLoose(String(r[desdeH] ?? '')) : null
-        const dHasta = hastaH ? parseDateLoose(String(r[hastaH] ?? '')) : null
+      let maxHasta: Date | null = null
+      let minDesde: Date | null = null
+
+      for (const r of sourceRows) {
+        const rawDesde = desdeH ? String(r[desdeH] ?? '') : ''
+        const rawHasta = hastaH ? String(r[hastaH] ?? '') : ''
+        const dDesde = rawDesde ? parseDateLoose(rawDesde) : null
+        const dHasta = rawHasta ? parseDateLoose(rawHasta) : null
+
+        if (dDesde && (!minDesde || dDesde < minDesde)) minDesde = dDesde
+        if (dHasta && (!maxHasta || dHasta > maxHasta)) maxHasta = dHasta
+
         if (dDesde && dHasta && !isNaN(dDesde.getTime()) && !isNaN(dHasta.getTime())) {
-          if (dActa >= dDesde && dActa <= dHasta) { covered = true; break }
-        }
-      }
-      if (covered) return false
-
-      // 2) Si no está cubierto por ningún intervalo, aplicar tolerancia de 30 días contra última Fecha hasta
-      if (hastaH) {
-        let maxHasta: Date | null = null
-        for (const r of filteredRows) {
-          const dHasta = parseDateLoose(String(r[hastaH] ?? ''))
-          if (dHasta && (!maxHasta || dHasta > maxHasta)) maxHasta = dHasta
-        }
-        if (maxHasta) {
-          const ms30d = 30 * 24 * 60 * 60 * 1000
-          if (dActa.getTime() >= (maxHasta.getTime() + ms30d)) return true
-          // También considerar que si el acta es anterior a min(Fecha desde) - 30 días, no aplica, pero el caso más habitual es acta posterior.
+          if (dActa.getTime() >= dDesde.getTime() && dActa.getTime() <= dHasta.getTime()) {
+            covered = true
+            break
+          }
         }
       }
 
-      // Si llegó aquí y no está cubierto, considerar que faltan facturas
-      return true
+      const MS_PER_DAY = 24 * 60 * 60 * 1000
+      const toleranceMs = 30 * MS_PER_DAY
+      let diffVsMaxHasta: number | null = null
+      let diffVsMinDesde: number | null = null
+
+      if (maxHasta) diffVsMaxHasta = Math.ceil((dActa.getTime() - maxHasta.getTime()) / MS_PER_DAY)
+      if (minDesde) diffVsMinDesde = Math.ceil((minDesde.getTime() - dActa.getTime()) / MS_PER_DAY)
+
+      const needsAttention = !covered || (diffVsMaxHasta !== null && diffVsMaxHasta > 30)
+
+      console.log('🔍 Validación estricta del acta', {
+        fechaActa,
+        covered,
+        desdeH,
+        hastaH,
+        filasAnalizadas: sourceRows.length,
+        maxHasta: maxHasta ? maxHasta.toISOString().slice(0, 10) : null,
+        minDesde: minDesde ? minDesde.toISOString().slice(0, 10) : null,
+        diffVsMaxHasta,
+        diffVsMinDesde,
+        needsAttention,
+        tolerancia30d: toleranceMs / MS_PER_DAY
+      })
+
+      if (!covered && maxHasta && dActa.getTime() <= maxHasta.getTime() + toleranceMs) {
+        // Caso especial: no existe intervalo exacto pero la diferencia con la última factura está dentro de 30 días.
+        // Aún así queremos indicar que faltan registros para valorar este mes.
+        return true
+      }
+
+      if (!covered && !maxHasta && minDesde) {
+        // No existe Fecha hasta, pero la fecha del acta está fuera de los intervalos detectados.
+        return true
+      }
+
+      return needsAttention
     } catch (e) {
       console.warn('Validación estricta de acta falló:', e)
       return false
