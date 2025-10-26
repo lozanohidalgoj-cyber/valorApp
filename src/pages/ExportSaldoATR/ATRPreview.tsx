@@ -2732,7 +2732,7 @@ dentro de los rangos normales esperados.
               )}
               {/* Mostrar Fecha de U. Factura (automática) y, si existe, la Fecha del acta */}
               {(lastFacturaHasta || fechaActa) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.35rem' }}>
                   {lastFacturaHasta && (
                     <span style={{ 
                       fontSize: '0.875rem', 
