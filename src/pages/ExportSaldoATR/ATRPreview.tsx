@@ -409,6 +409,12 @@ const ATRPreview: React.FC = () => {
     const t = stripAccents(h).toLowerCase().trim()
     return t === 'tipo de factura' || t === 'tipo factura' || (t.includes('tipo') && t.includes('factur'))
   }
+  // Cabecera para código/número de factura
+  const isCodigoFacturaHeader = (h: string) => {
+    const t = stripAccents(h).toLowerCase().trim()
+    return t === 'codigo factura' || t === 'número de factura' || t === 'numero de factura' ||
+           ((t.includes('cod') || t.includes('num')) && t.includes('factur'))
+  }
   const isEstadoMedidaHeader = (h: string) => {
     const t = stripAccents(h).toLowerCase().trim()
     return t === 'estado de medida' || t === 'estado medida' || (t.includes('estado') && t.includes('medida'))
@@ -1113,6 +1119,39 @@ const ATRPreview: React.FC = () => {
         }
       }
       
+      // Utilidad local: obtener código de factura que cubra el mes detectado
+      const getFacturaCodeForYM = (year: number, month: number): string | null => {
+        const codigoHeader = headers.find(h => isCodigoFacturaHeader(h)) || null
+        if (!codigoHeader) return null
+        // fecha de referencia para comparar (mitad de mes)
+        const dMid = new Date(year, month - 1, 15)
+        const envioH = headers.find(h => isFechaEnvioHeader(h)) || null
+        const candidates: Array<{ code: string; envio: Date | null }> = []
+        for (const r of rows) {
+          let inMonth = false
+          const dDesde = fechaDesdeHeader ? parseDateLoose(String(r[fechaDesdeHeader] ?? '')) : null
+          const dHasta = fechaHastaHeader ? parseDateLoose(String(r[fechaHastaHeader] ?? '')) : null
+          if (dDesde && dHasta) {
+            inMonth = dMid.getTime() >= dDesde.getTime() && dMid.getTime() <= dHasta.getTime()
+          } else {
+            const fechaHeaderLocal = headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h)) || headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isFechaHastaHeader(h))
+            if (fechaHeaderLocal) {
+              let d = isPeriodoHeader(fechaHeaderLocal) ? parsePeriodoStart(String(r[fechaHeaderLocal] ?? '')) : parseDateLoose(String(r[fechaHeaderLocal] ?? ''))
+              if (d && isFechaDesdeHeader(fechaHeaderLocal)) { const tmp = new Date(d); tmp.setMonth(tmp.getMonth() - 1); d = tmp }
+              if (d) inMonth = (d.getFullYear() === dMid.getFullYear() && (d.getMonth() + 1) === (dMid.getMonth() + 1))
+            }
+          }
+          if (inMonth) {
+            const code = String(r[codigoHeader] ?? '').trim()
+            const envio = envioH ? parseDateLoose(String(r[envioH] ?? '')) : null
+            if (code) candidates.push({ code, envio })
+          }
+        }
+        if (!candidates.length) return null
+        candidates.sort((a, b) => (a.envio?.getTime() || 0) - (b.envio?.getTime() || 0))
+        return candidates[0].code || null
+      }
+
       // REPORTE FINAL: Mostrar información detallada del análisis
       if (!detectedAnomalyYM) {
         console.log('✅ Análisis completado: No se detectaron descensos significativos en el consumo.')
@@ -1145,9 +1184,11 @@ dentro de los rangos normales esperados.
    verifica los datos en la tabla de variaciones.`
         window.alert(mensajeNoAnomalia)
       } else if (anomalyMetadata) {
+        const facturaCode = getFacturaCodeForYM(detectedAnomalyYM.year, detectedAnomalyYM.month)
         console.log('⚠️ ANOMALÍA DETECTADA CON ALTA PRECISIÓN:', anomalyMetadata)
         window.alert('⚠️ Anomalía detectada con alta precisión\n\n' +
                     `📅 Período: ${detectedAnomalyYM.year}-${pad2(detectedAnomalyYM.month)}\n` +
+                    (facturaCode ? `🧾 Factura inicial: ${facturaCode}\n` : '') +
                     `🎯 Criterio: ${anomalyMetadata.criterio}\n` +
                     `📊 Confianza: ${(anomalyMetadata.confianza * 100).toFixed(1)}%\n` +
                     `📉 Caída: ${(anomalyMetadata.caida * 100).toFixed(1)}%\n` +
@@ -1155,9 +1196,13 @@ dentro de los rangos normales esperados.
                     `🔢 Desviaciones estándar: ${anomalyMetadata.desvEstandar.toFixed(1)}\n` +
                     (anomalyMetadata.persistencia > 0 ? `⏱️ Persistencia: ${anomalyMetadata.persistencia} meses` : ''))
       } else {
+        const facturaCode = getFacturaCodeForYM(detectedAnomalyYM.year, detectedAnomalyYM.month)
         // Caso improbable pero contemplado: sin metadata pero con periodo detectado
         console.warn('⚠️ Período detectado sin metadata')
-        window.alert('⚠️ Se detectó un cambio significativo, pero sin información de contexto.\n\nIntenta de nuevo o verifica los datos.')
+        window.alert('⚠️ Se detectó un cambio significativo, pero sin información de contexto.\n\n' +
+                     `📅 Período: ${detectedAnomalyYM.year}-${pad2(detectedAnomalyYM.month)}\n` +
+                     (facturaCode ? `🧾 Factura inicial: ${facturaCode}\n\n` : '') +
+                     'Intenta de nuevo o verifica los datos.')
       }
       
       setMonthlySeries(withVar)
