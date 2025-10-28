@@ -4,7 +4,7 @@ import { Valoracion } from './pages/Dashboard'
 import Wart from './pages/Wart/Wart'
 import AnalisisExpediente from './pages/AnalisisExpediente/AnalisisExpediente'
 import ExportSaldoATR from './pages/ExportSaldoATR/ExportSaldoATR'
-import ATRPreview from './pages/ExportSaldoATR/ATRPreview'
+import ATRPreview from './pages/ExportSaldoATR/ATRPreviewMinimal'
 
 function useHashRoute() {
   const [route, setRoute] = useState<string>(() => location.hash || '#/')

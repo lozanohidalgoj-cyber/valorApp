@@ -1,670 +1,76 @@
 import React from 'react'
-import { useActaFacturaValidation } from '../../hooks/business/useActaFacturaValidation'
-import { ActaFacturaAlertModal } from '../../components/ui/ActaFacturaAlertModal'
 
 interface ParsedCSV {
   headers: string[]
-  rows: Record<string, string>[]
-}
+  import React from 'react'
 
-const useAtrCsv = (): ParsedCSV | null => {
-  try {
-    const s = localStorage.getItem('valorApp.analisis.atrCsv')
-    if (!s) return null
-    return JSON.parse(s)
-  } catch {
-    return null
-  }
-}
+  interface ParsedCSV { headers: string[]; rows: Record<string, any>[] }
 
-const ATRPreview: React.FC = () => {
-  const data = useAtrCsv()
-  console.log('🔵 ATRPreview renderizado:', { hasData: !!data, rowsCount: data?.rows?.length })
-    // Leer cambio de titular desde localStorage
-  const cambioTitularInfo = React.useMemo(() => {
+  // Lee el dataset ATR importado desde localStorage
+  const useAtrCsv = (): ParsedCSV | null => {
     try {
-      const s = localStorage.getItem('valorApp.wart.cambioTitular')
-      if (!s) return { tuvo: false, fecha: '' }
-      const obj = JSON.parse(s)
-      const tuvo = Boolean(obj?.tuvoCambioTitular)
-      const fecha = typeof obj?.fecha === 'string' ? obj.fecha : ''
-      return { tuvo, fecha }
-    } catch { return { tuvo: false, fecha: '' } }
-  }, [])
-  
-  // Leer fecha del acta desde localStorage
-  const fechaActa = React.useMemo(() => {
-    try {
-      const s = localStorage.getItem('valorApp.wart.fechaActa')
-      if (!s) return ''
-      const obj = JSON.parse(s)
-      return typeof obj === 'string' ? obj : ''
-    } catch { return '' }
-  }, [])
-  
-  // Filtrar columna "Autofactura" de los encabezados
-  const filteredData = React.useMemo(() => {
-    if (!data?.headers || !data?.rows) {
-      console.log('⚪ filteredData: sin datos', { hasData: !!data })
+      const s = localStorage.getItem('valorApp.analisis.atrCsv')
+      if (!s) return null
+      return JSON.parse(s)
+    } catch {
       return null
     }
-    
-    // Filtrar encabezados que no sean "Autofactura"
-    const filteredHeaders = data.headers.filter(h => 
-      (h || '').toLowerCase().trim() !== 'autofactura'
+  }
+
+  const ATRPreview: React.FC = () => {
+    const data = useAtrCsv()
+
+    const onDetect = React.useCallback(() => {
+      window.alert('Detección desactivada temporalmente.\n\nEl botón ha sido reiniciado y quedará listo para reprogramación desde cero.')
+      console.log('🔧 Botón Detectar anomalías: stub activo (sin análisis)')
+    }, [])
+
+    if (!data || !data.headers?.length) {
+      return (
+        <div style={{ padding: '2rem' }}>
+          <h2 style={{ marginBottom: '0.5rem' }}>Sin datos de ATR</h2>
+          <p style={{ marginBottom: '1rem' }}>Primero exporta un archivo ATR (CSV/Excel) para previsualizar.</p>
+          <a href="#/export-saldo-atr" style={{ color: '#0000D0', fontWeight: 700 }}>Ir a exportación</a>
+        </div>
+      )
+    }
+
+    return (
+      <div style={{ padding: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Vista ATR (modo simplificado)</h1>
+          <button onClick={onDetect} style={{
+            background: '#0000D0', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: 8, cursor: 'pointer', fontWeight: 700
+          }}>Detectar anomalías</button>
+        </div>
+
+        <div style={{ overflow: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
+          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '1px solid #eee' }}>#</th>
+                {data.headers.map((h, i) => (
+                  <th key={i} style={{ textAlign: 'left', padding: '0.5rem', borderBottom: '1px solid #eee' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.rows.map((r, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
+                  <td style={{ padding: '0.5rem', borderBottom: '1px solid #f2f2f2' }}>{i + 1}</td>
+                  {data.headers.map((h, j) => (
+                    <td key={j} style={{ padding: '0.5rem', borderBottom: '1px solid #f2f2f2', whiteSpace: 'nowrap' }}>{String(r[h] ?? '')}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     )
-    
-    // Si no hay cambios en los encabezados, retornar data original
-    if (filteredHeaders.length === data.headers.length) {
-      console.log('🟢 filteredData: datos sin filtrar', { rowsCount: data.rows.length })
-      return data
-    }
-    
-    // Filtrar las columnas de cada fila
-    const filteredRows = data.rows.map(row => {
-      const newRow: Record<string, string> = {}
-      filteredHeaders.forEach(header => {
-        if (header in row) {
-          newRow[header] = row[header]
-        }
-      })
-      return newRow
-    })
-    
-    console.log('🟡 filteredData: datos filtrados', { rowsCount: filteredRows.length })
-    return {
-      headers: filteredHeaders,
-      rows: filteredRows
-    }
-  }, [data])
-  
-  const [filteredRows, setFilteredRows] = React.useState<Record<string,string>[]>(() => filteredData?.rows || [])
-  const [removedRows, setRemovedRows] = React.useState<Record<string,string>[]>([])
-  const [keptRows, setKeptRows] = React.useState<Record<string,string>[]>([])
-  const [anuladas, setAnuladas] = React.useState<number>(0)
-  const [detalleAnuladas, setDetalleAnuladas] = React.useState<{comp: number; anuladas: number; enviados: number}>({ comp: 0, anuladas: 0, enviados: 0 })
-  const [ordenado, setOrdenado] = React.useState<boolean>(false)
-  const [viewMode, setViewMode] = React.useState<'restantes' | 'filtradas'>('restantes')
-  const [showFilteredModal, setShowFilteredModal] = React.useState<boolean>(false)
-  const [activeTab, setActiveTab] = React.useState<'vista' | 'eliminadas'>('vista')
-  const [showYearPanel, setShowYearPanel] = React.useState<boolean>(false)
-  // Modal de previsualización de anulación por Estado/Tipo
-  const [showAnularPreview, setShowAnularPreview] = React.useState<boolean>(false)
-  const [anularPreviewRows, setAnularPreviewRows] = React.useState<Record<string,string>[]>([])
-  const [anularPreviewDetalle, setAnularPreviewDetalle] = React.useState<{comp: number; anuladas: number; enviados: number}>({ comp: 0, anuladas: 0, enviados: 0 })
-  // Análisis de anomalías (nuevo panel): dependencia tras anulación y visualizaciones Heatmap + Barras
-  const [allowAnalysis, setAllowAnalysis] = React.useState<boolean>(false)
-  const [showAnalisisPanel, setShowAnalisisPanel] = React.useState<boolean>(false)
-  const [monthlySeries, setMonthlySeries] = React.useState<Array<{ key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }>>([])
-  const [anomalyMonthIdx, setAnomalyMonthIdx] = React.useState<number | null>(null)
-  const [heatmapTooltip, setHeatmapTooltip] = React.useState<{ x: number; y: number; text: string } | null>(null)
-  // Estado para resaltar fila con anomalía en la tabla (guardar año/mes en lugar de clave)
-  const [anomalyYearMonth, setAnomalyYearMonth] = React.useState<{ year: number; month: number } | null>(null)
-  // Estado para el modal de alerta de facturación ATR
-  const [showActaAlert, setShowActaAlert] = React.useState<boolean>(false)
-  const [actaAlertMessage, setActaAlertMessage] = React.useState<string>('')
-  const [actaAlertType, setActaAlertType] = React.useState<'warning' | 'error' | 'info'>('info')
-  
-  const total = filteredRows.length
-  
-  // Actualizar filteredRows cuando cambien los datos
-  React.useEffect(() => {
-    if (filteredData?.rows) {
-      setFilteredRows(filteredData.rows)
-      setKeptRows(filteredData.rows)
-      setRemovedRows([])
-      setViewMode('restantes')
-      setOrdenado(false)
-      setAnuladas(0)
-      setDetalleAnuladas({ comp: 0, anuladas: 0, enviados: 0 })
-      setActiveTab('vista')
-      // Habilitar análisis siempre que haya datos cargados
-      const shouldAllow = filteredData.rows.length > 0
-      console.log('🔄 useEffect filteredData ejecutado:', { rowsCount: filteredData.rows.length, allowAnalysis: shouldAllow })
-      setAllowAnalysis(shouldAllow)
-      // NO limpiar resaltado automáticamente - solo cuando el usuario cargue datos nuevos manualmente
-      // setAnomalyYearMonth(null) // Comentado para mantener el resaltado
-      console.log('🔍 Estado de anomalyYearMonth mantenido (no se limpió)')
-      // No cerramos el panel aquí para permitir que persista hasta que el usuario lo cierre manualmente
-    }
-  }, [filteredData])
-
-  // Scroll automático a la fila con anomalía cuando se detecta o cambia
-  React.useEffect(() => {
-    if (anomalyYearMonth) {
-      // Esperar a que el DOM se actualice
-      setTimeout(() => {
-        // Buscar la fila resaltada en la tabla
-        const table = document.querySelector('table')
-        if (table) {
-          const rows = table.querySelectorAll('tbody tr')
-          rows.forEach((row, index) => {
-            // Verificar si la fila tiene el atributo data-highlighted
-            const isHighlighted = row.getAttribute('data-highlighted') === 'true'
-            if (isHighlighted) {
-              // Scroll suave a la fila
-              row.scrollIntoView({ behavior: 'smooth', block: 'center' })
-              console.log('📍 Scroll automático a fila', index + 1, 'con anomalía')
-            }
-          })
-        }
-      }, 300) // Delay para asegurar que la tabla está renderizada
-    }
-  }, [anomalyYearMonth]) // Solo depende de anomalyYearMonth, no del panel
-
-  // Construir array de datos mensuales para validación desde los datos del CSV (sin depender del análisis)
-  const monthlyDataForValidation = React.useMemo(() => {
-    try {
-      if (!filteredData?.headers || !filteredRows || filteredRows.length === 0) return []
-
-      // Priorizamos "Fecha hasta" para identificar el período facturado más reciente
-      const fechaHastaH = filteredData.headers.find(h => isFechaHastaHeader(h)) || null
-      const fechaDesdeH = filteredData.headers.find(h => isFechaDesdeHeader(h)) || null
-      const periodoH = filteredData.headers.find(h => isPeriodoHeader(h)) || null
-      const fechaFactH = filteredData.headers.find(h => isFechaFactHeader(h)) || null
-      const chosenDateHeader = fechaHastaH || fechaDesdeH || periodoH || fechaFactH
-      if (!chosenDateHeader) return []
-
-      const consumoH = filteredData.headers.find(h => isConsumoActivaHeader(h)) || null
-
-      // Agregar por (año, mes)
-      const agg = new Map<string, { year: number; month: number; fecha: Date; consumo: number }>()
-      for (const r of filteredRows) {
-        const raw = String(r[chosenDateHeader] ?? '')
-        let d = periodoH && chosenDateHeader === periodoH ? parsePeriodoStart(raw) : parseDateLoose(raw)
-        if (!d) continue
-        // Si estamos usando Fecha desde, el consumo corresponde al mes anterior
-        if (fechaDesdeH && chosenDateHeader === fechaDesdeH) {
-          const tmp = new Date(d)
-          tmp.setMonth(tmp.getMonth() - 1)
-          d = tmp
-        }
-        const year = d.getFullYear()
-        const month = d.getMonth() + 1
-        const key = `${year}-${pad2(month)}`
-        const firstDay = new Date(year, month - 1, 1)
-        let consumo = 0
-        if (consumoH) {
-          const n = normalizeNumber(String(r[consumoH] ?? '0'))
-          consumo = Number.isFinite(n) ? n : 0
-        }
-        const prev = agg.get(key)
-        if (prev) prev.consumo += consumo
-        else agg.set(key, { year, month, fecha: firstDay, consumo })
-      }
-
-      const result = Array.from(agg.values()).sort((a, b) => a.fecha.getTime() - b.fecha.getTime())
-      console.log('🧮 monthlyDataForValidation:', {
-        chosenDateHeader,
-        hasConsumo: !!consumoH,
-        count: result.length,
-        first: result[0]?.fecha?.toISOString(),
-        last: result[result.length - 1]?.fecha?.toISOString()
-      })
-      return result
-    } catch (e) {
-      console.error('Error construyendo monthlyDataForValidation:', e)
-      return []
-    }
-  }, [filteredData, filteredRows])
-
-  // Llamar hook de validación de Acta/Factura (nivel superior del componente)
-  const actaValidation = useActaFacturaValidation(fechaActa, monthlyDataForValidation)
-  console.log('🧪 Acta validation state:', {
-    fechaActa,
-    dataCount: monthlyDataForValidation.length,
-    show: actaValidation.show,
-    type: actaValidation.type,
-    message: actaValidation.message?.slice(0, 80)
-  })
-
-  // Validación directa por intervalos Fecha desde / Fecha hasta con tolerancia de 30 días
-  const actaNeedsAttentionStrict = React.useMemo(() => {
-    try {
-      if (!fechaActa) {
-        console.log('🟦 Validación estricta: sin fecha de acta configurada')
-        return false
-      }
-
-      const dActa = parseDateLoose(fechaActa)
-      if (!dActa) {
-        console.log('🟦 Validación estricta: no se pudo interpretar la fecha del acta', fechaActa)
-        return false
-      }
-
-      const sourceRows = filteredData?.rows || filteredRows || []
-      if (!sourceRows.length) {
-        console.log('🟦 Validación estricta: no hay filas para analizar')
-        return false
-      }
-
-      const desdeH = filteredData?.headers.find(h => isFechaDesdeHeader(h)) || null
-      const hastaH = filteredData?.headers.find(h => isFechaHastaHeader(h)) || null
-      if (!desdeH && !hastaH) {
-        console.log('🟥 Validación estricta: no se encontraron cabeceras Fecha desde/Fecha hasta')
-        return false
-      }
-
-      let covered = false
-      let maxHasta: Date | null = null
-      let minDesde: Date | null = null
-
-      for (const r of sourceRows) {
-        const rawDesde = desdeH ? String(r[desdeH] ?? '') : ''
-        const rawHasta = hastaH ? String(r[hastaH] ?? '') : ''
-        const dDesde = rawDesde ? parseDateLoose(rawDesde) : null
-        const dHasta = rawHasta ? parseDateLoose(rawHasta) : null
-
-        if (dDesde && (!minDesde || dDesde < minDesde)) minDesde = dDesde
-        if (dHasta && (!maxHasta || dHasta > maxHasta)) maxHasta = dHasta
-
-        if (dDesde && dHasta && !isNaN(dDesde.getTime()) && !isNaN(dHasta.getTime())) {
-          if (dActa.getTime() >= dDesde.getTime() && dActa.getTime() <= dHasta.getTime()) {
-            covered = true
-            break
-          }
-        }
-      }
-
-      const MS_PER_DAY = 24 * 60 * 60 * 1000
-      const toleranceMs = 30 * MS_PER_DAY
-      let diffVsMaxHasta: number | null = null
-      let diffVsMinDesde: number | null = null
-
-      if (maxHasta) diffVsMaxHasta = Math.ceil((dActa.getTime() - maxHasta.getTime()) / MS_PER_DAY)
-      if (minDesde) diffVsMinDesde = Math.ceil((minDesde.getTime() - dActa.getTime()) / MS_PER_DAY)
-
-      const needsAttention = !covered || (diffVsMaxHasta !== null && diffVsMaxHasta > 30)
-
-      console.log('🔍 Validación estricta del acta', {
-        fechaActa,
-        covered,
-        desdeH,
-        hastaH,
-        filasAnalizadas: sourceRows.length,
-        maxHasta: maxHasta ? maxHasta.toISOString().slice(0, 10) : null,
-        minDesde: minDesde ? minDesde.toISOString().slice(0, 10) : null,
-        diffVsMaxHasta,
-        diffVsMinDesde,
-        needsAttention,
-        tolerancia30d: toleranceMs / MS_PER_DAY
-      })
-
-      if (!covered && maxHasta && dActa.getTime() <= maxHasta.getTime() + toleranceMs) {
-        // Caso especial: no existe intervalo exacto pero la diferencia con la última factura está dentro de 30 días.
-        // Aún así queremos indicar que faltan registros para valorar este mes.
-        return true
-      }
-
-      if (!covered && !maxHasta && minDesde) {
-        // No existe Fecha hasta, pero la fecha del acta está fuera de los intervalos detectados.
-        return true
-      }
-
-      return needsAttention
-    } catch (e) {
-      console.warn('Validación estricta de acta falló:', e)
-      return false
-    }
-  }, [fechaActa, filteredRows, filteredData])
-
-  const actaNeedsAttention = React.useMemo(() => {
-    if (!fechaActa) return false
-    if (actaNeedsAttentionStrict) return true
-    if (!actaValidation) return false
-    const diff = typeof actaValidation.diasDiferencia === 'number' ? actaValidation.diasDiferencia : null
-    return actaValidation.show && (actaValidation.type === 'error' || (diff !== null && diff > 30))
-  }, [fechaActa, actaNeedsAttentionStrict, actaValidation])
-
-  // Detectar si hay facturas con Estado de medida "pendiente a facturar"
-  const hasPendienteAFacturar = React.useMemo(() => {
-    try {
-      if (!filteredData) return false
-      const estadoHeader = filteredData.headers.find(h => isEstadoMedidaHeader(h)) || null
-      if (!estadoHeader) return false
-      for (const r of filteredRows) {
-        const t = normalizeLabel(String(r[estadoHeader] ?? ''))
-        if (t.includes('pendien') && t.includes('factur')) return true
-      }
-      return false
-    } catch {
-      return false
-    }
-  }, [filteredData, filteredRows])
-
-  // Señal unificada para mostrar aviso visual "Faltan facturas para valorar"
-  const faltanFacturasUI = React.useMemo(() => actaNeedsAttention || hasPendienteAFacturar, [actaNeedsAttention, hasPendienteAFacturar])
-
-  // Nota: Se elimina el fallback de modal por validación estricta.
-  // Ahora el modal solo se abre cuando el hook actaValidation lo indica explícitamente.
-
-  // useEffect para actualizar el estado del modal basado en validación
-  React.useEffect(() => {
-    if (actaValidation.show) {
-      setShowActaAlert(true)
-      setActaAlertMessage(actaValidation.message)
-      setActaAlertType(actaValidation.type)
-      console.log('⚠️ Acta/Factura validation alert:', { type: actaValidation.type, message: actaValidation.message })
-    } else if (!actaNeedsAttentionStrict) {
-      setShowActaAlert(false)
-    }
-  }, [actaValidation, actaNeedsAttentionStrict])
-
-  const isContratoHeader = (h: string) => ['Contrato ATR', 'Contrato'].some(x => x.toLowerCase() === (h || '').toLowerCase())
-  // Normalizador básico para headers: elimina acentos y espacios no separables
-  const normalizeHeader = (s: string) => {
-    const raw = String(s ?? '')
-    const withSpaces = raw.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
-    return stripAccents(withSpaces).toLowerCase().trim()
-  }
-  // Detección robusta de columna de potencia: acepta variantes como "Pot(kW)", "Potencia(kW)", "Potencia kW", etc.
-  const isPotenciaHeader = (h: string) => {
-    const raw = (h || '')
-    const t = stripAccents(raw).toLowerCase().trim()
-    // Normalizamos espacios y puntuación común
-  const norm = t.replace(/[\s._-]/g, '')
-    // Casos explícitos comunes
-    if (['potencia', 'potenciakw', 'potenciakW'.toLowerCase()].includes(norm)) return true
-    // Heurística: contiene "pot" (pot/potencia) y "kw"
-    if (t.includes('pot') && t.includes('kw')) return true
-    // Formatos con paréntesis típicos: pot(kw), potencia(kw)
-    if (/pot\s*\(\s*kw\s*\)/.test(t) || /potencia\s*\(\s*kw\s*\)/.test(t)) return true
-    return false
-  }
-  const stripAccents = (s: string) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '')
-  const isFechaEnvioHeader = (h: string) => {
-    const t = normalizeHeader(h)
-    return t === 'fecha de envio a facturar' || (t.includes('fecha') && t.includes('envio') && (t.includes('factur') || t.includes('facturar')))
-  }
-  const isFechaDesdeHeader = (h: string) => {
-    const t = normalizeHeader(h)
-    // Acepta variantes: "Fecha desde", "Desde", "Inicio", etc.
-    return t === 'fecha desde' || t === 'desde' || t.includes('desde') || (t.includes('fecha') && t.includes('inicio'))
-  }
-  const isFechaHastaHeader = (h: string) => {
-    const t = normalizeHeader(h)
-    // Acepta variantes: "Fecha hasta", "Hasta", "Fin", etc.
-    return t === 'fecha hasta' || t === 'hasta' || t.includes('hasta') || (t.includes('fecha') && (t.includes('fin') || t.includes('corte')))
-  }
-  // Extras para análisis de consumo
-  const isPeriodoHeader = (h: string) => normalizeLabel(h).includes('periodo')
-  const isFechaFactHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
-    return t.includes('fecha') && (t.includes('factur') || t.includes('emision'))
-  }
-  const isConsumoActivaHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
-    return t.includes('consum') && (t.includes('activa') || t.includes('kwh') || t.includes('total'))
-  }
-  // Selección unificada de columna de fecha para todo el componente
-  type DateHeaderChoice = { header: string; kind: 'hasta' | 'desde' | 'periodo' | 'fact' }
-  const pickPrimaryDateHeader = (headers: string[] | undefined | null): DateHeaderChoice | null => {
-    if (!headers || !headers.length) return null
-    const hasta = headers.find(h => isFechaHastaHeader(h))
-    if (hasta) return { header: hasta, kind: 'hasta' }
-    const desde = headers.find(h => isFechaDesdeHeader(h))
-    if (desde) return { header: desde, kind: 'desde' }
-    const periodo = headers.find(h => isPeriodoHeader(h))
-    if (periodo) return { header: periodo, kind: 'periodo' }
-    const fact = headers.find(h => isFechaFactHeader(h))
-    if (fact) return { header: fact, kind: 'fact' }
-    return null
-  }
-  // Selección unificada de columna de fecha para todo el componente
-  type DateHeaderChoice = { header: string; kind: 'hasta' | 'desde' | 'periodo' | 'fact' }
-  const pickPrimaryDateHeader = (headers: string[] | undefined | null): DateHeaderChoice | null => {
-    if (!headers || !headers.length) return null
-    const hasta = headers.find(h => isFechaHastaHeader(h))
-    if (hasta) return { header: hasta, kind: 'hasta' }
-    const desde = headers.find(h => isFechaDesdeHeader(h))
-    if (desde) return { header: desde, kind: 'desde' }
-    const periodo = headers.find(h => isPeriodoHeader(h))
-    if (periodo) return { header: periodo, kind: 'periodo' }
-    const fact = headers.find(h => isFechaFactHeader(h))
-    if (fact) return { header: fact, kind: 'fact' }
-    return null
-  }
-  // Cabeceras robustas para "Tipo de factura" y "Estado de medida"
-  const isTipoFacturaHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
-    return t === 'tipo de factura' || t === 'tipo factura' || (t.includes('tipo') && t.includes('factur'))
-  }
-  // Cabecera para código/número de factura
-  const isCodigoFacturaHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
-    return t === 'codigo factura' || t === 'número de factura' || t === 'numero de factura' ||
-           ((t.includes('cod') || t.includes('num')) && t.includes('factur'))
-  }
-  const isEstadoMedidaHeader = (h: string) => {
-    const t = stripAccents(h).toLowerCase().trim()
-    return t === 'estado de medida' || t === 'estado medida' || (t.includes('estado') && t.includes('medida'))
-  }
-  const normalizeNumber = (s: string) => {
-    // Convierte "2.345,67" o "2,200" a número normalizado para comparar
-    const t = (s || '').replace(/\./g, '').replace(/,/g, '.')
-    const n = Number(t)
-    return Number.isFinite(n) ? n : NaN
-  }
-  const normalizeLabel = (s: string) => {
-    const raw = String(s ?? '')
-    // Sustituir espacios no separables y otros espacios Unicode por espacio normal
-    const withSpaces = raw.replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
-    const t = stripAccents(withSpaces)
-      .toLowerCase()
-      .replace(/["'`]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-    return t
   }
 
-  // Clasifica etiquetas en categorías objetivo con heurística amplia
-  type ClaseObjetivo = 'comp' | 'envi' | 'anul' | 'orden' | null
-  const classifyLabel = (input: string): ClaseObjetivo => {
-    const s = normalizeLabel(input)
-    if (!s) return null
-    const compact = s.replace(/[\s._-]/g, '')
-
-    // Ordenar facturas
-    if (/orden\w*\s+factur\w*/.test(s) || /orden\w*factur\w*/.test(compact)) return 'orden'
-
-    // Complementaria: múltiples variantes y abreviaturas ("compl.", "complement.", "fc", "fact. compl.")
-    const hasFact = /fact/.test(s)
-    const hasCompl = /(compl\b|complem\w*|complement\w*)/.test(s) || /(compl)/.test(compact)
-    if ((hasFact && hasCompl) || /^fc$/.test(compact) || /^factcompl/.test(compact) || /^faccompl/.test(compact)) return 'comp'
-
-    // Enviado/a a facturar o facturación
-    if (/(envi\w*).*(factur\w*)/.test(s)) return 'envi'
-
-    // Anulada / Anuladora
-    if (/anulad\w*/.test(s) || /anulador\w*/.test(s)) return 'anul'
-
-    return null
-  }
-  const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n))
-  const fromExcelSerial = (serial: number): Date => {
-    // Excel 1900 date system: serial 1 -> 1899-12-31; tomamos base 1899-12-30 por bug del 1900 leap
-    const epoch = Date.UTC(1899, 11, 30)
-    return new Date(epoch + Math.round(serial * 86400000))
-  }
-  const parseDateLoose = (v: any): Date | null => {
-    if (v instanceof Date && !isNaN(v.getTime())) return v
-    if (typeof v === 'number' && isFinite(v)) {
-      // Si parece serial de Excel (rango típico > 20000)
-      if (v > 59) return fromExcelSerial(v)
-      // Si es timestamp (ms)
-      if (v > 1000000000000) return new Date(v)
-    }
-    if (typeof v === 'string') {
-      const s = v.trim()
-      // dd/MM/yyyy [HH:mm[:ss]]
-      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/)
-      if (m) {
-        const dd = Number(m[1]); const mm = Number(m[2]) - 1; const yyyy = Number(m[3].length === 2 ? `20${m[3]}` : m[3])
-        const HH = Number(m[4] ?? 0); const MM = Number(m[5] ?? 0); const SS = Number(m[6] ?? 0)
-        const d = new Date(yyyy, mm, dd, HH, MM, SS)
-        if (!isNaN(d.getTime())) return d
-      }
-      const d2 = new Date(s)
-      if (!isNaN(d2.getTime())) return d2
-    }
-    return null
-  }
-  const formatDateES = (v: any): string => {
-    const d = parseDateLoose(v)
-    if (!d) return String(v ?? '')
-    const Y = d.getFullYear(); const M = pad2(d.getMonth() + 1); const D = pad2(d.getDate())
-    const h = pad2(d.getHours()); const m = pad2(d.getMinutes()); const s = d.getSeconds()
-    const time = s ? `${h}:${m}:${pad2(s)}` : `${h}:${m}`
-    // Si hora es 00:00 y no hay indicios de tiempo, solo fecha
-    if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) return `${D}/${M}/${Y}`
-    return `${D}/${M}/${Y} ${time}`
-  }
-  const parsePeriodoStart = (s: string): Date | null => {
-    const m = String(s || '').match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/)
-    return m ? parseDateLoose(m[1]) : parseDateLoose(s)
-  }
-
-  // Colores por grupo de contrato (pasteles suaves)
-  const groupPalette = ['#fefce8', '#eef2ff', '#ecfdf5', '#fdf2f8', '#f0f9ff', '#fff7ed', '#f5f3ff', '#e8f5e9', '#ede7f6', '#fffde7']
-  const contractHeader = React.useMemo(() => (filteredData?.headers.find(h => isContratoHeader(h)) || null), [filteredData])
-  const fechaEnvioHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaEnvioHeader(h)) || null), [filteredData])
-  const fechaDesdeHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaDesdeHeader(h)) || null), [filteredData])
-  const fechaHastaHeader = React.useMemo(() => (filteredData?.headers.find(h => isFechaHastaHeader(h)) || null), [filteredData])
-  // Fecha de última factura (máximo de "Fecha hasta" en las filas visibles del expediente actual)
-  const lastFacturaHasta = React.useMemo(() => {
-    if (!fechaHastaHeader) return null
-    let maxHasta: Date | null = null
-    for (const r of filteredRows) {
-      const d = parseDateLoose(String(r[fechaHastaHeader] ?? ''))
-      if (d && (!maxHasta || d > maxHasta)) maxHasta = d
-    }
-    return maxHasta
-  }, [filteredRows, fechaHastaHeader])
-  const contractColorMap = React.useMemo(() => {
-    const map = new Map<string, string>()
-    if (!filteredData || !contractHeader) return map
-
-      // Selección unificada: prioriza Fecha hasta → Fecha desde → Periodo → Fecha factura
-      const choice = pickPrimaryDateHeader(filteredData.headers)
-      if (!choice) return []
-      const chosenDateHeader = choice.header
-    return map
-  }, [filteredRows, contractHeader, filteredData])
-
-  // Cabecera de potencia principal (si existe)
-  const potenciaHeaderMain = React.useMemo(() => (filteredData?.headers.find(h => isPotenciaHeader(h)) || null), [filteredData])
-
-        const raw = String(r[chosenDateHeader] ?? '')
-        let d = choice.kind === 'periodo' ? parsePeriodoStart(raw) : parseDateLoose(raw)
-    const set = new Set<number>()
-        // Si estamos usando Fecha desde, el consumo corresponde al mes anterior
-        if (choice.kind === 'desde') {
-      if (Number.isFinite(n)) set.add(n)
-    }
-    return set.size
-  }, [filteredRows, potenciaHeaderMain])
-
-  // Resumen por año: contratos/potencias únicos y cambios por transiciones
-  type YearSummary = { contratosUnicos: number; potenciasUnicas: number; cambiosContrato: number; cambiosPotencia: number; total: number }
-  const yearlySummary = React.useMemo(() => {
-    const result = new Map<number, YearSummary>()
-    if (!filteredData) return result
-
-    // Estructura temporal por año basada en filas visibles actualmente
-    const tmp = new Map<number, { rows: Array<{ d: Date | null; r: Record<string,string> }>; contratos: Set<string>; pots: Set<number> }>()
-
-    for (const r of filteredRows) {
-      // Fecha de referencia por orden: Fecha desde -> Fecha hasta -> Fecha envío a facturar
-      const dDesde = fechaDesdeHeader ? parseDateLoose(r[fechaDesdeHeader]) : null
-      const dHasta = (!dDesde && fechaHastaHeader) ? parseDateLoose(r[fechaHastaHeader]) : null
-      const dEnvio = (!dDesde && !dHasta && fechaEnvioHeader) ? parseDateLoose(r[fechaEnvioHeader]) : null
-      const d = dDesde || dHasta || dEnvio || null
-        chosenDateHeader,
-        chosenKind: choice.kind,
-      const year = d.getFullYear()
-      if (!Number.isFinite(year)) continue
-
-      if (!tmp.has(year)) tmp.set(year, { rows: [], contratos: new Set<string>(), pots: new Set<number>() })
-      const bucket = tmp.get(year)!
-      bucket.rows.push({ d, r })
-      if (contractHeader) {
-        const c = String(r[contractHeader] ?? '').trim()
-        if (c) bucket.contratos.add(c)
-      }
-      if (potenciaHeaderMain) {
-        const n = normalizeNumber(String(r[potenciaHeaderMain] ?? ''))
-        if (Number.isFinite(n)) bucket.pots.add(n)
-      }
-    }
-
-    // Calcular cambios por año (ordenado por fecha)
-    for (const [year, bucket] of tmp.entries()) {
-      let cambiosContrato = 0
-      let cambiosPotencia = 0
-      // Orden cronológico
-      bucket.rows.sort((a, b) => {
-        if (!a.d && !b.d) return 0
-        if (!a.d) return -1
-        if (!b.d) return 1
-        return a.d.getTime() - b.d.getTime()
-      })
-      let prevContrato: string | null = null
-      let prevPot: number | null = null
-      for (const { r } of bucket.rows) {
-        if (contractHeader) {
-          const cur = String(r[contractHeader] ?? '').trim()
-          if (prevContrato !== null && cur && prevContrato && cur !== prevContrato) cambiosContrato++
-          if (cur) prevContrato = cur
-        }
-        if (potenciaHeaderMain) {
-          const curN = normalizeNumber(String(r[potenciaHeaderMain] ?? ''))
-          if (Number.isFinite(curN)) {
-            if (prevPot !== null && Number.isFinite(prevPot) && curN !== prevPot) cambiosPotencia++
-            prevPot = curN
-          }
-        }
-      }
-
-      result.set(year, {
-        contratosUnicos: bucket.contratos.size,
-        potenciasUnicas: bucket.pots.size,
-        cambiosContrato,
-        cambiosPotencia,
-        total: bucket.rows.length
-      })
-    }
-    return result
-  }, [filteredData, filteredRows, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader, potenciaHeaderMain])
-
-  // Contratos por año (lista) para mostrar bajo cada tarjeta del panel CAP
-  const yearlyContracts = React.useMemo(() => {
-    const map = new Map<number, string[]>()
-    if (!filteredData || !contractHeader) return map
-
-    // Basado en filas visibles actualmente
-    const tmp = new Map<number, Set<string>>()
-    for (const r of filteredRows) {
-      // Fecha de referencia por orden: Fecha desde -> Fecha hasta -> Fecha envío a facturar
-      const dDesde = fechaDesdeHeader ? parseDateLoose(r[fechaDesdeHeader]) : null
-      const dHasta = (!dDesde && fechaHastaHeader) ? parseDateLoose(r[fechaHastaHeader]) : null
-      const dEnvio = (!dDesde && !dHasta && fechaEnvioHeader) ? parseDateLoose(r[fechaEnvioHeader]) : null
-      const d = dDesde || dHasta || dEnvio || null
-      if (!d) continue
-      const year = d.getFullYear()
-      if (!Number.isFinite(year)) continue
-
-      if (!tmp.has(year)) tmp.set(year, new Set<string>())
-      const c = String(r[contractHeader] ?? '').trim()
-      if (c) tmp.get(year)!.add(c)
-    }
-
-    for (const [y, set] of tmp.entries()) {
-      // Orden alfabético natural simple
-      map.set(y, Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' })))
-    }
-    return map
-  }, [filteredData, filteredRows, contractHeader, fechaDesdeHeader, fechaHastaHeader, fechaEnvioHeader])
-
+  export default ATRPreview
   // Años expandidos para ver contratos dentro del panel CAP
   const [expandedYears, setExpandedYears] = React.useState<Set<number>>(new Set())
   const toggleYearExpanded = React.useCallback((y: number) => {
@@ -676,59 +82,7 @@ const ATRPreview: React.FC = () => {
     })
   }, [])
 
-
-  // Duración total por contrato: desde primera "Fecha desde" hasta última "Fecha hasta"
-  const plural = (n: number, s: string, p: string) => (n === 1 ? s : p)
-  const diffMonthsDays = (start: Date, end: Date) => {
-    let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
-    let anchor = new Date(start.getFullYear(), start.getMonth() + months, start.getDate())
-    if (anchor > end) {
-      months--
-      anchor = new Date(start.getFullYear(), start.getMonth() + months, start.getDate())
-    }
-    const days = Math.max(0, Math.floor((end.getTime() - anchor.getTime()) / 86400000))
-    const totalDays = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000))
-    return { months, days, totalDays }
-  }
-
-  const contractDurationText = React.useMemo(() => {
-    const map = new Map<string, string>()
-    if (!filteredData || !contractHeader || !fechaDesdeHeader || !fechaHastaHeader) return map
-    const acc = new Map<string, { minDesde: Date | null, maxHasta: Date | null }>()
-    for (const r of filteredRows) {
-      const key = String(r[contractHeader] ?? '').trim()
-      const dDesde = parseDateLoose(r[fechaDesdeHeader])
-      const dHasta = parseDateLoose(r[fechaHastaHeader])
-      if (!acc.has(key)) acc.set(key, { minDesde: null, maxHasta: null })
-      const cur = acc.get(key)!
-      if (dDesde && (!cur.minDesde || dDesde < cur.minDesde)) cur.minDesde = dDesde
-      if (dHasta && (!cur.maxHasta || dHasta > cur.maxHasta)) cur.maxHasta = dHasta
-    }
-    for (const [key, { minDesde, maxHasta }] of acc) {
-      if (minDesde && maxHasta && maxHasta >= minDesde) {
-        const { months, days } = diffMonthsDays(minDesde, maxHasta)
-        const years = Math.floor(months / 12)
-        const remMonths = months % 12
-        const parts: string[] = []
-        if (years > 0) parts.push(`${years} ${plural(years, 'año', 'años')}`)
-        if (remMonths > 0) parts.push(`${remMonths} ${plural(remMonths, 'mes', 'meses')}`)
-        if (days > 0) parts.push(`${days} ${plural(days, 'día', 'días')}`)
-        if (parts.length === 0) parts.push('0 días')
-        let text: string
-        if (parts.length === 1) text = parts[0]
-        else if (parts.length === 2) text = parts.join(' y ')
-        else text = parts.slice(0, -1).join(', ') + ' y ' + parts[parts.length - 1]
-        map.set(key, text)
-      } else {
-        map.set(key, '')
-      }
-    }
-    return map
-  }, [filteredRows, contractHeader, fechaDesdeHeader, fechaHastaHeader])
-
-
-  // Índice de CUPS para insertar la columna a su derecha
-  const cupsIndex = React.useMemo(() => (filteredData ? filteredData.headers.findIndex(h => (h || '').toString().toLowerCase().trim() === 'cups') : -1), [filteredData])
+  
 
   // (Eliminado panel "Información de Contratos" y su cálculo asociado)
 
@@ -751,178 +105,7 @@ const ATRPreview: React.FC = () => {
   }, [ordenado, viewMode, removedRows, keptRows])
 
   // Cambiar pestañas entre Vista previa y Eliminadas
-  const setTab = React.useCallback((tab: 'vista' | 'eliminadas') => {
-    if (!ordenado) return
-    setActiveTab(tab)
-    if (tab === 'vista') {
-      setFilteredRows(keptRows)
-      setViewMode('restantes')
-    } else {
-      setFilteredRows(removedRows)
-      setViewMode('filtradas')
-    }
-  }, [ordenado, keptRows, removedRows])
-
-  // Eliminar datos ATR cargados y redirigir a exportación
-  // handleEliminar eliminado (no usado)
-
-  // Botón: Filtrar (selecciona por cualquier columna que contenga Complementaria / Enviado a facturar / Anulada / Anuladora y abre ventana con filtradas)
-  // handleFiltrar eliminado (no usado)
-
-  // Construir serie mensual y abrir panel con Heatmap + Barras
-  const handleDetectarAnomalias = React.useCallback(() => {
-    console.log('🔍 handleDetectarAnomalias llamado', { allowAnalysis, hasFilteredData: !!filteredData, keptRowsLength: keptRows?.length, filteredRowsLength: filteredData?.rows?.length })
-    try {
-      if (!allowAnalysis) {
-        console.log('❌ Análisis bloqueado: allowAnalysis =', allowAnalysis)
-        return
-      }
-      const headers = filteredData?.headers || []
-      const rows = keptRows && keptRows.length > 0 ? keptRows : (filteredData?.rows || [])
-      console.log('📊 Datos para análisis:', { headersLength: headers.length, rowsLength: rows.length })
-      if (!headers.length || !rows.length) { window.alert('No hay datos para analizar.'); return }
-      
-  // Buscar headers exactamente como en la tabla (mismo orden de prioridad)
-  const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isFechaHastaHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
-      const consumoHeader = headers.find(h => isConsumoActivaHeader(h))
-      if (!fechaHeader || !consumoHeader) { window.alert('No se encontró columna de fecha o consumo.'); return }
-
-      // Paso 1: recolectar pares fecha(consolidada a mes) y consumo
-      const points: Array<{ ymKey: string; year: number; month: number; fecha: Date; consumo: number }> = []
-      for (const r of rows) {
-        let d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(r[fechaHeader])
-        const n = normalizeNumber(String(r[consumoHeader] ?? ''))
-        if (!d || !Number.isFinite(n)) continue
-        // Importante: si la cabecera de fecha es "Fecha desde", el consumo corresponde al MES ANTERIOR
-        if (isFechaDesdeHeader(fechaHeader)) {
-          const adj = new Date(d)
-          adj.setMonth(adj.getMonth() - 1)
-          d = adj
-        }
-        const year = d.getFullYear(); const month = d.getMonth() + 1
-        const key = `${year}-${pad2(month)}`
-        const firstDay = new Date(year, month - 1, 1)
-        points.push({ ymKey: key, year, month, fecha: firstDay, consumo: n })
-      }
-      if (!points.length) { window.alert('No hay consumos válidos para analizar.'); return }
-
-      // Paso 2: agregar por mes (sumar consumos por (año,mes))
-      const agg = new Map<string, { year: number; month: number; fecha: Date; consumo: number }>()
-      for (const p of points) {
-        const prev = agg.get(p.ymKey)
-        if (prev) prev.consumo += p.consumo
-        else agg.set(p.ymKey, { year: p.year, month: p.month, fecha: p.fecha, consumo: p.consumo })
-      }
-      // Rango temporal completo de meses contiguos
-      const keys = Array.from(agg.values()).sort((a,b) => a.fecha.getTime() - b.fecha.getTime())
-      const minD = keys[0].fecha
-      const maxD = keys[keys.length - 1].fecha
-      const full: Array<{ key: string; year: number; month: number; fecha: Date; consumo: number }> = []
-      const cur = new Date(minD.getFullYear(), minD.getMonth(), 1)
-      while (cur <= maxD) {
-        const ym = `${cur.getFullYear()}-${pad2(cur.getMonth() + 1)}`
-        const found = agg.get(ym)
-        full.push({ key: ym, year: cur.getFullYear(), month: cur.getMonth() + 1, fecha: new Date(cur), consumo: found ? found.consumo : 0 })
-        // siguiente mes
-        cur.setMonth(cur.getMonth() + 1)
-      }
-      // Variación vs mes anterior
-      const withVar: Array<{ key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }> = full.map((p, i) => {
-        if (i === 0) return { ...p, variacion: null }
-        const prev = full[i - 1]
-        const v = prev.consumo > 0 ? (p.consumo - prev.consumo) / prev.consumo : null
-        return { ...p, variacion: v }
-      })
-      
-      // Variables para consolidar resultado de detección (inicio de anomalía)
-      let firstDrop: number | null = null
-      let detectedAnomalyYM: { year: number; month: number } | null = null
-      let anomalyMetadata: {
-        criterio: string;
-        confianza: number;
-        baseline: number;
-        actual: number;
-        caida: number;
-        persistencia: number;
-        desvEstandar: number;
-      } | null = null
-
-      // Detección prioridad 0: cambio a lectura ESTIMADA (inicio probable de anomalía operativa)
-      try {
-        const estadoHeader = headers.find(h => isEstadoMedidaHeader(h)) || headers.find(h => isTipoFacturaHeader(h)) || null
-        if (estadoHeader) {
-          // Construir entradas cronológicas por fila para detectar el primer "estimada" tras tener algún "real"
-          type RowEntry = { d: Date; year: number; month: number; estado: string }
-          const entries: RowEntry[] = []
-          for (const r of rows) {
-            const d = isPeriodoHeader(fechaHeader) ? parsePeriodoStart(String(r[fechaHeader] ?? '')) : parseDateLoose(String(r[fechaHeader] ?? ''))
-            if (!d) continue
-            let year = d.getFullYear(); let month = d.getMonth() + 1
-            if (isFechaDesdeHeader(fechaHeader)) {
-              const tmp = new Date(d); tmp.setMonth(tmp.getMonth() - 1)
-              year = tmp.getFullYear(); month = tmp.getMonth() + 1
-            }
-            const estado = normalizeLabel(String(r[estadoHeader] ?? ''))
-            entries.push({ d, year, month, estado })
-          }
-          // Orden cronológico por fecha de referencia
-          entries.sort((a, b) => a.d.getTime() - b.d.getTime())
-          let sawReal = false
-          let firstEstimadoIndex: number | null = null
-          for (let i = 0; i < entries.length; i++) {
-            const e = entries[i]
-            const isReal = e.estado.includes('real')
-            const isEstimada = e.estado.includes('estimad')
-            if (isReal) sawReal = true
-            if (sawReal && isEstimada) { firstEstimadoIndex = i; break }
-          }
-          if (firstEstimadoIndex !== null) {
-            const e = entries[firstEstimadoIndex]
-            const candidateYM = { year: e.year, month: e.month }
-            // Buscar índice en la serie mensual agregada
-            const idxInWithVar = withVar.findIndex(p => p.year === candidateYM.year && p.month === candidateYM.month)
-            if (idxInWithVar >= 0) {
-              firstDrop = firstDrop ?? idxInWithVar
-              detectedAnomalyYM = detectedAnomalyYM ?? candidateYM
-              anomalyMetadata = anomalyMetadata ?? {
-                criterio: 'Primer período con lectura ESTIMADA tras períodos REALES',
-                confianza: 0.7,
-                baseline: 0,
-                actual: withVar[idxInWithVar].consumo,
-                caida: 0,
-                persistencia: 0,
-                desvEstandar: 0
-              }
-              console.log('⚠️ Anomalía por ESTIMADA detectada primero en', candidateYM)
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('No fue posible evaluar cambio a ESTIMADA:', e)
-      }
-
-  // NUEVO: Calcular métricas avanzadas para detección precisa de anomalías
-      const seasonalAvg = new Map<number, number>() // mes (1-12) → promedio de consumo
-      const seasonalCount = new Map<number, number>() // mes (1-12) → cantidad de ocurrencias
-      const seasonalStdDev = new Map<number, number>() // mes (1-12) → desviación estándar
-      const consumosByMonth = new Map<number, number[]>() // mes (1-12) → array de consumos históricos
-      
-      // Recopilar datos por mes del año
-      for (const p of full) {
-        if (p.consumo > 0) {
-          const prev = seasonalAvg.get(p.month) || 0
-          const count = seasonalCount.get(p.month) || 0
-          const consumos = consumosByMonth.get(p.month) || []
-          
-          seasonalAvg.set(p.month, prev + p.consumo)
-          seasonalCount.set(p.month, count + 1)
-          consumos.push(p.consumo)
-          consumosByMonth.set(p.month, consumos)
-        }
-      }
-      
-      // Calcular promedios y desviaciones estándar
-      for (const [month, total] of seasonalAvg.entries()) {
+  export default ATRPreview
         const count = seasonalCount.get(month) || 1
         const avg = total / count
         seasonalAvg.set(month, avg)
@@ -1161,10 +344,10 @@ const ATRPreview: React.FC = () => {
           if (dDesde && dHasta) {
             inMonth = dMid.getTime() >= dDesde.getTime() && dMid.getTime() <= dHasta.getTime()
           } else {
-            const fechaHeaderLocal = headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h)) || headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isFechaHastaHeader(h))
-            if (fechaHeaderLocal) {
-              let d = isPeriodoHeader(fechaHeaderLocal) ? parsePeriodoStart(String(r[fechaHeaderLocal] ?? '')) : parseDateLoose(String(r[fechaHeaderLocal] ?? ''))
-              if (d && isFechaDesdeHeader(fechaHeaderLocal)) { const tmp = new Date(d); tmp.setMonth(tmp.getMonth() - 1); d = tmp }
+            const localChoice = pickPrimaryDateHeader(headers)
+            if (localChoice) {
+              let d = localChoice.kind === 'periodo' ? parsePeriodoStart(String(r[localChoice.header] ?? '')) : parseDateLoose(String(r[localChoice.header] ?? ''))
+              if (d && localChoice.kind === 'desde') { const tmp = new Date(d); tmp.setMonth(tmp.getMonth() - 1); d = tmp }
               if (d) inMonth = (d.getFullYear() === dMid.getFullYear() && (d.getMonth() + 1) === (dMid.getMonth() + 1))
             }
           }
@@ -2081,13 +1264,13 @@ dentro de los rangos normales esperados.
           </thead>
           <tbody>
             {(() => {
-              // Headers para detectar fecha de la fila
-              const fechaHeaderForKey = filteredData.headers.find(h => isFechaDesdeHeader(h)) || filteredData.headers.find(h => isFechaHastaHeader(h)) || filteredData.headers.find(h => isPeriodoHeader(h)) || filteredData.headers.find(h => isFechaFactHeader(h))
+              // Selección unificada para detectar fecha de la fila
+              const dateChoiceForKey = pickPrimaryDateHeader(filteredData.headers)
               
               console.log('📑 Renderizando tabla:', { 
                 totalRows: filteredRows.length, 
                 anomalyYearMonth, 
-                fechaHeaderForKey,
+                fechaHeaderForKey: dateChoiceForKey?.header,
                 hasAnomaly: !!anomalyYearMonth,
                 headers: filteredData.headers 
               })
@@ -2106,13 +1289,13 @@ dentro de los rangos normales esperados.
                 let isHighlighted = false
                 if (anomalyYearMonth) {
                   // 1) Intento de coincidencia simple por (año, mes) usando el header de fecha elegido
-                  if (fechaHeaderForKey) {
-                    const fechaVal = String(r[fechaHeaderForKey] ?? '')
-                    const d = isPeriodoHeader(fechaHeaderForKey) ? parsePeriodoStart(fechaVal) : parseDateLoose(fechaVal)
+                  if (dateChoiceForKey) {
+                    const fechaVal = String(r[dateChoiceForKey.header] ?? '')
+                    let d = dateChoiceForKey.kind === 'periodo' ? parsePeriodoStart(fechaVal) : parseDateLoose(fechaVal)
                     if (d) {
                       let rowYear = d.getFullYear()
                       let rowMonth = d.getMonth() + 1
-                      if (isFechaDesdeHeader(fechaHeaderForKey)) {
+                      if (dateChoiceForKey.kind === 'desde') {
                         const consumptionDate = new Date(d)
                         consumptionDate.setMonth(consumptionDate.getMonth() - 1)
                         rowYear = consumptionDate.getFullYear()
