@@ -1,348 +1,112 @@
 # ValorApp – Guía para agentes (Copilot)
 
 ## Visión general
-**Aplicación enfocada al análisis de consumo energético y la detección de anomalías**
-
-Aplicación corporativa especializada en el análisis inteligente de consumo energético basada en registros ATR (información de contadores de clientes). Su objetivo principal es detectar anomalías en el consumo que puedan indicar fraudes, averías o comportamientos atípicos. Permite crear/gestionar registros, distinguir gestión por avería/fraude y marcar valores estimados o reales, con algoritmos avanzados de detección de patrones anómalos. 
-
-**IMPORTANTE**: La aplicación NO maneja autenticación ni usuarios. Es una aplicación de acceso libre sin control de acceso.
+Aplicación corporativa para el análisis de consumo energético basada en registros ATR (CSV/Excel). Detecta anomalías (fraude/avería) y permite gestionar registros locales. No hay autenticación ni backend: acceso libre, datos en localStorage.
 
 ## Arquitectura y patrones clave
-- **Arquitectura modular**: Separación clara entre presentación, lógica de negocio y estado
-- **Contexto único**: `StoreProvider` en `src/main.tsx` para gestión de estado global
-- **Persistencia**: Store en localStorage con clave `valorApp.registros`
-- **SPA por hash**: hook `useHashRoute()` en `src/App.tsx`; rutas: `#/`, `#/wart`, `#/analisis-expediente`, `#/export-saldo-atr`, `#/ver-saldo-atr`
-- **Navegación**: sidebar con enlace activo usando clase `.active`
+- Arquitectura modular (presentación, negocio, estado) con React + TypeScript
+- Contexto único: `StoreProvider` (en `src/main.tsx`)
+- Persistencia: localStorage (clave principal `valorApp.registros`), más claves auxiliares
+- SPA por hash: `useHashRoute()` en `src/App.tsx`
+- Rutas: `#/`, `#/wart`, `#/analisis-expediente`, `#/export-saldo-atr`, `#/ver-saldo-atr`
 
-## Páginas y patrones
+## Páginas y responsabilidades
+- Dashboard (`src/pages/Dashboard/`): listado y métricas de registros del store; filtros rápidos
+- WART (`src/pages/Wart/Wart.tsx`): checklist, “cambio de titular” y “fecha del acta” (persisten en localStorage)
+- Análisis de Expediente (`src/pages/AnalisisExpediente/`): parsing de Excel, KPIs y tabla
+- Export Saldo ATR (`src/pages/ExportSaldoATR/ExportSaldoATR.tsx`): import CSV/Excel ATR y guardado
+- Vista ATR (`src/pages/ExportSaldoATR/ATRPreview.tsx`): previsualización, filtrado, series y detección de anomalías
+- Formularios ATR (`src/pages/ATRForm/`): creación/edición de registros con validación
 
-### Estructura de páginas
-- **Dashboard** (`src/pages/Dashboard/`): Valoración principal con filtros y agregaciones
-- **WART** (`src/pages/Wart/`): Funcionalidad WART
-- **Análisis de Expediente** (`src/pages/AnalisisExpediente/`): Análisis de expedientes
-- **Export Saldo ATR** (`src/pages/ExportSaldoATR/`): Exportación de datos
-- **ATR Form** (`src/pages/ATRForm/`): Formularios de gestión ATR
+## Estado y servicios
+- `src/state/StoreContext.tsx`: reducer + acciones (INIT/ADD/REMOVE/CLEAR/SET_LOADING/SET_ERROR)
+- `src/services/atr/atrService.ts`: CRUD, validación, búsqueda y totales kWh, persistencia
+- `src/services/storage/storageService.ts`: servicio genérico de storage (local/session)
+
+## Persistencia (claves)
+- `valorApp.registros` (registros ATR manuales)
+- `valorApp.analisis.atrCsv` (dataset importado: { headers, rows })
+- `valorApp.analisisExpediente` (items parseados de expediente)
+- `valorApp.analisis.tipoContador` ('Tipo V' | 'Tipo IV')
+- `valorApp.wart.cambioTitular` ({ tuvoCambioTitular, fecha })
+- `valorApp.wart.fechaActa` (string ISO)
 
 ## Calidad de código y herramientas
+- ESLint (React/TS) + Prettier + EditorConfig
+- Vitest + React Testing Library (mock de storages en `src/test/setup.ts`)
+- Vite + `@vitejs/plugin-react`
 
-### Linting y formateo
-- **ESLint**: Configuración estricta con reglas de React y TypeScript
-- **Prettier**: Formateo automático consistente
-- **Husky**: Pre-commit hooks para calidad
-- **EditorConfig**: Configuración de editor unificada
-
-### Testing
-- **Vitest**: Testing unitario rápido y moderno
-- **React Testing Library**: Testing centrado en el usuario
-- **MSW**: Mock Service Worker para APIs
-- **Coverage**: Reportes de cobertura de código
-
-### Performance y optimización
-- **React.memo**: Para componentes puros
-- **useMemo/useCallback**: Optimización de cálculos y funciones
-- **Lazy loading**: Carga diferida de componentes
-- **Bundle analysis**: Análisis de tamaño del bundle
-
-## Flujo de desarrollo
-
-### Scripts de desarrollo
+### Scripts (package.json)
 ```json
 {
   "dev": "vite --host",
   "build": "vite build",
   "preview": "vite preview",
+  "start": "vite preview --host",
+  "typecheck": "tsc --noEmit",
   "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
   "lint:fix": "eslint src --ext ts,tsx --fix",
   "format": "prettier --write src",
   "test": "vitest",
-  "test:coverage": "vitest --coverage",
-  "typecheck": "tsc --noEmit"
+  "test:coverage": "vitest --coverage"
 }
 ```
 
 ### Workflow recomendado
-1. **Desarrollo**: `npm run dev`
-2. **Linting**: `npm run lint`
-3. **Tests**: `npm run test`
-4. **Build**: `npm run build`
-5. **Preview**: `npm run preview`
+1) `npm run dev` → desarrollo
+2) `npm run lint` / `npm run typecheck` → calidad
+3) `npm run test` → pruebas
+4) `npm run build` y `npm run preview` → verificación final
 
 ## Convenciones del proyecto
+- UI y comentarios en español; emojis opcionales (📊, ⚠️, ✅) para jerarquía
+- Imports sin extensión TS y ordenados
+- Números en inputs: `parseFloat(e.target.value) || 0`
+- Componentes: responsabilidad única y <150 líneas; extraer lógica a hooks
+- Mantener rutas por hash y estilos corporativos (ver `docs/DESIGN_SYSTEM.md`)
 
-### Estándares de código
-- **Texto UI**: En español con emojis opcionales para jerarquía visual
-- **Comentarios**: En español, concisos y útiles
-- **Imports**: Sin extensiones TS, ordenados alfabéticamente
-- **Números**: `parseFloat(e.target.value) || 0` para inputs numéricos
-- **Funciones**: Máximo 20 líneas, una responsabilidad
-- **Variables**: Nombres descriptivos, evitar abreviacionesicación demo con persistencia configurable
-- **Dashboard** (`src/pages/Lista/`): Listado principal con filtros y agregaciones
-- **Formularios** (`src/pages/Nuevo/`): Creación/edición de registros
-- **Gestión** (`src/pages/GestionUsuarios/`): Administración de usuarios
+## Patrones de implementación
+- Hooks especializados para negocio (`useATRData`, `useWARTModule`, `useActaFacturaValidation`)
+- Formularios con validación previa; mensajes claros de error
+- Optimización con `useMemo`/`useCallback` y React.memo en componentes puros
 
-### Patrones de implementación
-- Hooks personalizados para lógica de negocio (`useLogin`, `useRegistros`, `useFormulario`)
-- Componentes de formulario reutilizables con validación
-- Manejo de estado local con `useState`/`useReducer` según complejidad
-- Optimización con `useMemo`/`useCallback` para cálculos costosos
-- Lazy loading para rutas secundarias
+## Detección de anomalías (guía rápida)
+- Implementación principal en `src/pages/ExportSaldoATR/ATRPreview.tsx`
+- Criterio 0: consumo nulo sostenido (≤1 kWh por ≥2 meses)
+- Umbral operativo: ±40% (variación crítica)
+- Validaciones cruzadas: Z-Score, estacionalidad, caída/incremento significativo
+- Detalle completo: `docs/DETECCION_ANOMALIAS_CONSUMO.md`
 
-### Manejo de formularios
-```typescript
-// Patrón recomendado para formularios
-const useFormulario = (initialData: FormData) => {
-  const [data, setData] = useState(initialData);
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
+## Manejo de errores y accesibilidad
+- try/catch en operaciones asíncronas; errores globales en `StoreContext`
+- Accesibilidad: labels/roles ARIA, foco visible, contraste suficiente, navegación por teclado
 
-  const validate = useCallback((data: FormData) => {
-    // Lógica de validación
-  }, []);
-
-  const handleSubmit = useCallback(async (e: FormEvent) => {
-    e.preventDefault();
-    const validationErrors = validate(data);
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-    // Lógica de envío
-  }, [data, validate]);
-
-  return { data, setData, errors, isLoading, handleSubmit };
-};
-```istros ATR (información de contadores de clientes). Permite crear/gestionar registros, distinguir gestión por avería/fraude y marcar valores estimados o reales.
-
-## Arquitectura y patrones clave
-- **Arquitectura modular**: Separación clara entre presentación, lógica de negocio y estado
-- **Contextos anidados**: `AuthProvider` envuelve `StoreProvider` en `src/main.tsx`
-- **Persistencia**: Auth en localStorage o sessionStorage según "remember"; Store en localStorage con clave `valorApp.registros`
-- **Errores de contexto**: `useAuth`/`useStore` lanzan error si se usan fuera de sus providers (mensaje en español)
-- **SPA por hash**: hook `useHashRoute()` en `src/App.tsx`; rutas: `#/login`, `#/`, `#/nuevo` (sin react-router)
-- **Guard de autenticación**: si no hay sesión → redirección a `#/login`
-- **Navegación**: sidebar con enlace activo usando clase `.active`
-
-## Principios de desarrollo (SOLID y mejores prácticas)
-
-### Single Responsibility Principle (SRP)
-- Cada componente debe tener una única responsabilidad
-- Separar lógica de presentación usando hooks personalizados
-- Componentes de máximo 100-150 líneas (dividir si excede)
-
-### Open/Closed Principle (OCP)
-- Interfaces extensibles sin modificar código existente
-- Uso de composición sobre herencia
-- Props configurables para extensibilidad
-
-### Liskov Substitution Principle (LSP)
-- Componentes intercambiables que respetan contratos
-- Interfaces consistentes para componentes similares
-
-### Interface Segregation Principle (ISP)
-- Props específicas por componente, evitar interfaces monolíticas
-- Hooks especializados por funcionalidad
-
-### Dependency Inversion Principle (DIP)
-- Dependencia de abstracciones (interfaces/tipos)
-- Inyección de dependencias via props/context Guía para agentes (Copilot)
-
-## Visión general
-Aplicación corporativa para valoración de consumo energético basada en registros ATR (información de contadores de clientes). Permite crear/gestionar registros, distinguir gestión por avería/fraude y marcar valores estimados o reales.
-
-## Arquitectura y patrones clave (duplicado - eliminado)
-**Esta sección está duplicada y obsoleta. Ver arriba la versión actualizada.**
-
-## Estructura de carpetas y organización
-
-### Arquitectura de capas
+## Archivos clave
 ```
 src/
-├── components/          # Componentes reutilizables
-│   ├── ui/             # Componentes de UI básicos (Button, Input, Card)
-│   ├── forms/          # Componentes de formularios
-│   └── layout/         # Componentes de layout (Header, Sidebar)
-├── pages/              # Páginas principales
-├── hooks/              # Hooks personalizados
-├── services/           # Servicios y APIs
-├── utils/              # Utilidades y helpers
-├── types/              # Tipos e interfaces TypeScript
-├── constants/          # Constantes y configuraciones
-├── styles/             # Estilos globales y variables CSS
-└── assets/             # Recursos estáticos
-```
-
-### Convenciones de nomenclatura
-- **Componentes**: PascalCase (`UserCard.tsx`)
-- **Hooks**: camelCase con prefijo `use` (`useAuth.ts`)
-- **Servicios**: camelCase (`authService.ts`)
-- **Tipos**: PascalCase (`ATRRegistro`, `UserRole`)
-- **Constantes**: UPPER_SNAKE_CASE (`API_ENDPOINTS`)
-- **Archivos de estilos**: kebab-case (`user-card.css`)
-
-## Modelo de dominio (src/types/atr.ts)
-- `ATRRegistro`: `{ id, clienteId, fechaISO, gestion, fraudeTipo?, valorTipo, kWh, notas? }`
-- `gestion`: `'averia' | 'fraude'`; si es `'fraude'` entonces `fraudeTipo` es requerido en UI
-- `valorTipo`: `'estimado' | 'real'`
-- Fechas en ISO (`YYYY-MM-DD`) en formularios y `toLocaleDateString('es-ES')` para mostrar
-
-## Patrones de componentes y estilos
-
-### Separación de responsabilidades en componentes
-- **Presentacionales**: Solo UI, reciben props y renderizan
-- **Contenedores**: Manejan lógica, estado y datos
-- **Hooks personalizados**: Lógica reutilizable extraída
-
-### Estructura de componente recomendada
-```typescript
-// UserCard/UserCard.tsx
-interface UserCardProps {
-  user: User;
-  onEdit?: (user: User) => void;
-}
-
-export const UserCard: React.FC<UserCardProps> = ({ user, onEdit }) => {
-  const { handleEdit } = useUserCard(user, onEdit);
-  
-  return (
-    <div className={styles.userCard}>
-      {/* JSX */}
-    </div>
-  );
-};
-
-// UserCard/useUserCard.ts - Hook personalizado
-export const useUserCard = (user: User, onEdit?: (user: User) => void) => {
-  const handleEdit = useCallback(() => {
-    onEdit?.(user);
-  }, [user, onEdit]);
-  
-  return { handleEdit };
-};
-
-// UserCard/UserCard.module.css - Estilos del componente
-.userCard {
-  /* estilos específicos */
-}
-
-// UserCard/index.ts - Exportación limpia
-export { UserCard } from './UserCard';
-export type { UserCardProps } from './UserCard';
-```
-
-### Sistema de diseño y estilos
-- **Tokens de diseño** en `src/styles/tokens.css`: variables CSS para colores, espaciado, tipografía
-- **Componentes base** en `src/components/ui/`: Button, Input, Card, etc.
-- **Módulos CSS**: Cada componente tiene su archivo `.module.css`
-- **Utilidades globales** en `src/styles/utilities.css`
-- **Layout corporativo** en `src/App.css`: `.app-layout` con `.sidebar` + `.main-content`
-
-## Patrones de implementación (duplicado - ver arriba)
-**Esta sección está duplicada. Ver la sección "Páginas y patrones" al inicio del documento.**
-
-## Estado y datos
-
-### Gestión de estado global
-- **AuthContext**: Autenticación y autorización centralizada
-- **StoreContext**: Estado de la aplicación con persistencia
-- **Reducers**: Para operaciones complejas de estado
-- **Selectors**: Funciones para acceder a fragmentos específicos del estado
-
-### Patrones de estado
-```typescript
-// Patrón para contextos con reducers
-interface State {
-  registros: ATRRegistro[];
-  loading: boolean;
-  error: string | null;
-}
-
-type Action = 
-  | { type: 'LOAD_START' }
-  | { type: 'LOAD_SUCCESS'; payload: ATRRegistro[] }
-  | { type: 'LOAD_ERROR'; payload: string };
-
-const reducer = (state: State, action: Action): State => {
-  switch (action.type) {
-    case 'LOAD_START':
-      return { ...state, loading: true, error: null };
-    // ... otros casos
-    default:
-      return state;
-  }
-};
-```
-
-### Persistencia y sincronización
-- localStorage para datos de registros ATR y preferencias de UI
-- Debouncing para sincronización automática
-- Manejo de errores y recuperación de datos corruptos
-
-## Flujo de desarrollo
-- Ejecutar en Windows: `npm.cmd run dev` (evita problemas de PowerShell ExecutionPolicy). Tarea de VS Code: “Vite dev (valorApp)”.
-- Build: `npm run build`; Preview: `npm run preview`.
-
-## Convenciones del proyecto
-- Texto UI y comentarios en español; uso opcional de emojis (📋, ➕, 🗑️) para jerarquía visual.
-- Importaciones TS sin extensión (`import App from './App'`).
-- Números en inputs: `parseFloat(e.target.value) || 0`.
-- Mantener el enrutado por hash y clases de diseño existentes al agregar vistas.
-
-### Manejo de errores
-- **Try/catch**: En todas las operaciones asíncronas
-- **Error boundaries**: Para errores de componentes
-- **Logging**: Sistema centralizado de logs
-- **Fallbacks**: Interfaces de error amigables
-
-### Accesibilidad
-- **ARIA**: Labels y roles apropiados
-- **Keyboard navigation**: Navegación completa por teclado
-- **Color contrast**: Cumplimiento WCAG AA
-- **Screen readers**: Compatibilidad con lectores de pantalla
-
-## Archivos clave y estructura
-
-### Archivos principales
-```
-src/
-├── App.tsx                 # Router, layout, navegación principal
-├── main.tsx               # Punto de entrada, providers
-├── index.css              # Tokens de diseño y utilidades
-├── App.css                # Layout corporativo
-├── auth/
-│   └── AuthContext.tsx    # Contexto de autenticación
-├── state/
-│   └── StoreContext.tsx   # Estado global de la aplicación
-├── types/
-│   └── atr.ts            # Tipos de dominio
-└── pages/                 # Páginas principales
-    ├── Login.tsx
-    ├── Lista.tsx
-    └── Nuevo.tsx
-```
-
-### Configuración recomendada
-```
-.editorconfig              # Configuración del editor
-.eslintrc.json            # Reglas de linting
-.prettierrc               # Configuración de formateo
-.gitignore                # Archivos ignorados
-tsconfig.json             # Configuración TypeScript
-vite.config.ts            # Configuración del bundler
+├── App.tsx                  # Router por hash
+├── main.tsx                 # Providers
+├── state/StoreContext.tsx   # Estado global
+├── services/atr/atrService.ts
+├── services/storage/storageService.ts
+├── types/atr.ts             # Tipos de dominio
+├── pages/
+│   ├── Dashboard/
+│   ├── Wart/
+│   ├── AnalisisExpediente/
+│   └── ExportSaldoATR/
+└── utils/csv.ts             # Parser CSV robusto
 ```
 
 ## Próximas integraciones y mejoras
+- Refactor de `ATRPreview` en submódulos + tests unitarios
+- Web Worker para parsing y agregados
+- Tabla virtualizada y export de reportes
+- Acciones de borrado seguro de datos locales
+- PWA / i18n / dark mode (opcional)
 
-### Funcionalidades pendientes
-- **Importación ATR**: Desde Excel usando SheetJS
-- **Cálculos de valoración**: Reglas según gestión/fraude/valor
-- **Autenticación real**: Reemplazar demo por backend
-- **Notificaciones**: Toast/snackbar para feedback
-- **Exportación**: PDF/Excel de reportes
-- **Filtros avanzados**: Fechas, rangos, múltiples criterios
-
-### Optimizaciones técnicas
-- **PWA**: Service worker y cache
-- **Internacionalización**: i18n para múltiples idiomas
-- **Dark mode**: Tema oscuro
-- **Responsive**: Diseño móvil completo
-- **API integration**: Conexión con backend real
+## Nota para agentes (Copilot)
+- Favorecer cambios pequeños y testeables; no introducir autenticación
+- No romper el enrutado por hash ni las claves de localStorage existentes
+- Si añades claves nuevas, documentarlas en esta guía
+- Mantener textos en español y coherencia visual con `DESIGN_SYSTEM.md`
