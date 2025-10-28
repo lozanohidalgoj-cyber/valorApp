@@ -410,6 +410,20 @@ const ATRPreview: React.FC = () => {
     if (fact) return { header: fact, kind: 'fact' }
     return null
   }
+  // Selección unificada de columna de fecha para todo el componente
+  type DateHeaderChoice = { header: string; kind: 'hasta' | 'desde' | 'periodo' | 'fact' }
+  const pickPrimaryDateHeader = (headers: string[] | undefined | null): DateHeaderChoice | null => {
+    if (!headers || !headers.length) return null
+    const hasta = headers.find(h => isFechaHastaHeader(h))
+    if (hasta) return { header: hasta, kind: 'hasta' }
+    const desde = headers.find(h => isFechaDesdeHeader(h))
+    if (desde) return { header: desde, kind: 'desde' }
+    const periodo = headers.find(h => isPeriodoHeader(h))
+    if (periodo) return { header: periodo, kind: 'periodo' }
+    const fact = headers.find(h => isFechaFactHeader(h))
+    if (fact) return { header: fact, kind: 'fact' }
+    return null
+  }
   // Cabeceras robustas para "Tipo de factura" y "Estado de medida"
   const isTipoFacturaHeader = (h: string) => {
     const t = stripAccents(h).toLowerCase().trim()
@@ -529,25 +543,22 @@ const ATRPreview: React.FC = () => {
   const contractColorMap = React.useMemo(() => {
     const map = new Map<string, string>()
     if (!filteredData || !contractHeader) return map
-    let idx = 0
-    for (const r of filteredRows) {
-      const key = String(r[contractHeader] ?? '').trim()
-      if (!map.has(key)) {
-        map.set(key, groupPalette[idx % groupPalette.length])
-        idx++
-      }
-    }
+
+      // Selección unificada: prioriza Fecha hasta → Fecha desde → Periodo → Fecha factura
+      const choice = pickPrimaryDateHeader(filteredData.headers)
+      if (!choice) return []
+      const chosenDateHeader = choice.header
     return map
   }, [filteredRows, contractHeader, filteredData])
 
   // Cabecera de potencia principal (si existe)
   const potenciaHeaderMain = React.useMemo(() => (filteredData?.headers.find(h => isPotenciaHeader(h)) || null), [filteredData])
 
-  const potenciasUnicasVisibles = React.useMemo(() => {
-    if (!potenciaHeaderMain) return 0
+        const raw = String(r[chosenDateHeader] ?? '')
+        let d = choice.kind === 'periodo' ? parsePeriodoStart(raw) : parseDateLoose(raw)
     const set = new Set<number>()
-    for (const r of filteredRows) {
-      const n = normalizeNumber(String(r[potenciaHeaderMain] ?? ''))
+        // Si estamos usando Fecha desde, el consumo corresponde al mes anterior
+        if (choice.kind === 'desde') {
       if (Number.isFinite(n)) set.add(n)
     }
     return set.size
@@ -568,7 +579,8 @@ const ATRPreview: React.FC = () => {
       const dHasta = (!dDesde && fechaHastaHeader) ? parseDateLoose(r[fechaHastaHeader]) : null
       const dEnvio = (!dDesde && !dHasta && fechaEnvioHeader) ? parseDateLoose(r[fechaEnvioHeader]) : null
       const d = dDesde || dHasta || dEnvio || null
-      if (!d) continue
+        chosenDateHeader,
+        chosenKind: choice.kind,
       const year = d.getFullYear()
       if (!Number.isFinite(year)) continue
 
