@@ -396,6 +396,20 @@ const ATRPreview: React.FC = () => {
     const t = stripAccents(h).toLowerCase().trim()
     return t.includes('consum') && (t.includes('activa') || t.includes('kwh') || t.includes('total'))
   }
+  // Selección unificada de columna de fecha para todo el componente
+  type DateHeaderChoice = { header: string; kind: 'hasta' | 'desde' | 'periodo' | 'fact' }
+  const pickPrimaryDateHeader = (headers: string[] | undefined | null): DateHeaderChoice | null => {
+    if (!headers || !headers.length) return null
+    const hasta = headers.find(h => isFechaHastaHeader(h))
+    if (hasta) return { header: hasta, kind: 'hasta' }
+    const desde = headers.find(h => isFechaDesdeHeader(h))
+    if (desde) return { header: desde, kind: 'desde' }
+    const periodo = headers.find(h => isPeriodoHeader(h))
+    if (periodo) return { header: periodo, kind: 'periodo' }
+    const fact = headers.find(h => isFechaFactHeader(h))
+    if (fact) return { header: fact, kind: 'fact' }
+    return null
+  }
   // Cabeceras robustas para "Tipo de factura" y "Estado de medida"
   const isTipoFacturaHeader = (h: string) => {
     const t = stripAccents(h).toLowerCase().trim()
@@ -529,7 +543,6 @@ const ATRPreview: React.FC = () => {
   // Cabecera de potencia principal (si existe)
   const potenciaHeaderMain = React.useMemo(() => (filteredData?.headers.find(h => isPotenciaHeader(h)) || null), [filteredData])
 
-  // Potencias únicas (kW) en las filas visibles actualmente
   const potenciasUnicasVisibles = React.useMemo(() => {
     if (!potenciaHeaderMain) return 0
     const set = new Set<number>()
@@ -757,8 +770,8 @@ const ATRPreview: React.FC = () => {
       console.log('📊 Datos para análisis:', { headersLength: headers.length, rowsLength: rows.length })
       if (!headers.length || !rows.length) { window.alert('No hay datos para analizar.'); return }
       
-      // Buscar headers exactamente como en la tabla (mismo orden de prioridad)
-      const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isFechaHastaHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
+  // Buscar headers exactamente como en la tabla (mismo orden de prioridad)
+  const fechaHeader = headers.find(h => isFechaDesdeHeader(h)) || headers.find(h => isFechaHastaHeader(h)) || headers.find(h => isPeriodoHeader(h)) || headers.find(h => isFechaFactHeader(h))
       const consumoHeader = headers.find(h => isConsumoActivaHeader(h))
       if (!fechaHeader || !consumoHeader) { window.alert('No se encontró columna de fecha o consumo.'); return }
 
