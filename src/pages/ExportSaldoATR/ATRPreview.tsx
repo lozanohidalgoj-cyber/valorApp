@@ -629,6 +629,7 @@ const ATRPreview: React.FC = () => {
       if (withVar.length < 6) {
         console.log('⚠️ Datos insuficientes: Se necesitan al menos 6 meses de histórico para detectar anomalías.')
         window.alert('⚠️ Datos insuficientes para análisis de anomalías.\n\nSe necesitan al menos 6 meses de histórico para establecer una línea base y detectar descensos anormales.')
+        // Aun así, mostramos la serie mensual para que el usuario vea el resumen/visualizaciones
         setMonthlySeries(withVar)
         setAnomalyMonthIdx(null)
         setAnomalyYearMonth(null)
@@ -636,7 +637,6 @@ const ATRPreview: React.FC = () => {
         setShowAnalisisPanel(true)
         return
       }
-      
       // DETECCIÓN AVANZADA: Múltiples validaciones cruzadas para identificación precisa
       let firstDrop: number | null = null
       let detectedAnomalyYM: { year: number; month: number } | null = null
@@ -691,6 +691,72 @@ const ATRPreview: React.FC = () => {
       
       // Si ya se detectó anomalía nula, no continuar con el análisis normal
       if (firstDrop === null) {
+        // PRIORIDAD: detectar el INICIO de un descenso mantenido
+        // Regla: primer mes i tal que consumo[i] < 70% del baseline (6m previos) y
+        // consumo[i+1] y consumo[i+2] se mantienen por debajo del 75% del baseline.
+        // Además, el mes anterior no está claramente bajo (o hay caída >= 25% vs anterior) para marcar inicio.
+        for (let i = 6; i <= withVar.length - 3; i++) {
+          const baselineAvg = calculateBaselineAvg(i, 6)
+          if (baselineAvg <= 0) continue
+          const prev = withVar[i - 1].consumo
+          const c0 = withVar[i].consumo
+          const c1 = withVar[i + 1].consumo
+          const c2 = withVar[i + 2].consumo
+          const belowStart = c0 <= baselineAvg * 0.70
+          const belowNext = c1 <= baselineAvg * 0.75 && c2 <= baselineAvg * 0.75
+          const priorNotLow = prev >= baselineAvg * 0.85
+          const sharpDropVsPrev = prev > 0 ? (prev - c0) / prev >= 0.25 : false
+
+          if (belowStart && belowNext && (priorNotLow || sharpDropVsPrev)) {
+            firstDrop = i
+            detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
+            anomalyMetadata = {
+              criterio: 'Descenso mantenido (inicio)',
+              confianza: 0.9,
+              baseline: baselineAvg,
+              actual: c0,
+              caida: Math.max((prev > 0 ? (prev - c0) / prev : 0), (baselineAvg - c0) / baselineAvg),
+              persistencia: 3,
+              desvEstandar: 0
+            }
+            console.log('🎯 DESCENSO MANTENIDO (inicio) detectado en mes', i, '→', withVar[i].year + '-' + pad2(withVar[i].month))
+            break
+          }
+        }
+
+        // Si no se identificó descenso mantenido, intentar detección simple por umbral (±40%) con persistencia opcional
+        if (firstDrop === null) {
+          const THRESHOLD = 0.4
+          const PERSIST_MIN = 0 // meses consecutivos adicionales con variación anómala requerida (0 = sin persistencia)
+          for (let i = 1; i < withVar.length; i++) {
+            const v = withVar[i].variacion
+            if (v == null) continue
+            const isAnom = Math.abs(v) >= THRESHOLD
+            if (!isAnom) continue
+            let ok = true
+            for (let j = 1; j <= PERSIST_MIN; j++) {
+              const nx = withVar[i + j]
+              if (!nx || nx.variacion == null || Math.sign(nx.variacion) !== Math.sign(v) || Math.abs(nx.variacion) < THRESHOLD) { ok = false; break }
+            }
+            if (ok) {
+              firstDrop = i
+              detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
+              anomalyMetadata = {
+                criterio: v >= THRESHOLD ? 'Incremento anómalo (umbral)' : 'Descenso anómalo (umbral)',
+                confianza: 0.8,
+                baseline: calculateBaselineAvg(i, 6),
+                actual: withVar[i].consumo,
+                caida: v >= THRESHOLD ? 0 : Math.abs(v),
+                persistencia: Math.max(1, PERSIST_MIN + 1),
+                desvEstandar: 0
+              }
+              console.log('🎯 Anomalía por umbral detectada en mes', i, '→', withVar[i].year + '-' + pad2(withVar[i].month), 'v =', (v * 100).toFixed(1) + '%')
+              break
+            }
+          }
+        }
+
+        // Si no se identificó con umbral, continuar con análisis avanzado
         // IMPORTANTE: Empezar a analizar después de los primeros 3 meses para tener contexto
         const startAnalysisFrom = Math.max(1, 3)
         
@@ -832,35 +898,35 @@ const ATRPreview: React.FC = () => {
       
       // REPORTE FINAL: Mostrar información detallada del análisis
       if (!detectedAnomalyYM) {
-        console.log('✅ Análisis completado: No se detectaron descensos significativos en el consumo.')
-        const mensajeNoAnomalia = `✅ ANÁLISIS COMPLETADO - SIN ANOMALÍAS DETECTADAS
+        // Fallback: detectar también incrementos o descensos significativos (±40%) por variación simple
+        for (let i = 1; i < withVar.length; i++) {
+          const v = withVar[i].variacion
+          if (v != null && (v >= 0.4 || v <= -0.4)) {
+            firstDrop = i
+            detectedAnomalyYM = { year: withVar[i].year, month: withVar[i].month }
+            break
+          }
+        }
 
-📊 RESUMEN DEL ANÁLISIS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Período analizado: ${withVar.length} meses
-• Rango: ${withVar[0]?.year}-${pad2(withVar[0]?.month)} → ${withVar[withVar.length-1]?.year}-${pad2(withVar[withVar.length-1]?.month)}
-• Meses analizados: ${withVar.length}
-• Promedio histórico: ${(withVar.reduce((s, v) => s + v.consumo, 0) / withVar.length).toFixed(0)} kWh
-
-🔍 VALIDACIONES REALIZADAS:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ Análisis estadístico (Z-Score)
-✓ Detección de outliers
-✓ Validación estacional
-✓ Análisis de tendencias
-✓ Detección de persistencia
-
-📈 CONCLUSIÓN:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-El comportamiento del consumo es ESTABLE y está
-dentro de los rangos normales esperados.
-
-✅ No se detectaron descensos ni incrementos
-   anómalos superiores al 40%
-
-💡 TIP: Si sospechas de anomalías no detectadas,
-   verifica los datos en la tabla de variaciones.`
-        window.alert(mensajeNoAnomalia)
+        if (!detectedAnomalyYM) {
+          // Mensajes simples requeridos por especificación
+          const TH = 0.4
+          const hasIncAnom = withVar.some(p => p.variacion != null && p.variacion >= TH)
+          const hasDecAnom = withVar.some(p => p.variacion != null && p.variacion <= -TH)
+          if (!hasIncAnom && !hasDecAnom) {
+            console.log('✅ Análisis completado: No se encontraron incrementos ni descensos anómalos en el consumo.')
+            window.alert('No se encontraron incrementos ni descensos anómalos en el consumo.')
+          } else if (hasIncAnom && !hasDecAnom) {
+            console.log('⚠️ Se detectaron incrementos anómalos de consumo (≥ +40%).')
+            window.alert('Se detectaron incrementos anómalos de consumo. Revise las facturas resaltadas en amarillo.')
+          } else if (hasDecAnom && !hasIncAnom) {
+            console.log('⚠️ Se detectaron descensos significativos de consumo (≤ −40%).')
+            window.alert('Se detectaron descensos significativos de consumo. Revise las facturas resaltadas en rojo.')
+          } else {
+            console.log('⚠️ Se detectaron incrementos y descensos anómalos.')
+            window.alert('Se detectaron incrementos y descensos anómalos de consumo. Revise las facturas resaltadas.')
+          }
+        }
       } else if (anomalyMetadata) {
         console.log('⚠️ ANOMALÍA DETECTADA CON ALTA PRECISIÓN:', anomalyMetadata)
         window.alert('⚠️ Anomalía detectada con alta precisión\n\n' +
@@ -2157,6 +2223,121 @@ dentro de los rangos normales esperados.
               anomalyIdx={anomalyMonthIdx}
               onHover={(v) => setHeatmapTooltip(v)}
             />
+            {/* Resumen anual de consumo */}
+            {monthlySeries && monthlySeries.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(0,0,208,0.04) 0%, rgba(41,41,229,0.03) 100%)',
+                border: '1px solid rgba(0,0,208,0.08)',
+                borderRadius: 12,
+                padding: '0.875rem 1rem',
+                marginTop: '0.25rem'
+              }}>
+                <div style={{ fontWeight: 800, color: '#0000D0', marginBottom: '0.5rem', fontFamily: "'Lato', sans-serif", fontSize: '0.9rem' }}>
+                  📅 Resumen anual de consumo
+                </div>
+                {(() => {
+                  const map = new Map<number, { total: number; months: number }>()
+                  for (const p of monthlySeries) {
+                    const cur = map.get(p.year) || { total: 0, months: 0 }
+                    cur.total += p.consumo || 0
+                    cur.months += 1
+                    map.set(p.year, cur)
+                  }
+                  const years = Array.from(map.entries()).map(([year, v]) => ({ year, total: v.total, months: v.months }))
+                  years.sort((a,b) => a.year - b.year)
+                  const withYoY = years.map((y, i) => ({
+                    ...y,
+                    yoy: i > 0 && years[i-1].total > 0 ? (y.total - years[i-1].total) / years[i-1].total : null
+                  }))
+                  const fmt = new Intl.NumberFormat('es-ES')
+
+                  const handleExportCSV = () => {
+                    const header = 'Año,Total_kWh,Meses,YoY_%\n'
+                    const lines = withYoY.map(({ year, total, months, yoy }) => (
+                      `${year},${Math.round(total)},${months},${yoy == null ? '' : (yoy * 100).toFixed(1)}`
+                    ))
+                    const csv = header + lines.join('\n')
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = 'resumen_anual.csv'
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                  }
+
+                  const maxTotal = withYoY.reduce((m, y) => Math.max(m, y.total), 0)
+
+                  return (
+                    <>
+                      {/* Acciones */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+                        <button type="button" onClick={handleExportCSV} style={{
+                          border: '1px solid rgba(0,0,208,0.18)',
+                          background: '#ffffff', color: '#0000D0',
+                          borderRadius: 8, padding: '0.35rem 0.6rem', fontWeight: 800, cursor: 'pointer'
+                        }}>
+                          Exportar CSV
+                        </button>
+                      </div>
+                      {/* Tarjetas por año */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                        {withYoY.map(({ year, total, months, yoy }) => (
+                          <div key={year} style={{
+                            background: '#ffffff',
+                            border: '1px solid rgba(0,0,0,0.06)',
+                            borderRadius: 10,
+                            padding: '0.65rem 0.75rem',
+                            display: 'flex', flexDirection: 'column', gap: '0.25rem'
+                          }}>
+                            <div style={{ color: '#334155', fontWeight: 800 }}>Año {year}</div>
+                            <div style={{ color: '#111827', fontWeight: 700 }}>{fmt.format(Math.round(total))} kWh</div>
+                            <div style={{ color: '#64748b', fontSize: '0.78rem' }}>{months} meses</div>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: (() => {
+                              if (yoy == null) return '#6b7280'
+                              if (yoy < 0) return '#dc2626' // rojo descenso interanual
+                              if (yoy >= 0.4) return '#059669' // verde aumento fuerte interanual
+                              if (yoy > 0) return '#f59e0b' // naranja aumento moderado
+                              return '#6b7280'
+                            })() }}>
+                              {yoy == null ? '—' : `${(yoy * 100).toFixed(1)}% YoY`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Barras anuales */}
+                      {withYoY.length > 0 && (
+                        <div style={{ marginTop: '0.75rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: 120 }}>
+                            {withYoY.map(({ year, total, yoy }) => {
+                              const h = maxTotal > 0 ? Math.max(4, Math.round((total / maxTotal) * 110)) : 4
+                              const color = (() => {
+                                if (yoy == null) return '#6b7280'
+                                if (yoy < 0) return '#dc2626'
+                                if (yoy >= 0.4) return '#059669'
+                                if (yoy > 0) return '#f59e0b'
+                                return '#6b7280'
+                              })()
+                              return (
+                                <div key={year} title={`Año ${year}: ${fmt.format(Math.round(total))} kWh${yoy == null ? '' : ` (${(yoy * 100).toFixed(1)}% YoY)`}`}
+                                  style={{ width: 18, height: h, background: color, borderRadius: 4 }} />
+                              )
+                            })}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', color: '#6b7280', fontSize: '0.75rem' }}>
+                            {withYoY.map(({ year }) => (
+                              <span key={year} style={{ width: 18, textAlign: 'center' }}>{String(year).slice(-2)}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
+            )}
             {/* Panel de métricas de calidad del análisis */}
             {anomalyMonthIdx !== null && monthlySeries[anomalyMonthIdx] && (
               <div style={{
@@ -2175,11 +2356,30 @@ dentro de los rangos normales esperados.
                 }}>
                   🎯 Métricas de Calidad del Análisis
                 </div>
+                {(() => {
+                  const anom = monthlySeries[anomalyMonthIdx]
+                  const overallAvg = monthlySeries.length > 0 ? (monthlySeries.reduce((s, v) => s + (v.consumo || 0), 0) / monthlySeries.length) : 0
+                  const sameMonth = monthlySeries.filter(v => v.month === anom.month && v.consumo > 0)
+                  const seasonalAvgMonth = sameMonth.length > 0 ? sameMonth.reduce((s, v) => s + v.consumo, 0) / sameMonth.length : 0
+                  const seasonalDiffPct = seasonalAvgMonth > 0 ? ((anom.consumo - seasonalAvgMonth) / seasonalAvgMonth) : null
+                  return (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', fontSize: '0.8125rem' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <span style={{ color: '#6b7280', fontWeight: 600 }}>📅 Período detectado</span>
                     <span style={{ color: '#111827', fontWeight: 700 }}>
                       {monthlySeries[anomalyMonthIdx].year}-{String(monthlySeries[anomalyMonthIdx].month).padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <span style={{ color: '#6b7280', fontWeight: 600 }}>📈 Promedio histórico</span>
+                    <span style={{ color: '#111827', fontWeight: 700 }}>
+                      {overallAvg.toFixed(0)} kWh
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <span style={{ color: '#6b7280', fontWeight: 600 }}>📆 Promedio estacional (mes)</span>
+                    <span style={{ color: '#111827', fontWeight: 700 }}>
+                      {seasonalAvgMonth.toFixed(0)} kWh {seasonalDiffPct != null ? `(${(seasonalDiffPct * 100).toFixed(1)}%)` : ''}
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -2191,10 +2391,17 @@ dentro de los rangos normales esperados.
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <span style={{ color: '#6b7280', fontWeight: 600 }}>📉 Variación vs anterior</span>
                     <span style={{ 
-                      color: monthlySeries[anomalyMonthIdx].variacion && monthlySeries[anomalyMonthIdx].variacion! < -0.4 ? '#dc2626' : '#059669', 
+                      color: (() => {
+                        const v = monthlySeries[anomalyMonthIdx].variacion
+                        if (v == null) return '#111827'
+                        if (v < 0) return '#dc2626' // rojo descenso
+                        if (v >= 0.4) return '#059669' // verde aumento fuerte
+                        if (v > 0) return '#f59e0b' // naranja aumento moderado
+                        return '#111827'
+                      })(), 
                       fontWeight: 700 
                     }}>
-                      {monthlySeries[anomalyMonthIdx].variacion ? 
+                      {monthlySeries[anomalyMonthIdx].variacion != null ? 
                         `${(monthlySeries[anomalyMonthIdx].variacion! * 100).toFixed(1)}%` : 
                         'N/A'}
                     </span>
@@ -2218,6 +2425,7 @@ dentro de los rangos normales esperados.
                     </span>
                   </div>
                 </div>
+                  )})()}
                 <div style={{ 
                   marginTop: '0.75rem', 
                   padding: '0.5rem 0.75rem', 
@@ -2235,7 +2443,7 @@ dentro de los rangos normales esperados.
             )}
             
             <div style={{ fontSize: 12, color: '#334155' }}>
-              • El indicador 👉 muestra el inicio del descenso de anomalía en el consumo mensual (celda agrandada). <br/>
+              • El indicador 👉 muestra el inicio del cambio significativo (±40%) en el consumo mensual (celda destacada). <br/>
               • El mapa de calor muestra la evolución temporal de los consumos. Al pasar el cursor sobre cualquier mes, verá el detalle completo.<br/>
               • <strong>Nuevo:</strong> Análisis con validación cruzada estadística para mayor precisión en la identificación del período.
             </div>
@@ -2472,7 +2680,9 @@ export default ATRPreview
 type MonthlyPoint = { key: string; year: number; month: number; fecha: Date; consumo: number; variacion: number | null }
 type Hover = { x: number; y: number; text: string }
 
-// Heatmap: x = Años, y = Meses (1..12). Color por consumo. Borde rojo en primera anomalía.
+// Heatmap: x = Años, y = Meses (1..12).
+// Color por variación vs mes anterior: rojo (≤ −40%), amarillo (≥ +40%), verde en el rango (−40%, +40%).
+// Borde destacado en el primer cambio significativo (±40%) detectado.
 function Heatmap({ data, anomalyIdx, onHover, onClick }: { 
   data: MonthlyPoint[]; 
   anomalyIdx: number | null; 
@@ -2490,22 +2700,15 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
   // Matriz por (y,m)
   const matrix = new Map<string, MonthlyPoint>()
   for (const d of data) matrix.set(`${d.year}-${d.month}`, d)
-  // Escala de color Rojo->Amarillo->Verde (baja->media->alta) usando cuantiles para mejor distribución visual
-  // Invertida: consumos bajos son problemáticos (rojo), consumos altos son normales (verde)
-  const sorted = [...data.map(d => d.consumo)].sort((a,b) => a - b)
-  const min = sorted[0] || 0
-  const q50 = sorted[Math.floor(sorted.length * 0.5)] || 0
-  const max = sorted[sorted.length - 1] || 1
-  const colorFor = (v: number) => {
-    // Normalizar usando cuantiles: <q50 = rojo->amarillo, >=q50 = amarillo->verde
-    if (v <= q50) {
-      const range = q50 - min
-      const t = range > 0 ? (v - min) / range : 0
-      return mixColor('#ef4444', '#fbbf24', t)
-    }
-    const range = max - q50
-    const t = range > 0 ? (v - q50) / range : 0
-    return mixColor('#fbbf24', '#10b981', t)
+  // Colorear por variación vs mes anterior (descenso anómalo rojo, incremento anómalo amarillo, normal verde)
+  const colorForPoint = (pt?: MonthlyPoint) => {
+    if (!pt) return '#f1f5f9' // sin datos
+    const v = pt.variacion
+    if (v == null) return '#e5e7eb' // primer mes o sin referencia
+    if (v <= -0.4) return '#ef4444' // descenso anómalo
+    if (v >= 0.4) return '#f59e0b' // incremento anómalo (amarillo)
+    // rango normal (−40%, +40%)
+    return '#10b981'
   }
   const mixColor = (a: string, b: string, t: number) => {
     const pa = hexToRgb(a); const pb = hexToRgb(b)
@@ -2515,8 +2718,8 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
     return `rgb(${r},${g},${bl})`
   }
   const hexToRgb = (hex: string) => {
-    const m = hex.replace('#','')
-    const bigint = parseInt(m, 16)
+    const clean = hex.replace('#','')
+    const bigint = parseInt(clean, 16)
     return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 }
   }
 
@@ -2544,34 +2747,28 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
 
   const monthsES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
-  // Función para determinar el motivo del color según el consumo y la escala de cuantiles (invertida)
-  const getMotivoColor = (v: number, isAnomaly: boolean) => {
-    if (isAnomaly) return '👉 Descenso de anomalía (≥40%)'
-    if (v <= min + (q50 - min) * 0.33) return 'Consumo bajo o anómalo (posible irregularidad)'
-    if (v <= q50) return 'Consumo bajo-medio (requiere observación)'
-    if (v <= q50 + (max - q50) * 0.5) return 'Consumo medio-alto (dentro del promedio)'
-    return 'Consumo normal o alto (estable y esperado)'
+  // Motivo del color basado en variación
+  const getMotivoColor = (v: number | null, isAnomaly: boolean) => {
+    if (isAnomaly) return '👉 Inicio del cambio significativo (±40%)'
+    if (v == null) return 'Sin referencia de variación'
+    if (v <= -0.4) return 'Descenso anómalo (≤ −40%)'
+    if (v >= 0.4) return 'Incremento anómalo (≥ +40%)'
+    return 'Consumo dentro del rango normal'
   }
 
   const handleEnter = (pt: MonthlyPoint, e: React.MouseEvent<SVGRectElement>) => {
     const varPct = pt.variacion == null ? '—' : `${(pt.variacion * 100).toFixed(1)}%`
     const isAnomaly = pt.key === anomalyKey
-    const motivo = getMotivoColor(pt.consumo, isAnomaly)
+  const motivo = getMotivoColor(pt.variacion, isAnomaly)
     
-    // Tooltip mejorado para anomalías
-    if (isAnomaly) {
-      onHover({ 
-        x: e.clientX + 12, 
-        y: e.clientY - 28, 
-        text: `👉 Descenso de anomalía (≥40%) — Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct}` 
-      })
-    } else {
-      onHover({ 
-        x: e.clientX + 12, 
-        y: e.clientY - 28, 
-        text: `Año: ${pt.year} — Mes: ${monthsES[pt.month-1]} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación: ${varPct} — Motivo del color: ${motivo}` 
-      })
-    }
+    // Tooltip enriquecido
+    const labelPeriodo = `${monthsES[pt.month-1]}/${pt.year}`
+    const baseText = `Periodo: ${labelPeriodo} — Consumo: ${new Intl.NumberFormat('es-ES').format(pt.consumo)} kWh — Variación vs anterior: ${varPct}`
+    onHover({ 
+      x: e.clientX + 12, 
+      y: e.clientY - 28, 
+      text: `${isAnomaly ? '👉 ' : ''}${baseText} — Clasificación: ${motivo}` 
+    })
   }
   const handleLeave = () => onHover(null)
   
@@ -2583,7 +2780,7 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
 
   return (
     <div>
-      <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 6, fontFamily: "'Lato', sans-serif" }}>Mapa de calor mensual</div>
+  <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 6, fontFamily: "'Lato', sans-serif" }}>Mapa de calor por variación mensual</div>
       
       {/* Estilos CSS para animación de anomalía */}
       <style>{`
@@ -2610,17 +2807,17 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
           Array.from({ length: 12 }).map((_, mi) => {
             const mm = mi + 1
             const pt = matrix.get(`${y}-${mm}`)
-            const val = pt ? pt.consumo : 0
-            const fill = colorFor(val)
-            const isAnomaly = pt && pt.key === anomalyKey
+            const fill = colorForPoint(pt)
+            const isAnomaly = !!pt && pt.key === anomalyKey
             const x = m.l + cx * cell
             const ypix = m.t + mi * cell
             const textColor = getTextColor(fill)
             
             // Formatear valor: si es >1000, mostrar en K (miles), sino mostrar entero
-            const displayValue = val === 0 ? '—' : val >= 1000 
-              ? `${(val / 1000).toFixed(1)}K` 
-              : Math.round(val).toString()
+            const consumoVal = pt ? pt.consumo : 0
+            const displayValue = consumoVal === 0 ? '—' : (consumoVal >= 1000 
+              ? `${(consumoVal / 1000).toFixed(1)}K` 
+              : Math.round(consumoVal).toString())
             
             return (
               <g key={`${y}-${mm}`}>
@@ -2673,7 +2870,7 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
         ))}
       </svg>
       
-      {/* Leyenda explicativa del mapa de calor */}
+      {/* Leyenda explicativa del mapa de calor (por variación) */}
       <div style={{
         marginTop: '1rem',
         padding: '0.75rem 0.875rem',
@@ -2682,41 +2879,33 @@ function Heatmap({ data, anomalyIdx, onHover, onClick }: {
         borderRadius: 10,
         fontFamily: "'Open Sans', sans-serif"
       }}>
-        <div style={{ fontWeight: 700, color: '#0000D0', fontSize: '0.875rem', marginBottom: '0.5rem', fontFamily: "'Lato', sans-serif" }}>📊 Leyenda del mapa de calor</div>
+        <div style={{ fontWeight: 700, color: '#0000D0', fontSize: '0.875rem', marginBottom: '0.5rem', fontFamily: "'Lato', sans-serif" }}>📊 Leyenda del mapa de calor (variación vs mes anterior)</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', fontSize: '0.8125rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 24, height: 24, background: '#ef4444', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#dc2626' }}>Rojo:</strong> Consumo bajo o anómalo (posible irregularidad)</span>
+            <span style={{ color: '#334155' }}><strong style={{ color: '#dc2626' }}>Rojo:</strong> Descenso anómalo (≤ −40%)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#f97316', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#ea580c' }}>Naranja:</strong> Consumo bajo-medio (requiere observación)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#fbbf24', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Amarillo:</strong> Consumo medio (en seguimiento)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div style={{ width: 24, height: 24, background: '#84cc16', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Verde claro:</strong> Consumo medio-alto (dentro del promedio)</span>
+            <div style={{ width: 24, height: 24, background: '#f59e0b', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
+            <span style={{ color: '#334155' }}><strong style={{ color: '#b45309' }}>Amarillo:</strong> Incremento anómalo (≥ +40%)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 24, height: 24, background: '#10b981', borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)' }} />
-            <span style={{ color: '#334155' }}><strong style={{ color: '#059669' }}>Verde:</strong> Consumo normal o alto (estable y esperado)</span>
+            <span style={{ color: '#334155' }}><strong style={{ color: '#047857' }}>Verde:</strong> Rango normal (−40% a &lt; +40%)</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ 
               width: 32, 
               height: 32, 
-              background: '#ef4444', 
+              background: '#e5e7eb', 
               borderRadius: 6, 
-              border: '1px solid rgba(220, 38, 38, 0.3)',
+              border: '1px solid rgba(0,0,0,0.1)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '14px'
             }}>👉</div>
-            <span style={{ color: '#334155' }}><strong style={{ color: '#dc2626' }}>Celda agrandada 👉:</strong> Descenso de anomalía (≥40%)</span>
+            <span style={{ color: '#334155' }}><strong style={{ color: '#0f172a' }}>Celda con 👉:</strong> Inicio del cambio significativo (±40%)</span>
           </div>
         </div>
       </div>
@@ -2756,12 +2945,28 @@ function BarsChart({ data, anomalyIdx, onHover }: { data: MonthlyPoint[]; anomal
         {ordered.map((pt, i) => {
           const isAnomaly = pt.key === anomalyKey
           const label = `${monthsES[pt.month-1]}/${pt.year}`
+          const v = pt.variacion
+          const fillColor = v == null
+            ? '#94a3b8'
+            : (v <= -0.4
+              ? '#ef4444' // descenso anómalo
+              : (v >= 0.4
+                ? '#f59e0b' // incremento anómalo (amarillo)
+                : '#10b981')) // rango normal
           return (
             <g key={pt.key}>
-              <rect x={x(i) + 2} width={barW} y={y(pt.consumo)} height={Math.max(1, m.t + innerH - y(pt.consumo))}
-                fill={isAnomaly ? '#dc2626' : '#3b82f6'} stroke="#ffffff" strokeWidth={1}
-                rx={4} ry={4}
-                onMouseEnter={(e) => handleEnter(pt, i, e)} onMouseLeave={handleLeave}
+              <rect
+                x={x(i) + 2}
+                width={barW}
+                y={y(pt.consumo)}
+                height={Math.max(1, m.t + innerH - y(pt.consumo))}
+                fill={fillColor}
+                stroke={isAnomaly ? '#111827' : '#ffffff'}
+                strokeWidth={isAnomaly ? 2 : 1}
+                rx={4}
+                ry={4}
+                onMouseEnter={(e) => handleEnter(pt, i, e)}
+                onMouseLeave={handleLeave}
               />
               {/* Etiquetas X espaciadas */}
               {i % Math.ceil(ordered.length / 10 || 1) === 0 && (
