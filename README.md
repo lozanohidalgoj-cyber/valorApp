@@ -1,4 +1,4 @@
-# ValorApp v2
+# ValorApp
 
 **Aplicación profesional de análisis de consumo energético y detección de anomalías**
 
@@ -26,7 +26,7 @@
 
 ## Descripción
 
-ValorApp v2 es una aplicación web desarrollada en **React 19 + TypeScript + Vite** diseñada específicamente para el **análisis avanzado de consumos energéticos y detección automatizada de anomalías** en contadores eléctricos.
+ValorApp es una aplicación web desarrollada en **React 19 + TypeScript + Vite** diseñada específicamente para el **análisis avanzado de consumos energéticos y detección automatizada de anomalías** en contadores eléctricos.
 
 ### Propósito
 
@@ -183,8 +183,8 @@ src/
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/lozanohidalgoj-cyber/valorapp-v2.git
-cd valorapp-v2
+git clone https://github.com/lozanohidalgoj-cyber/valorapp.git
+cd valorapp
 
 # 2. Instalar dependencias
 npm install
@@ -808,8 +808,8 @@ Este proyecto es propietario. Todos los derechos reservados.
 ## Contacto
 
 **Desarrollador Principal**: Jullieth Lozano Hidalgo  
-**Repositorio**: [https://github.com/lozanohidalgoj-cyber/valorapp-v2](https://github.com/lozanohidalgoj-cyber/valorapp-v2)
+**Repositorio**: [https://github.com/lozanohidalgoj-cyber/valorapp](https://github.com/lozanohidalgoj-cyber/valorapp)
 
 ---
 
-**ValorApp v2** - Análisis energético profesional y confiable
+**ValorApp** - Análisis energético profesional y confiable
