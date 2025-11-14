@@ -1,0 +1,257 @@
+/* 🎯 Estilos para el componente DeteccionAnomalia */
+
+.deteccion-anomalia {
+  width: 100%;
+  margin-bottom: 2rem;
+  background: var(--color-white);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.deteccion-anomalia__header {
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #0056b3 100%);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.deteccion-anomalia__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.deteccion-anomalia__stats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stat {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.deteccion-anomalia__legend {
+  padding: 1rem 2rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.legend-color--normal {
+  background: #28a745; /* Verde */
+}
+
+.legend-color--moderado {
+  background: #ffc107; /* Amarillo/Naranja */
+}
+
+.legend-color--alto {
+  background: #fd7e14; /* Naranja */
+}
+
+.legend-color--critico {
+  background: #dc3545; /* Rojo */
+}
+
+.deteccion-anomalia__table-container {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.deteccion-anomalia__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  min-width: 800px;
+}
+
+.año-header,
+.mes-header {
+  background: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+  border: 1px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.año-header {
+  left: 0;
+  z-index: 11;
+  min-width: 60px;
+  background: #e9ecef;
+}
+
+.año-cell {
+  background: #f8f9fa;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+  border: 1px solid #dee2e6;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  min-width: 60px;
+}
+
+.celda {
+  border: 1px solid #dee2e6;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0.5rem;
+  min-width: 70px;
+  height: 60px;
+  position: relative;
+}
+
+.celda--vacia {
+  background: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.celda--normal {
+  background: #28a745;
+  color: white;
+}
+
+.celda--moderado {
+  background: #ffc107;
+  color: #212529;
+}
+
+.celda--alto {
+  background: #fd7e14;
+  color: white;
+}
+
+.celda--critico {
+  background: #dc3545;
+  color: white;
+}
+
+.celda:hover:not(.celda--vacia) {
+  transform: scale(1.05);
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: #000;
+}
+
+.celda__valor {
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.celda__dias {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.deteccion-anomalia__empty {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #6c757d;
+}
+
+.deteccion-anomalia__info {
+  padding: 1rem 2rem;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.deteccion-anomalia__info strong {
+  color: var(--color-primary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .deteccion-anomalia__header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .deteccion-anomalia__header h2 {
+    font-size: 1.125rem;
+  }
+
+  .deteccion-anomalia__stats {
+    gap: 1rem;
+  }
+
+  .deteccion-anomalia__legend {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .legend-item {
+    font-size: 0.8rem;
+  }
+
+  .celda {
+    min-width: 50px;
+    height: 50px;
+    padding: 0.25rem;
+  }
+
+  .celda__valor {
+    font-size: 0.75rem;
+  }
+
+  .celda__dias {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .deteccion-anomalia__legend {
+    gap: 0.5rem;
+  }
+
+  .legend-item {
+    flex-direction: column;
+    font-size: 0.75rem;
+  }
+
+  .celda {
+    min-width: 45px;
+    height: 45px;
+  }
+}

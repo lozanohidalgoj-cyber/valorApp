@@ -1,0 +1,328 @@
+/**
+ * 🎨 Estilos del Módulo WART
+ * Colores corporativos: #0000D0 (primario), #FF3184 (secundario)
+ */
+
+.wart-container {
+  min-height: 100vh;
+  background: #0000d0;
+  padding: 2rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.wart-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  animation: float 15s ease-in-out infinite;
+}
+
+.wart-container::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  left: -10%;
+  width: 400px;
+  height: 400px;
+  background: rgba(255, 49, 132, 0.12);
+  border-radius: 50%;
+  animation: float 12s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+}
+
+.wart-content {
+  max-width: 52rem;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.wart-header {
+  margin-bottom: 3rem;
+  text-align: center;
+  position: relative;
+}
+
+.wart-title {
+  font-size: 3rem;
+  font-weight: 400;
+  color: #ffffff;
+  margin-bottom: 1rem;
+  letter-spacing: -0.03em;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.wart-subtitle {
+  font-size: 1.25rem;
+  color: #ffffff;
+  font-weight: 400;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.wart-card {
+  background: #ffffff;
+  backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  box-shadow:
+    0 25px 50px rgba(0, 0, 0, 0.3),
+    0 10px 25px rgba(0, 0, 0, 0.2);
+  padding: 3rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.wart-card:hover {
+  box-shadow:
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    0 15px 30px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.wart-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 2rem;
+  border-radius: 1.125rem;
+  background: rgba(0, 0, 0, 0.05);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.wart-check-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: #ff3184;
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.wart-check-item:hover::before {
+  transform: scaleY(1);
+}
+
+.wart-check-item:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.wart-check-item input[type='checkbox'] {
+  margin-top: 0.25rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  border: 3px solid #0000d0;
+  cursor: pointer;
+  accent-color: #ff3184;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.wart-check-item input[type='checkbox']:hover {
+  border-color: #ff3184;
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 4px 12px rgba(255, 49, 132, 0.3);
+}
+
+.wart-check-item input[type='checkbox']:checked {
+  background: #ff3184;
+  border-color: #ff3184;
+  animation: check-bounce 0.4s ease;
+}
+
+@keyframes check-bounce {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.wart-check-label {
+  cursor: pointer;
+  flex: 1;
+}
+
+.wart-check-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+
+.wart-check-description {
+  font-size: 1rem;
+  color: #333333;
+  opacity: 0.9;
+  margin-top: 0.5rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.wart-separator {
+  border: none;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 2rem 0;
+  position: relative;
+}
+
+.wart-separator::after {
+  content: '✦';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  padding: 0 1rem;
+  color: #ff3184;
+  font-size: 1.25rem;
+}
+
+.wart-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 3.5rem;
+  gap: 2rem;
+}
+
+.wart-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.75rem;
+  background: #ff3184;
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 1rem;
+  border: 2px solid #ff3184;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(255, 49, 132, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.wart-back-btn:hover {
+  background: #ff1a6e;
+  border-color: #ff1a6e;
+  box-shadow: 0 6px 12px rgba(255, 49, 132, 0.4);
+}
+
+.wart-back-btn:active {
+  transform: translateX(-3px) scale(0.98);
+}
+
+.wart-continue-btn {
+  padding: 1.125rem 3rem;
+  border-radius: 1rem;
+  font-weight: 800;
+  font-size: 1.25rem;
+  border: none;
+  transition: none;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+
+.wart-continue-btn:enabled {
+  background: #ff3184;
+  color: white;
+  box-shadow: 0 4px 8px rgba(255, 49, 132, 0.3);
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.wart-continue-btn:enabled:hover {
+  background: #ff1a6e;
+  box-shadow: 0 4px 8px rgba(255, 49, 132, 0.4);
+}
+
+.wart-continue-btn:enabled:active {
+  background: #e6005c;
+  box-shadow: 0 2px 4px rgba(255, 49, 132, 0.3);
+}
+
+.wart-continue-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  border: 2px solid #d1d5db;
+  box-shadow: none;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .wart-container {
+    padding: 1.5rem 1rem;
+  }
+
+  .wart-title {
+    font-size: 2rem;
+  }
+
+  .wart-subtitle {
+    font-size: 1rem;
+  }
+
+  .wart-card {
+    padding: 1.5rem;
+  }
+
+  .wart-check-item {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .wart-check-title {
+    font-size: 1rem;
+  }
+
+  .wart-check-description {
+    font-size: 0.875rem;
+  }
+
+  .wart-footer {
+    flex-direction: column-reverse;
+    gap: 1rem;
+  }
+
+  .wart-back-btn,
+  .wart-continue-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

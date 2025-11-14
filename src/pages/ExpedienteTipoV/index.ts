@@ -1,0 +1,1 @@
+export { ExpedienteTipoV } from './ExpedienteTipoV';

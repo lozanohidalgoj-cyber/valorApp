@@ -1,0 +1,1 @@
+export { BannerClasificacionExpediente } from './BannerClasificacionExpediente';

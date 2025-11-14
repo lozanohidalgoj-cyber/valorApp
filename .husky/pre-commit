@@ -1,0 +1,7 @@
+#!/bin/sh
+# Husky pre-commit hook
+# Ejecuta lint-staged para validar archivos staged
+
+npx lint-staged
+npm run type-check
+
